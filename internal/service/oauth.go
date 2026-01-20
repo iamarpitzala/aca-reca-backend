@@ -149,13 +149,27 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 	return &userInfo, nil
 }
 
-func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, provider string, providerUserID string, token *oauth2.Token) error {
+func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, provider string, providerUserID string, providerEmail string, token *oauth2.Token) error {
 	var oauthProvider domain.OAuthProvider
 
-	// Check if provider link already exists
-	err := repository.UpdateOrCreateOAuthProvider(ctx, os.db, &oauthProvider, provider, providerUserID, userID, token)
+	// Check if provider link already exists and update it
+	exists, err := repository.UpdateOrCreateOAuthProvider(ctx, os.db, &oauthProvider, provider, providerUserID, userID, token)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update OAuth provider: %w", err)
+	}
+
+	// If provider already exists and was updated, update email if needed
+	if exists {
+		if providerEmail != "" && oauthProvider.ProviderEmail != providerEmail {
+			oauthProvider.ProviderEmail = providerEmail
+			_, err = os.db.ExecContext(ctx,
+				"UPDATE tbl_auth_provider SET provider_email = $1, updated_at = $2 WHERE id = $3",
+				providerEmail, time.Now(), oauthProvider.ID)
+			if err != nil {
+				return fmt.Errorf("failed to update provider email: %w", err)
+			}
+		}
+		return nil
 	}
 
 	// Create new link
@@ -165,6 +179,7 @@ func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, prov
 		UserID:         userID,
 		Provider:       provider,
 		ProviderUserID: providerUserID,
+		ProviderEmail:  providerEmail,
 		AccessToken:    token.AccessToken,
 		RefreshToken:   token.RefreshToken,
 		TokenExpiresAt: &expiresAt,
@@ -172,10 +187,10 @@ func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, prov
 		UpdatedAt:      time.Now(),
 	}
 
-	// Use repository helper instead of raw insert; avoid duplicate inserts if already linked.
+	// Create new OAuth provider link
 	err = repository.CreateOAuthProvider(ctx, os.db, &oauthProvider)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create OAuth provider: %w", err)
 	}
 	return nil
 }

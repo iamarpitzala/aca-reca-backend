@@ -174,7 +174,7 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	// Get user info from provider
 	userInfo, err := h.oauthService.GetUserInfo(c.Request.Context(), provider, token)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user info from provider", "details": err.Error()})
 		return
 	}
 
@@ -184,20 +184,20 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 		// User doesn't exist, create new user
 		newUser, err := h.oauthService.CreateUserFromOAuth(c.Request.Context(), userInfo)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user", "details": err.Error()})
 			return
 		}
 
 		// Link OAuth provider
-		if err := h.oauthService.LinkProvider(c.Request.Context(), newUser.ID, provider, userInfo.ID, token); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to link provider"})
+		if err := h.oauthService.LinkProvider(c.Request.Context(), newUser.ID, provider, userInfo.ID, userInfo.Email, token); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to link provider", "details": err.Error()})
 			return
 		}
 
 		// Generate tokens and create session
 		response, err := h.authService.OAuthLogin(c.Request.Context(), newUser.ID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "details": err.Error()})
 			return
 		}
 
@@ -206,14 +206,15 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	}
 
 	// User exists, link provider if not already linked
-	if err := h.oauthService.LinkProvider(c.Request.Context(), existingUser.ID, provider, userInfo.ID, token); err != nil {
-		// Provider might already be linked, continue
+	if err := h.oauthService.LinkProvider(c.Request.Context(), existingUser.ID, provider, userInfo.ID, userInfo.Email, token); err != nil {
+		// Provider might already be linked, log but continue
+		// In production, you might want to log this error
 	}
 
 	// Generate tokens and create session
 	response, err := h.authService.OAuthLogin(c.Request.Context(), existingUser.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "details": err.Error()})
 		return
 	}
 

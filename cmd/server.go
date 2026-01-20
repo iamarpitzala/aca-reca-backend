@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -17,9 +18,23 @@ import (
 
 func InitServer() {
 	// Load environment variables
-	if err := godotenv.Load("./.env"); err != nil {
-		log.Println("No .env file found, using environment variables")
-	}
+	var envOnce sync.Once
+	envOnce.Do(func() {
+		envFile := ".env"
+
+		// Try loading the .env file
+		err := godotenv.Load(envFile)
+		if err != nil {
+			// If .env file is not found, don't log an error
+			if !os.IsNotExist(err) {
+				log.Fatalf("Error loading .env file from %s: %s", envFile, err)
+			} else {
+				log.Println(".env file not found, falling back to system environment variables")
+			}
+		} else {
+			log.Println(".env file loaded successfully")
+		}
+	})
 
 	// Load configuration
 	cfg := config.Load()
@@ -39,10 +54,6 @@ func InitServer() {
 	if err := config.RunMigrations(db.DB.DB); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
-
-	// Initialize Redis
-	rdb := config.NewRedisClient(cfg.Redis)
-	defer rdb.Close()
 
 	e := gin.New()
 	e.Use(gin.Recovery())

@@ -26,7 +26,6 @@ func InitRouter(e *gin.Engine) {
 	}
 
 	rdb := config.NewRedisClient(cfg.Redis)
-	defer rdb.Close()
 
 	tokenService := service.NewTokenService(cfg.JWT)
 	sessionService := service.NewSessionService(rdb, cfg.Session)

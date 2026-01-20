@@ -11,15 +11,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/internal/middleware"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
+	"github.com/iamarpitzala/aca-reca-backend/route"
 	"github.com/joho/godotenv"
 )
 
 func InitServer() {
 	// Load environment variables
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load("./.env"); err != nil {
 		log.Println("No .env file found, using environment variables")
 	}
 
@@ -43,26 +41,24 @@ func InitServer() {
 	}
 
 	// Initialize Redis
-	rdb := config.NewClient(cfg.Redis)
+	rdb := config.NewRedisClient(cfg.Redis)
 	defer rdb.Close()
 
-	// Initialize services
-	tokenService := service.NewTokenService(cfg.JWT)
-	sessionService := service.NewSessionService(rdb, cfg.Session)
-	oauthService := service.NewOAuthService(cfg.OAuth, db.DB)
-	authService := service.NewAuthService(db.DB, tokenService, sessionService, oauthService)
+	e := gin.New()
+	e.Use(gin.Recovery())
+	e.Use(gin.Logger())
 
-	// Initialize handlers
-	authHandler := domain.NewAuthHandler(authService, oauthService)
-	userHandler := domain.NewUserHandler(authService)
+	route.InitRouter(e)
 
-	// Setup router
-	router := setupRouter(authHandler, userHandler, tokenService)
+	port := cfg.Server.Port
+	if port == "" {
+		port = "8080"
+	}
 
 	// Start server
 	srv := &http.Server{
-		Addr:    ":" + cfg.Server.Port,
-		Handler: router,
+		Addr:    ":" + port,
+		Handler: e,
 	}
 
 	// Graceful shutdown
@@ -72,7 +68,7 @@ func InitServer() {
 		}
 	}()
 
-	log.Printf("SSO service started on port %s", cfg.Server.Port)
+	log.Printf("ACA RECA service started on port %s", port)
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
@@ -89,42 +85,4 @@ func InitServer() {
 	}
 
 	log.Println("Server exited")
-}
-
-func setupRouter(authHandler *domain.AuthHandler, userHandler *domain.UserHandler, tokenService *service.TokenService) *gin.Engine {
-	router := gin.Default()
-
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
-
-	// Public routes
-	api := router.Group("/api/v1")
-	{
-		// Authentication routes
-		auth := api.Group("/auth")
-		{
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/refresh", authHandler.RefreshToken)
-			auth.POST("/logout", middleware.AuthMiddleware(tokenService), authHandler.Logout)
-
-			// OAuth routes
-			auth.GET("/oauth/:provider", authHandler.InitiateOAuth)
-			auth.GET("/oauth/:provider/callback", authHandler.OAuthCallback)
-		}
-
-		// Protected routes
-		protected := api.Group("/users")
-		protected.Use(middleware.AuthMiddleware(tokenService))
-		{
-			protected.GET("/me", userHandler.GetCurrentUser)
-			protected.PUT("/me", userHandler.UpdateCurrentUser)
-			protected.GET("/sessions", userHandler.GetActiveSessions)
-			protected.DELETE("/sessions/:sessionId", userHandler.RevokeSession)
-		}
-	}
-
-	return router
 }

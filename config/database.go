@@ -42,7 +42,7 @@ func RunMigrations(db *sql.DB) error {
 	log.Println("Running database migrations with goose...")
 
 	// Get the migrations directory path
-	migrationsDir := filepath.Join("migrations")
+	migrationsDir := filepath.Join("./migration")
 	if err := goose.SetDialect("postgres"); err != nil {
 		return fmt.Errorf("failed to set goose dialect: %w", err)
 	}

@@ -1,152 +1,22 @@
 package domain
 
 import (
-	"net/http"
+	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
-type UserHandler struct {
-	authService *service.AuthService
-}
-
-func NewUserHandler(authService *service.AuthService) *UserHandler {
-	return &UserHandler{
-		authService: authService,
-	}
-}
-
-// GetCurrentUser returns the current authenticated user
-// GET /api/v1/users/me
-func (h *UserHandler) GetCurrentUser(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
-		return
-	}
-
-	userUUID, ok := userID.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
-		return
-	}
-
-	user, err := h.authService.GetUserByID(userUUID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, user)
-}
-
-// UpdateCurrentUser updates the current authenticated user
-// PUT /api/v1/users/me
-func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
-		return
-	}
-
-	userUUID, ok := userID.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
-		return
-	}
-
-	var req struct {
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		Phone     string `json:"phone"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	user, err := h.authService.UpdateUser(userUUID, req.FirstName, req.LastName, req.Phone)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully", "user": user})
-}
-
-// GetActiveSessions returns all active sessions for the current user
-// GET /api/v1/users/sessions
-func (h *UserHandler) GetActiveSessions(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
-		return
-	}
-
-	userUUID, ok := userID.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
-		return
-	}
-
-	sessions, err := h.authService.GetUserSessions(userUUID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, sessions)
-}
-
-// RevokeSession revokes a specific session
-// DELETE /api/v1/users/sessions/:sessionId
-func (h *UserHandler) RevokeSession(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
-		return
-	}
-
-	userUUID, ok := userID.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
-		return
-	}
-
-	sessionIDStr := c.Param("sessionId")
-	sessionID, err := uuid.Parse(sessionIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session ID"})
-		return
-	}
-
-	// Verify session belongs to user
-	sessions, err := h.authService.GetUserSessions(userUUID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	found := false
-	for _, session := range sessions {
-		if session.ID == sessionID {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		c.JSON(http.StatusForbidden, gin.H{"error": "session not found or does not belong to user"})
-		return
-	}
-
-	if err := h.authService.RevokeSession(sessionID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "session revoked successfully"})
+type User struct {
+	ID              uuid.UUID  `db:"id" json:"id"`
+	Email           string     `db:"email" json:"email"`
+	Password        string     `db:"password" json:"-"` // Never return password in JSON
+	FirstName       string     `db:"first_name" json:"first_name"`
+	LastName        string     `db:"last_name" json:"last_name"`
+	Phone           string     `db:"phone" json:"phone"`
+	AvatarURL       string     `db:"avatar_url" json:"avatar_url"`
+	IsActive        bool       `db:"is_active" json:"is_active"`
+	IsEmailVerified bool       `db:"is_email_verified" json:"is_email_verified"`
+	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
+	DeletedAt       *time.Time `db:"deleted_at" json:"-"`
 }

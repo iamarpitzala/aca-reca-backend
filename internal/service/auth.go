@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/iamarpitzala/aca-reca-backend/internal/model"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/repository"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,27 +19,6 @@ type AuthService struct {
 	oauthService   *OAuthService
 }
 
-type RegisterRequest struct {
-	Email     string `json:"email" binding:"required,email"`
-	Password  string `json:"password" binding:"required,min=8"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Phone     string `json:"phone"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
-
-type AuthResponse struct {
-	User         *model.User `json:"user"`
-	AccessToken  string      `json:"access_token"`
-	RefreshToken string      `json:"refresh_token"`
-	TokenType    string      `json:"token_type"`
-	ExpiresIn    int64       `json:"expires_in"`
-}
-
 func NewAuthService(db *sqlx.DB, tokenService *TokenService, sessionService *SessionService, oauthService *OAuthService) *AuthService {
 	return &AuthService{
 		db:             db,
@@ -49,15 +28,14 @@ func NewAuthService(db *sqlx.DB, tokenService *TokenService, sessionService *Ses
 	}
 }
 
-func (as *AuthService) Register(ctx context.Context, req *RegisterRequest) (*AuthResponse, error) {
+func (as *AuthService) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.AuthResponse, error) {
 	// Check if user already exists
-	var existingUser model.User
-	err := as.db.GetContext(ctx, &existingUser, "SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", req.Email)
-	if err == nil {
-		return nil, errors.New("user with this email already exists")
+	existingUser, err := repository.GetUserByEmail(ctx, as.db, req.Email)
+	if err != nil {
+		return nil, err
 	}
-	if err != sql.ErrNoRows {
-		return nil, errors.New("failed to check existing user")
+	if existingUser != nil {
+		return nil, errors.New("user with this email already exists")
 	}
 
 	// Hash password
@@ -67,7 +45,7 @@ func (as *AuthService) Register(ctx context.Context, req *RegisterRequest) (*Aut
 	}
 
 	// Create user
-	user := model.User{
+	user := domain.User{
 		ID:        uuid.New(),
 		Email:     req.Email,
 		Password:  string(hashedPassword),
@@ -79,12 +57,9 @@ func (as *AuthService) Register(ctx context.Context, req *RegisterRequest) (*Aut
 		UpdatedAt: time.Now(),
 	}
 
-	query := `INSERT INTO users (id, email, password, first_name, last_name, phone, is_active, created_at, updated_at)
-		VALUES (:id, :email, :password, :first_name, :last_name, :phone, :is_active, :created_at, :updated_at)`
-
-	_, err = as.db.NamedExecContext(ctx, query, user)
+	err = repository.CreateUser(ctx, as.db, &user)
 	if err != nil {
-		return nil, errors.New("failed to create user")
+		return nil, err
 	}
 
 	// Generate tokens
@@ -95,7 +70,7 @@ func (as *AuthService) Register(ctx context.Context, req *RegisterRequest) (*Aut
 	}
 
 	// Create session in database
-	session := model.Session{
+	session := domain.Session{
 		ID:           sessionID,
 		UserID:       user.ID,
 		RefreshToken: tokenPair.RefreshToken,
@@ -105,31 +80,23 @@ func (as *AuthService) Register(ctx context.Context, req *RegisterRequest) (*Aut
 		UpdatedAt:    time.Now(),
 	}
 
-	sessionQuery := `INSERT INTO sessions (id, user_id, refresh_token, is_active, expires_at, created_at, updated_at)
-		VALUES (:id, :user_id, :refresh_token, :is_active, :expires_at, :created_at, :updated_at)`
-
-	_, err = as.db.NamedExecContext(ctx, sessionQuery, session)
+	err = repository.CreateSession(ctx, as.db, &session)
 	if err != nil {
-		return nil, errors.New("failed to create session")
+		return nil, err
 	}
 
 	// Store session in Redis
-	sessionData := &SessionData{
+	sessionData := &domain.SessionData{
 		UserID:    user.ID,
 		Email:     user.Email,
 		SessionID: sessionID,
-		CreatedAt: time.Now(),
 	}
 
 	if err := as.sessionService.StoreSession(ctx, sessionID, sessionData); err != nil {
-		// Log error but don't fail registration
-		_ = err
+		return nil, err
 	}
 
-	// Remove password from response
-	user.Password = ""
-
-	return &AuthResponse{
+	return &domain.AuthResponse{
 		User:         &user,
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
@@ -138,27 +105,24 @@ func (as *AuthService) Register(ctx context.Context, req *RegisterRequest) (*Aut
 	}, nil
 }
 
-func (as *AuthService) Login(ctx context.Context, req *LoginRequest, userAgent string, ipAddress string) (*AuthResponse, error) {
+func (as *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*domain.AuthResponse, error) {
 	// Find user
-	var user model.User
-	err := as.db.GetContext(ctx, &user,
-		"SELECT id, email, password, first_name, last_name, phone, avatar_url, is_active, is_email_verified, created_at, updated_at FROM users WHERE email = $1 AND deleted_at IS NULL",
-		req.Email)
+	user, err := repository.GetUserByEmail(ctx, as.db, req.Email)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("invalid email or password")
-		}
-		return nil, errors.New("failed to find user")
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("invalid email or password")
 	}
 
 	// Check if user is active
-	if !user.IsActive {
+	if user.IsActive == false {
 		return nil, errors.New("user account is inactive")
 	}
 
 	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, errors.New("invalid password")
 	}
 
 	// Generate tokens
@@ -169,46 +133,34 @@ func (as *AuthService) Login(ctx context.Context, req *LoginRequest, userAgent s
 	}
 
 	// Create session in database
-	session := model.Session{
+	session := domain.Session{
 		ID:           sessionID,
 		UserID:       user.ID,
 		RefreshToken: tokenPair.RefreshToken,
-		UserAgent:    userAgent,
-		IPAddress:    ipAddress,
 		IsActive:     true,
 		ExpiresAt:    time.Now().Add(as.tokenService.refreshTokenTTL),
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
 
-	sessionQuery := `INSERT INTO sessions (id, user_id, refresh_token, user_agent, ip_address, is_active, expires_at, created_at, updated_at)
-		VALUES (:id, :user_id, :refresh_token, :user_agent, :ip_address, :is_active, :expires_at, :created_at, :updated_at)`
-
-	_, err = as.db.NamedExecContext(ctx, sessionQuery, session)
+	err = repository.CreateSession(ctx, as.db, &session)
 	if err != nil {
-		return nil, errors.New("failed to create session")
+		return nil, err
 	}
 
 	// Store session in Redis
-	sessionData := &SessionData{
+	sessionData := &domain.SessionData{
 		UserID:    user.ID,
 		Email:     user.Email,
 		SessionID: sessionID,
-		UserAgent: userAgent,
-		IPAddress: ipAddress,
-		CreatedAt: time.Now(),
 	}
 
 	if err := as.sessionService.StoreSession(ctx, sessionID, sessionData); err != nil {
-		// Log error but don't fail login
-		_ = err
+		return nil, err
 	}
 
-	// Remove password from response
-	user.Password = ""
-
-	return &AuthResponse{
-		User:         &user,
+	return &domain.AuthResponse{
+		User:         user,
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 		TokenType:    tokenPair.TokenType,
@@ -216,7 +168,7 @@ func (as *AuthService) Login(ctx context.Context, req *LoginRequest, userAgent s
 	}, nil
 }
 
-func (as *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error) {
+func (as *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*domain.AuthResponse, error) {
 	// Validate refresh token
 	claims, err := as.tokenService.ValidateToken(refreshToken)
 	if err != nil {
@@ -224,15 +176,9 @@ func (as *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*
 	}
 
 	// Find session in database
-	var session model.Session
-	err = as.db.GetContext(ctx, &session,
-		"SELECT id, user_id, refresh_token, user_agent, ip_address, is_active, expires_at, created_at, updated_at FROM sessions WHERE refresh_token = $1 AND is_active = $2 AND deleted_at IS NULL",
-		refreshToken, true)
+	session, err := repository.GetSessionByRefreshToken(ctx, as.db, refreshToken)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("session not found or inactive")
-		}
-		return nil, errors.New("failed to find session")
+		return nil, err
 	}
 
 	// Check if session is expired
@@ -241,19 +187,9 @@ func (as *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*
 	}
 
 	// Find user
-	var user model.User
-	err = as.db.GetContext(ctx, &user,
-		"SELECT id, email, password, first_name, last_name, phone, avatar_url, is_active, is_email_verified, created_at, updated_at FROM users WHERE id = $1 AND deleted_at IS NULL",
-		claims.UserID)
+	user, err := repository.GetUserByID(ctx, as.db, claims.UserID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("user not found")
-		}
-		return nil, errors.New("failed to find user")
-	}
-
-	if !user.IsActive {
-		return nil, errors.New("user account is inactive")
+		return nil, err
 	}
 
 	// Generate new token pair
@@ -267,19 +203,16 @@ func (as *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*
 	session.ExpiresAt = time.Now().Add(as.tokenService.refreshTokenTTL)
 	session.UpdatedAt = time.Now()
 
-	_, err = as.db.ExecContext(ctx,
-		"UPDATE sessions SET refresh_token = $1, expires_at = $2, updated_at = $3 WHERE id = $4",
-		session.RefreshToken, session.ExpiresAt, session.UpdatedAt, session.ID)
+	err = repository.UpdateSession(ctx, as.db, session)
 	if err != nil {
-		return nil, errors.New("failed to update session")
+		return nil, err
 	}
 
 	// Update session in Redis
-	sessionData := &SessionData{
+	sessionData := &domain.SessionData{
 		UserID:    user.ID,
 		Email:     user.Email,
 		SessionID: session.ID,
-		CreatedAt: time.Now(),
 	}
 
 	if err := as.sessionService.StoreSession(ctx, session.ID, sessionData); err != nil {
@@ -287,98 +220,83 @@ func (as *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*
 		_ = err
 	}
 
-	return newTokenPair, nil
+	return &domain.AuthResponse{
+		AccessToken:  newTokenPair.AccessToken,
+		RefreshToken: newTokenPair.RefreshToken,
+		TokenType:    newTokenPair.TokenType,
+		ExpiresIn:    newTokenPair.ExpiresIn,
+	}, nil
 }
 
 func (as *AuthService) Logout(ctx context.Context, sessionID uuid.UUID) error {
 	// Deactivate session in database
-	_, err := as.db.ExecContext(ctx, "UPDATE sessions SET is_active = $1, updated_at = $2 WHERE id = $3", false, time.Now(), sessionID)
+	err := repository.DeleteSession(ctx, as.db, sessionID)
 	if err != nil {
-		return errors.New("failed to deactivate session")
+		return err
 	}
 
 	// Delete session from Redis
 	if err := as.sessionService.DeleteSession(ctx, sessionID); err != nil {
-		// Log error but don't fail logout
-		_ = err
+		return err
 	}
 
 	return nil
 }
 
-func (as *AuthService) GetUserByID(userID uuid.UUID) (*model.User, error) {
-	var user model.User
-	err := as.db.Get(&user,
-		"SELECT id, email, password, first_name, last_name, phone, avatar_url, is_active, is_email_verified, created_at, updated_at FROM users WHERE id = $1 AND deleted_at IS NULL",
-		userID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("user not found")
-		}
-		return nil, errors.New("failed to find user")
-	}
-
-	user.Password = ""
-	return &user, nil
-}
-
-func (as *AuthService) UpdateUser(userID uuid.UUID, firstName, lastName, phone string) (*model.User, error) {
-	query := `UPDATE users SET 
-		first_name = COALESCE(NULLIF($1, ''), first_name),
-		last_name = COALESCE(NULLIF($2, ''), last_name),
-		phone = COALESCE(NULLIF($3, ''), phone),
-		updated_at = $4
-		WHERE id = $5 AND deleted_at IS NULL
-		RETURNING id, email, password, first_name, last_name, phone, avatar_url, is_active, is_email_verified, created_at, updated_at`
-
-	var user model.User
-	err := as.db.Get(&user, query, firstName, lastName, phone, time.Now(), userID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("user not found")
-		}
-		return nil, errors.New("failed to update user")
-	}
-
-	user.Password = ""
-	return &user, nil
-}
-
-func (as *AuthService) GetUserSessions(userID uuid.UUID) ([]model.Session, error) {
-	var sessions []model.Session
-	err := as.db.Select(&sessions,
-		"SELECT id, user_id, refresh_token, user_agent, ip_address, is_active, expires_at, created_at, updated_at FROM sessions WHERE user_id = $1 AND is_active = $2 AND deleted_at IS NULL",
-		userID, true)
+func (as *AuthService) GetUserByID(ctx context.Context, userID uuid.UUID) (*domain.User, error) {
+	user, err := repository.GetUserByID(ctx, as.db, userID)
 	if err != nil {
 		return nil, err
+	}
+
+	user.Password = ""
+	return user, nil
+}
+
+func (as *AuthService) UpdateUser(ctx context.Context, userID uuid.UUID, firstName, lastName, phone string) (*domain.User, error) {
+	user, err := repository.GetUserByID(ctx, as.db, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	user.FirstName = firstName
+	user.LastName = lastName
+	user.Phone = phone
+	user.UpdatedAt = time.Now()
+	err = repository.UpdateUser(ctx, as.db, user)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Password = ""
+	return user, nil
+}
+
+func (as *AuthService) GetUserSessions(ctx context.Context, userID uuid.UUID) ([]domain.Session, error) {
+	sessions, err := repository.GetUserSessions(ctx, as.db, userID)
+	if err != nil {
+		return sessions, nil
 	}
 
 	return sessions, nil
 }
 
-func (as *AuthService) RevokeSession(sessionID uuid.UUID) error {
-	_, err := as.db.Exec("UPDATE sessions SET is_active = $1, updated_at = $2 WHERE id = $3", false, time.Now(), sessionID)
+func (as *AuthService) RevokeSession(ctx context.Context, sessionID uuid.UUID) error {
+	err := repository.RevokeSession(ctx, as.db, sessionID)
 	if err != nil {
-		return errors.New("failed to revoke session")
+		return err
 	}
 
 	return nil
 }
 
 // OAuthLogin creates a session for an OAuth-authenticated user
-func (as *AuthService) OAuthLogin(ctx context.Context, userID uuid.UUID, userAgent string, ipAddress string) (*AuthResponse, error) {
+func (as *AuthService) OAuthLogin(ctx context.Context, userID uuid.UUID) (*domain.AuthResponse, error) {
 	// Find user
-	var user model.User
-	err := as.db.GetContext(ctx, &user,
-		"SELECT id, email, password, first_name, last_name, phone, avatar_url, is_active, is_email_verified, created_at, updated_at FROM users WHERE id = $1 AND deleted_at IS NULL",
-		userID)
+	user, err := repository.GetUserByID(ctx, as.db, userID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("user not found")
-		}
-		return nil, errors.New("failed to find user")
+		return nil, err
 	}
-
 	// Check if user is active
 	if !user.IsActive {
 		return nil, errors.New("user account is inactive")
@@ -392,46 +310,36 @@ func (as *AuthService) OAuthLogin(ctx context.Context, userID uuid.UUID, userAge
 	}
 
 	// Create session in database
-	session := model.Session{
+	session := domain.Session{
 		ID:           sessionID,
 		UserID:       user.ID,
 		RefreshToken: tokenPair.RefreshToken,
-		UserAgent:    userAgent,
-		IPAddress:    ipAddress,
 		IsActive:     true,
 		ExpiresAt:    time.Now().Add(as.tokenService.refreshTokenTTL),
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
 
-	sessionQuery := `INSERT INTO sessions (id, user_id, refresh_token, user_agent, ip_address, is_active, expires_at, created_at, updated_at)
-		VALUES (:id, :user_id, :refresh_token, :user_agent, :ip_address, :is_active, :expires_at, :created_at, :updated_at)`
-
-	_, err = as.db.NamedExecContext(ctx, sessionQuery, session)
-	if err != nil {
+	if err := repository.CreateSession(ctx, as.db, &session); err != nil {
 		return nil, errors.New("failed to create session")
 	}
 
 	// Store session in Redis
-	sessionData := &SessionData{
+	sessionData := &domain.SessionData{
 		UserID:    user.ID,
 		Email:     user.Email,
 		SessionID: sessionID,
-		UserAgent: userAgent,
-		IPAddress: ipAddress,
-		CreatedAt: time.Now(),
 	}
 
 	if err := as.sessionService.StoreSession(ctx, sessionID, sessionData); err != nil {
-		// Log error but don't fail login
-		_ = err
+		return nil, err
 	}
 
 	// Remove password from response
 	user.Password = ""
 
-	return &AuthResponse{
-		User:         &user,
+	return &domain.AuthResponse{
+		User:         user,
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 		TokenType:    tokenPair.TokenType,

@@ -1,230 +1,42 @@
 package domain
 
 import (
-	"net/http"
-	"strings"
+	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
-// contains checks if a string contains a substring (case-insensitive)
-func contains(s, substr string) bool {
-	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+type OAuthProvider struct {
+	ID             uuid.UUID  `db:"id" json:"id"`
+	UserID         uuid.UUID  `db:"user_id" json:"user_id"`
+	Provider       string     `db:"provider" json:"provider"`                 // google, microsoft, etc.
+	ProviderUserID string     `db:"provider_user_id" json:"provider_user_id"` // External provider's user ID
+	ProviderEmail  string     `db:"provider_email" json:"provider_email"`
+	AccessToken    string     `db:"access_token" json:"-"`  // Encrypted in production
+	RefreshToken   string     `db:"refresh_token" json:"-"` // Encrypted in production
+	TokenExpiresAt *time.Time `db:"token_expires_at" json:"token_expires_at"`
+	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt      time.Time  `db:"updated_at" json:"updated_at"`
+	DeletedAt      *time.Time `db:"deleted_at" json:"-"`
 }
 
-type AuthHandler struct {
-	authService  *service.AuthService
-	oauthService *service.OAuthService
+type RegisterRequest struct {
+	Email     string `json:"email" binding:"required,email"`
+	Password  string `json:"password" binding:"required,min=8"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Phone     string `json:"phone"`
 }
 
-func NewAuthHandler(authService *service.AuthService, oauthService *service.OAuthService) *AuthHandler {
-	return &AuthHandler{
-		authService:  authService,
-		oauthService: oauthService,
-	}
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
 }
 
-// Register handles user registration
-// POST /api/v1/auth/register
-func (h *AuthHandler) Register(c *gin.Context) {
-	var req service.RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	response, err := h.authService.Register(c.Request.Context(), &req)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, response)
-}
-
-// Login handles user login
-// POST /api/v1/auth/login
-func (h *AuthHandler) Login(c *gin.Context) {
-	var req service.LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	userAgent := c.GetHeader("User-Agent")
-	ipAddress := c.ClientIP()
-
-	response, err := h.authService.Login(c.Request.Context(), &req, userAgent, ipAddress)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, response)
-}
-
-// RefreshToken handles token refresh
-// POST /api/v1/auth/refresh
-func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	var req struct {
-		RefreshToken string `json:"refresh_token" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	tokenPair, err := h.authService.RefreshToken(c.Request.Context(), req.RefreshToken)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, tokenPair)
-}
-
-// Logout handles user logout
-// POST /api/v1/auth/logout
-func (h *AuthHandler) Logout(c *gin.Context) {
-	sessionID, exists := c.Get("session_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "session not found"})
-		return
-	}
-
-	sessionUUID, ok := sessionID.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid session ID"})
-		return
-	}
-
-	if err := h.authService.Logout(c.Request.Context(), sessionUUID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "logged out successfully"})
-}
-
-// InitiateOAuth initiates OAuth flow
-// GET /api/v1/auth/oauth/:provider
-func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
-	provider := c.Param("provider")
-
-	// Generate state token for CSRF protection
-	state := uuid.New().String()
-
-	// Store state in session/cookie (in production, use secure cookie)
-	c.SetCookie("oauth_state", state, 600, "/", "", false, true)
-
-	authURL, err := h.oauthService.GetAuthURL(provider, state)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-			"hint":  "Ensure OAuth provider is configured with CLIENT_ID and CLIENT_SECRET",
-		})
-		return
-	}
-
-	c.Redirect(http.StatusTemporaryRedirect, authURL)
-}
-
-// OAuthCallback handles OAuth callback
-// GET /api/v1/auth/oauth/:provider/callback
-func (h *AuthHandler) OAuthCallback(c *gin.Context) {
-	provider := c.Param("provider")
-
-	// Verify state
-	stateCookie, err := c.Cookie("oauth_state")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing state cookie"})
-		return
-	}
-
-	state := c.Query("state")
-	if state != stateCookie {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid state parameter"})
-		return
-	}
-
-	code := c.Query("code")
-	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing authorization code"})
-		return
-	}
-
-	// Exchange code for token
-	token, err := h.oauthService.ExchangeCode(c.Request.Context(), provider, code)
-	if err != nil {
-		// Provide helpful error message for redirect_uri_mismatch
-		errorMsg := err.Error()
-		if contains(errorMsg, "redirect_uri_mismatch") {
-			redirectURI, _ := h.oauthService.GetRedirectURI(provider)
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":                   "OAuth redirect URI mismatch",
-				"details":                 errorMsg,
-				"configured_redirect_uri": redirectURI,
-				"hint": "Ensure this exact redirect URI is added in your OAuth provider's console. " +
-					"For Google: https://console.cloud.google.com/apis/credentials",
-			})
-			return
-		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": errorMsg})
-		return
-	}
-
-	// Get user info from provider
-	userInfo, err := h.oauthService.GetUserInfo(c.Request.Context(), provider, token)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Find or create user
-	existingUser, err := h.oauthService.FindUserByProvider(c.Request.Context(), provider, userInfo.ID)
-	if err != nil {
-		// User doesn't exist, create new user
-		newUser, err := h.oauthService.CreateUserFromOAuth(c.Request.Context(), userInfo)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
-			return
-		}
-
-		// Link OAuth provider
-		if err := h.oauthService.LinkProvider(c.Request.Context(), newUser.ID, provider, userInfo.ID, token); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to link provider"})
-			return
-		}
-
-		// Generate tokens and create session
-		userAgent := c.GetHeader("User-Agent")
-		ipAddress := c.ClientIP()
-		response, err := h.authService.OAuthLogin(c.Request.Context(), newUser.ID, userAgent, ipAddress)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusOK, response)
-		return
-	}
-
-	// User exists, link provider if not already linked
-	if err := h.oauthService.LinkProvider(c.Request.Context(), existingUser.ID, provider, userInfo.ID, token); err != nil {
-		// Provider might already be linked, continue
-	}
-
-	// Generate tokens and create session
-	userAgent := c.GetHeader("User-Agent")
-	ipAddress := c.ClientIP()
-	response, err := h.authService.OAuthLogin(c.Request.Context(), existingUser.ID, userAgent, ipAddress)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, response)
+type AuthResponse struct {
+	User         *User  `json:"user"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int64  `json:"expires_in"`
 }

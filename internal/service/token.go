@@ -7,6 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/config"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 )
 
 type TokenService struct {
@@ -14,20 +15,6 @@ type TokenService struct {
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 	issuer          string
-}
-
-type TokenClaims struct {
-	UserID    uuid.UUID `json:"user_id"`
-	Email     string    `json:"email"`
-	SessionID uuid.UUID `json:"session_id"`
-	jwt.RegisteredClaims
-}
-
-type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int64  `json:"expires_in"`
 }
 
 func NewTokenService(cfg config.JWTConfig) *TokenService {
@@ -39,11 +26,11 @@ func NewTokenService(cfg config.JWTConfig) *TokenService {
 	}
 }
 
-func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessionID uuid.UUID) (*TokenPair, error) {
+func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessionID uuid.UUID) (*domain.TokenPair, error) {
 	now := time.Now()
 
 	// Access token
-	accessClaims := &TokenClaims{
+	accessClaims := &domain.TokenClaims{
 		UserID:    userID,
 		Email:     email,
 		SessionID: sessionID,
@@ -63,7 +50,7 @@ func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessio
 	}
 
 	// Refresh token (longer TTL, stored in database)
-	refreshClaims := &TokenClaims{
+	refreshClaims := &domain.TokenClaims{
 		UserID:    userID,
 		Email:     email,
 		SessionID: sessionID,
@@ -82,7 +69,7 @@ func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessio
 		return nil, err
 	}
 
-	return &TokenPair{
+	return &domain.TokenPair{
 		AccessToken:  accessTokenString,
 		RefreshToken: refreshTokenString,
 		TokenType:    "Bearer",
@@ -90,8 +77,8 @@ func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessio
 	}, nil
 }
 
-func (ts *TokenService) ValidateToken(tokenString string) (*TokenClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &TokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+func (ts *TokenService) ValidateToken(tokenString string) (*domain.TokenClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &domain.TokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
@@ -102,7 +89,7 @@ func (ts *TokenService) ValidateToken(tokenString string) (*TokenClaims, error) 
 		return nil, err
 	}
 
-	claims, ok := token.Claims.(*TokenClaims)
+	claims, ok := token.Claims.(*domain.TokenClaims)
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid token claims")
 	}

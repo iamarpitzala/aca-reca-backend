@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/config"
-	"github.com/iamarpitzala/aca-reca-backend/internal/model"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/repository"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/oauth2"
 )
@@ -19,15 +19,6 @@ type OAuthService struct {
 	config    config.OAuthConfig
 	db        *sqlx.DB
 	providers map[string]*oauth2.Config
-}
-
-type OAuthUserInfo struct {
-	ID            string
-	Email         string
-	FirstName     string
-	LastName      string
-	AvatarURL     string
-	EmailVerified bool
 }
 
 func NewOAuthService(cfg config.OAuthConfig, db *sqlx.DB) *OAuthService {
@@ -88,7 +79,7 @@ func (os *OAuthService) ExchangeCode(ctx context.Context, provider string, code 
 	return token, nil
 }
 
-func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token *oauth2.Token) (*OAuthUserInfo, error) {
+func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token *oauth2.Token) (*domain.OAuthUserInfo, error) {
 	providerCfg, ok := os.config.Providers[provider]
 	if !ok {
 		return nil, fmt.Errorf("oauth provider %s not configured", provider)
@@ -106,7 +97,7 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 		return nil, fmt.Errorf("failed to read user info response: %w", err)
 	}
 
-	var userInfo OAuthUserInfo
+	var userInfo domain.OAuthUserInfo
 	switch provider {
 	case "google":
 		var googleUser struct {
@@ -121,7 +112,7 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 		if err := json.Unmarshal(body, &googleUser); err != nil {
 			return nil, fmt.Errorf("failed to parse Google user info: %w", err)
 		}
-		userInfo = OAuthUserInfo{
+		userInfo = domain.OAuthUserInfo{
 			ID:            googleUser.ID,
 			Email:         googleUser.Email,
 			FirstName:     googleUser.GivenName,
@@ -144,7 +135,7 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 		if email == "" {
 			email = msUser.UserPrincipalName
 		}
-		userInfo = OAuthUserInfo{
+		userInfo = domain.OAuthUserInfo{
 			ID:            msUser.ID,
 			Email:         email,
 			FirstName:     msUser.GivenName,
@@ -159,39 +150,17 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 }
 
 func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, provider string, providerUserID string, token *oauth2.Token) error {
-	var oauthProvider model.OAuthProvider
+	var oauthProvider domain.OAuthProvider
 
 	// Check if provider link already exists
-	err := os.db.GetContext(ctx, &oauthProvider,
-		"SELECT id, user_id, provider, provider_user_id, provider_email, access_token, refresh_token, token_expires_at, created_at, updated_at FROM oauth_providers WHERE provider = $1 AND provider_user_id = $2 AND deleted_at IS NULL",
-		provider, providerUserID)
-
-	if err == nil {
-		// Update existing link
-		oauthProvider.UserID = userID
-		oauthProvider.AccessToken = token.AccessToken
-		if token.RefreshToken != "" {
-			oauthProvider.RefreshToken = token.RefreshToken
-		}
-		if !token.Expiry.IsZero() {
-			expiresAt := token.Expiry
-			oauthProvider.TokenExpiresAt = &expiresAt
-		}
-		oauthProvider.UpdatedAt = time.Now()
-
-		_, err = os.db.ExecContext(ctx,
-			"UPDATE oauth_providers SET user_id = $1, access_token = $2, refresh_token = $3, token_expires_at = $4, updated_at = $5 WHERE id = $6",
-			oauthProvider.UserID, oauthProvider.AccessToken, oauthProvider.RefreshToken, oauthProvider.TokenExpiresAt, oauthProvider.UpdatedAt, oauthProvider.ID)
-		return err
-	}
-
-	if err != sql.ErrNoRows {
+	err := repository.UpdateOrCreateOAuthProvider(ctx, os.db, &oauthProvider, provider, providerUserID, userID, token)
+	if err != nil {
 		return err
 	}
 
 	// Create new link
 	expiresAt := token.Expiry
-	oauthProvider = model.OAuthProvider{
+	oauthProvider = domain.OAuthProvider{
 		ID:             uuid.New(),
 		UserID:         userID,
 		Provider:       provider,
@@ -203,35 +172,30 @@ func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, prov
 		UpdatedAt:      time.Now(),
 	}
 
-	query := `INSERT INTO oauth_providers (id, user_id, provider, provider_user_id, access_token, refresh_token, token_expires_at, created_at, updated_at)
-		VALUES (:id, :user_id, :provider, :provider_user_id, :access_token, :refresh_token, :token_expires_at, :created_at, :updated_at)`
-
-	_, err = os.db.NamedExecContext(ctx, query, oauthProvider)
-	return err
+	// Use repository helper instead of raw insert; avoid duplicate inserts if already linked.
+	err = repository.CreateOAuthProvider(ctx, os.db, &oauthProvider)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (os *OAuthService) FindUserByProvider(ctx context.Context, provider string, providerUserID string) (*model.User, error) {
-	var oauthProvider model.OAuthProvider
-	err := os.db.GetContext(ctx, &oauthProvider,
-		"SELECT id, user_id, provider, provider_user_id, provider_email, access_token, refresh_token, token_expires_at, created_at, updated_at FROM oauth_providers WHERE provider = $1 AND provider_user_id = $2 AND deleted_at IS NULL",
-		provider, providerUserID)
+func (os *OAuthService) FindUserByProvider(ctx context.Context, provider string, providerUserID string) (*domain.User, error) {
+	oauthProvider, err := repository.GetOAuthProvider(ctx, os.db, provider, providerUserID)
 	if err != nil {
 		return nil, err
 	}
 
-	var user model.User
-	err = os.db.GetContext(ctx, &user,
-		"SELECT id, email, password, first_name, last_name, phone, avatar_url, is_active, is_email_verified, created_at, updated_at FROM users WHERE id = $1 AND deleted_at IS NULL",
-		oauthProvider.UserID)
+	user, err := repository.GetUserByID(ctx, os.db, oauthProvider.UserID)
 	if err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return user, nil
 }
 
-func (os *OAuthService) CreateUserFromOAuth(ctx context.Context, userInfo *OAuthUserInfo) (*model.User, error) {
-	user := model.User{
+func (os *OAuthService) CreateUserFromOAuth(ctx context.Context, userInfo *domain.OAuthUserInfo) (*domain.User, error) {
+	user := domain.User{
 		ID:              uuid.New(),
 		Email:           userInfo.Email,
 		FirstName:       userInfo.FirstName,
@@ -243,10 +207,7 @@ func (os *OAuthService) CreateUserFromOAuth(ctx context.Context, userInfo *OAuth
 		UpdatedAt:       time.Now(),
 	}
 
-	query := `INSERT INTO users (id, email, first_name, last_name, avatar_url, is_active, is_email_verified, created_at, updated_at)
-		VALUES (:id, :email, :first_name, :last_name, :avatar_url, :is_active, :is_email_verified, :created_at, :updated_at)`
-
-	_, err := os.db.NamedExecContext(ctx, query, user)
+	err := repository.CreateUser(ctx, os.db, &user)
 	if err != nil {
 		return nil, err
 	}

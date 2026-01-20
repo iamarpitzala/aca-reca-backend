@@ -1,8 +1,9 @@
-package model
+package domain
 
 import (
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -21,4 +22,27 @@ type Session struct {
 
 func (s *Session) IsExpired() bool {
 	return time.Now().After(s.ExpiresAt)
+}
+
+type SessionData struct {
+	UserID    uuid.UUID `json:"user_id"`
+	Email     string    `json:"email"`
+	SessionID uuid.UUID `json:"session_id"`
+	UserAgent string    `json:"user_agent"`
+	IPAddress string    `json:"ip_address"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type TokenClaims struct {
+	UserID    uuid.UUID `json:"user_id"`
+	Email     string    `json:"email"`
+	SessionID uuid.UUID `json:"session_id"`
+	jwt.RegisteredClaims
+}
+
+type TokenPair struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int64  `json:"expires_in"`
 }

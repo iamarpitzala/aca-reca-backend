@@ -14,5 +14,10 @@ func BindAndValidate(c *gin.Context, rq interface{}) error {
 		return err
 	}
 
+	userAgent := c.GetHeader("User-Agent")
+	ipAddress := c.ClientIP()
+	c.Set("user_agent", userAgent)
+	c.Set("ip_address", ipAddress)
+
 	return nil
 }

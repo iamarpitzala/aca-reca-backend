@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
@@ -20,7 +21,17 @@ func NewUserHandler(authService *service.AuthService) *UserHandler {
 }
 
 // GetCurrentUser returns the current authenticated user
-// GET /api/v1/users/me
+// GET /api/v1/users/:user_id
+// @Summary Get current user
+// @Description Get current user by user ID
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Success 200 {object} domain.User
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /users/{user_id} [get]
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 	userID := c.Param("user_id")
 	userUUID, err := uuid.Parse(userID)
@@ -39,7 +50,18 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 }
 
 // UpdateCurrentUser updates the current authenticated user
-// PUT /api/v1/users/me
+// PUT /api/v1/users/:user_id
+// @Summary Update current user
+// @Description Update current user by user ID
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Param update_user_request body domain.UpdateUserRequest true "Update user request"
+// @Success 200 {object} domain.User
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /users/{user_id} [put]
 func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 	userID := c.Param("user_id")
 	userUUID, err := uuid.Parse(userID)
@@ -48,11 +70,7 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 		return
 	}
 
-	var req struct {
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		Phone     string `json:"phone"`
-	}
+	var req domain.UpdateUserRequest
 
 	if err := utils.BindAndValidate(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -69,7 +87,17 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 }
 
 // GetActiveSessions returns all active sessions for the current user
-// GET /api/v1/users/sessions
+// GET /api/v1/users/:user_id/sessions
+// @Summary Get active sessions
+// @Description Get active sessions by user ID
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Success 200 {array} domain.Session
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /users/{user_id}/sessions [get]
 func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 	userID := c.Param("user_id")
 	userUUID, err := uuid.Parse(userID)
@@ -88,7 +116,18 @@ func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 }
 
 // RevokeSession revokes a specific session
-// DELETE /api/v1/users/sessions/:sessionId
+// DELETE /api/v1/users/:user_id/sessions/:session_id
+// @Summary Revoke a session
+// @Description Revoke a session by session ID and user ID
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Param session_id path string true "Session ID"
+// @Success 200 {object} gin.H
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /users/{user_id}/sessions/{session_id} [delete]
 func (h *UserHandler) RevokeSession(c *gin.Context) {
 	userID := c.Param("user_id")
 	userUUID, err := uuid.Parse(userID)

@@ -5,17 +5,14 @@ import (
 
 	"github.com/iamarpitzala/aca-reca-backend/config"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
-	// swaggerFiles "github.com/swaggo/files"
-	// ginSwagger "github.com/swaggo/gin-swagger"
-
-	// _ "github.com/iamarpitzala/aca-reca-backend/docs"
+	_ "github.com/iamarpitzala/aca-reca-backend/docs"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
-	// swaggerFiles "github.com/swaggo/files"
-	// ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func InitRouter(e *gin.Engine) {
@@ -36,7 +33,7 @@ func InitRouter(e *gin.Engine) {
 	userHandler := httpHandler.NewUserHandler(authService)
 
 	// Swagger documentation route
-	// e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	v1 := e.Group("/api/v1")
 	auth.RegisterAuthRoutes(v1, authHandler)

@@ -38,7 +38,7 @@ docker-compose up -d
 This will:
 - Start a PostgreSQL 15 container
 - Create the `acareca` database automatically
-- Run migrations from `internal/database/migrations/` on first startup
+- Run migrations from `migration/` on first startup
 - Expose PostgreSQL on port 5432
 
 To stop the database:
@@ -61,16 +61,20 @@ Create a PostgreSQL database:
 CREATE DATABASE acareca;
 ```
 
-Run the migration:
+Run the migrations from the `migration/` directory:
 
 ```bash
-psql -U your_user -d acareca -f internal/database/migrations/001_initial_schema.sql
+psql -U your_user -d acareca -f migration/20260120061252_user.sql
+psql -U your_user -d acareca -f migration/20260120061308_auth_provider.sql
+psql -U your_user -d acareca -f migration/20260120061318_session.sql
 ```
 
 Or using the psql command line:
 
 ```bash
-psql -h localhost -U postgres -d acareca < internal/database/migrations/001_initial_schema.sql
+psql -h localhost -U postgres -d acareca < migration/20260120061252_user.sql
+psql -h localhost -U postgres -d acareca < migration/20260120061308_auth_provider.sql
+psql -h localhost -U postgres -d acareca < migration/20260120061318_session.sql
 ```
 
 ### 3. Environment Configuration
@@ -103,13 +107,13 @@ openssl rand -base64 32
 ### 4. Run the Server
 
 ```bash
-go run cmd/server/main.go
+go run main.go
 ```
 
 Or build and run:
 
 ```bash
-go build -o bin/server cmd/server/main.go
+go build -o bin/server main.go
 ./bin/server
 ```
 
@@ -206,19 +210,21 @@ Content-Type: application/json
 
 ```
 backend/
+├── main.go                  # Application entry point
 ├── cmd/
-│   └── server/
-│       └── main.go          # Application entry point
+│   └── server.go           # Server initialization
+├── config/                  # Configuration management
+│   ├── config.go           # Configuration loading
+│   ├── database.go         # Database connection & migrations
+│   └── redis.go            # Redis client
 ├── internal/
-│   ├── config/              # Configuration management
-│   ├── database/            # Database connection & migrations
-│   ├── handlers/            # HTTP handlers
-│   ├── middleware/          # HTTP middleware (auth, tenant)
-│   ├── models/              # Data models
-│   ├── repository/          # Data access layer
-│   └── services/            # Business logic
-├── pkg/                     # Public packages
-└── go.mod                   # Go dependencies
+│   ├── domain/             # Domain handlers (auth, user)
+│   ├── middleware/         # HTTP middleware (auth)
+│   ├── model/              # Data models
+│   └── service/            # Business logic
+├── migration/              # Database migrations
+├── util/                   # Utility functions
+└── go.mod                  # Go dependencies
 ```
 
 ## Key Concepts

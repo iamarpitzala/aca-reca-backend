@@ -10,8 +10,8 @@ func RegisterUserRoutes(e *gin.RouterGroup, userHandler *httpHandler.UserHandler
 	{
 		user.GET("/:user_id", userHandler.GetCurrentUser)
 		user.PUT("/:user_id", userHandler.UpdateCurrentUser)
-		user.GET("/sessions", userHandler.GetActiveSessions)
+		user.GET("/:user_id/sessions", userHandler.GetActiveSessions)
 		user.DELETE("/sessions/:session_id", userHandler.RevokeSession)
-		user.POST("/sessions/revoke", userHandler.RevokeSession)
+		user.POST("/:user_id/sessions/revoke", userHandler.RevokeSession)
 	}
 }

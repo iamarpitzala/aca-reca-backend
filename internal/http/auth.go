@@ -30,6 +30,16 @@ func NewAuthHandler(authService *service.AuthService, oauthService *service.OAut
 
 // Register handles user registration
 // POST /api/v1/auth/register
+// @Summary Register a new user
+// @Description Register a new user with email and password
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param register_request body domain.RegisterRequest true "Register request"
+// @Success 201 {object} domain.AuthResponse
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req domain.RegisterRequest
 	if err := utils.BindAndValidate(c, &req); err != nil {
@@ -48,6 +58,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 // Login handles user login
 // POST /api/v1/auth/login
+// @Summary Login a user
+// @Description Login a user with email and password
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param login_request body domain.LoginRequest true "Login request"
+// @Success 200 {object} domain.AuthResponse
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req domain.LoginRequest
 
@@ -67,6 +87,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 // RefreshToken handles token refresh
 // POST /api/v1/auth/refresh
+// @Summary Refresh a token
+// @Description Refresh a token with a refresh token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param refresh_token body string true "Refresh token"
+// @Success 200 {object} domain.AuthResponse
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token" binding:"required"`
@@ -88,6 +118,16 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 // Logout handles user logout
 // POST /api/v1/auth/logout
+// @Summary Logout a user
+// @Description Logout a user with a session ID
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param session_id path string true "Session ID"
+// @Success 200 {object} gin.H
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /auth/logout/{session_id} [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	sessionID := c.Param("session_id")
 	sessionUUID, err := uuid.Parse(sessionID)
@@ -106,6 +146,16 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 // InitiateOAuth initiates OAuth flow
 // GET /api/v1/auth/oauth/:provider
+// @Summary Initiate OAuth flow
+// @Description Initiate OAuth flow with a provider
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param provider path string true "Provider"
+// @Success 307 {string} string "Redirect to OAuth provider"
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /auth/oauth/{provider} [get]
 func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
 	provider := c.Param("provider")
 
@@ -129,6 +179,16 @@ func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
 
 // OAuthCallback handles OAuth callback
 // GET /api/v1/auth/oauth/:provider/callback
+// @Summary OAuth callback
+// @Description OAuth callback with a provider
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param provider path string true "Provider"
+// @Success 200 {object} domain.AuthResponse
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /auth/oauth/{provider}/callback [get]
 func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	provider := c.Param("provider")
 
@@ -209,6 +269,8 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	if err := h.oauthService.LinkProvider(c.Request.Context(), existingUser.ID, provider, userInfo.ID, userInfo.Email, token); err != nil {
 		// Provider might already be linked, log but continue
 		// In production, you might want to log this error
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to link provider", "details": err.Error()})
+		return
 	}
 
 	// Generate tokens and create session

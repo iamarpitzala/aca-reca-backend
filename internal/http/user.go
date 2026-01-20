@@ -83,7 +83,7 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully", "user": user})
+	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully", "user_id": user.ID})
 }
 
 // GetActiveSessions returns all active sessions for the current user
@@ -112,7 +112,7 @@ func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, sessions)
+	c.JSON(http.StatusOK, gin.H{"message": "sessions retrieved successfully", "sessions": sessions})
 }
 
 // RevokeSession revokes a specific session
@@ -168,5 +168,5 @@ func (h *UserHandler) RevokeSession(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "session revoked successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "session revoked successfully", "session_id": sessionID})
 }

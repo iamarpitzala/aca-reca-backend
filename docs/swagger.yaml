@@ -12,6 +12,41 @@ definitions:
       user:
         $ref: '#/definitions/domain.User'
     type: object
+  domain.Clinic:
+    properties:
+      abn_number:
+        type: string
+      address:
+        type: string
+      city:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      logo_url:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      postcode:
+        type: string
+      state:
+        type: string
+      updated_at:
+        type: string
+      website:
+        type: string
+    type: object
   domain.LoginRequest:
     properties:
       email:
@@ -273,6 +308,194 @@ paths:
       summary: Register a new user
       tags:
       - Auth
+  /clinic:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all clinics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Retrieve all clinics
+      tags:
+      - Clinic
+    post:
+      consumes:
+      - application/json
+      description: Create a new clinic with the given information
+      parameters:
+      - description: Clinic information
+        in: body
+        name: clinic
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Clinic'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Create a new clinic
+      tags:
+      - Clinic
+  /clinic/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a clinic by ID
+      parameters:
+      - description: Clinic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Delete a clinic by ID
+      tags:
+      - Clinic
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a clinic by ID
+      parameters:
+      - description: Clinic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Retrieve a clinic by ID
+      tags:
+      - Clinic
+    put:
+      consumes:
+      - application/json
+      description: Update a clinic by ID with the given information
+      parameters:
+      - description: Clinic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Clinic information
+        in: body
+        name: clinic
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Clinic'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Update a clinic by ID
+      tags:
+      - Clinic
+  /clinic/abn/{abn_number}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a clinic by ABN number
+      parameters:
+      - description: ABN number
+        in: path
+        name: abn_number
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Retrieve a clinic by ABN number
+      tags:
+      - Clinic
   /users/{user_id}:
     get:
       consumes:

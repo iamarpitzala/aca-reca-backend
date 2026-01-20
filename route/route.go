@@ -3,15 +3,10 @@ package route
 import (
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
 
-	// swaggerFiles "github.com/swaggo/files"
-	// ginSwagger "github.com/swaggo/gin-swagger"
-
-	// _ "github.com/iamarpitzala/aca-reca-backend/docs"
+	_ "github.com/iamarpitzala/aca-reca-backend/docs"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 
 	"github.com/gin-gonic/gin"
-	// swaggerFiles "github.com/swaggo/files"
-	// ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func InitRouter(e *gin.Engine) {
@@ -21,8 +16,7 @@ func InitRouter(e *gin.Engine) {
 	//log.Fatalf("Failed to connect to database: %v", err)
 	//}
 
-	//rdb := config.NewRedisClient(cfg.Redis)
-	//defer rdb.Close()
+	rdb := config.NewRedisClient(cfg.Redis)
 
 	// tokenService := service.NewTokenService(cfg.JWT)
 	// sessionService := service.NewSessionService(rdb, cfg.Session)
@@ -34,7 +28,7 @@ func InitRouter(e *gin.Engine) {
 	payslipHandler := httpHandler.NewPayshipHandler()
 
 	// Swagger documentation route
-	// e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	v1 := e.Group("/api/v1")
 	// auth.RegisterAuthRoutes(v1, authHandler)

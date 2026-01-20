@@ -33,6 +33,12 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type UpdateUserRequest struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Phone     string `json:"phone"`
+}
+
 type AuthResponse struct {
 	User         *User  `json:"user"`
 	AccessToken  string `json:"access_token"`

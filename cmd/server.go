@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -15,32 +16,42 @@ import (
 
 func InitServer() {
 	// Load environment variables
-	// if err := godotenv.Load("./.env"); err != nil {
-	// 	log.Println("No .env file found, using environment variables")
-	// }
+	var envOnce sync.Once
+	envOnce.Do(func() {
+		envFile := ".env"
 
-	// // Load configuration
-	// cfg := config.Load()
+		// Try loading the .env file
+		err := godotenv.Load(envFile)
+		if err != nil {
+			// If .env file is not found, don't log an error
+			if !os.IsNotExist(err) {
+				log.Fatalf("Error loading .env file from %s: %s", envFile, err)
+			} else {
+				log.Println(".env file not found, falling back to system environment variables")
+			}
+		} else {
+			log.Println(".env file loaded successfully")
+		}
+	})
 
-	// // Initialize database
-	// db, err := config.NewConnection(cfg.DB)
-	// if err != nil {
-	// 	log.Fatalf("Failed to connect to database: %v", err)
-	// }
-	// defer func() {
-	// 	if err := db.Close(); err != nil {
-	// 		log.Printf("Error closing database: %v", err)
-	// 	}
-	// }()
+	// Load configuration
+	cfg := config.Load()
 
-	// // Run migrations
-	// if err := config.RunMigrations(db.DB.DB); err != nil {
-	// 	log.Fatalf("Failed to run migrations: %v", err)
-	// }
+	// Initialize database
+	db, err := config.NewConnection(cfg.DB)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	}()
 
-	// // Initialize Redis
-	// rdb := config.NewRedisClient(cfg.Redis)
-	// defer rdb.Close()
+	// Run migrations
+	if err := config.RunMigrations(db.DB.DB); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
 
 	e := gin.New()
 	e.Use(gin.Recovery())

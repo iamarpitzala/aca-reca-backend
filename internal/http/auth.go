@@ -37,8 +37,8 @@ func NewAuthHandler(authService *service.AuthService, oauthService *service.OAut
 // @Produce json
 // @Param register_request body domain.RegisterRequest true "Register request"
 // @Success 201 {object} domain.AuthResponse
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req domain.RegisterRequest
@@ -65,8 +65,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Produce json
 // @Param login_request body domain.LoginRequest true "Login request"
 // @Success 200 {object} domain.AuthResponse
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req domain.LoginRequest
@@ -94,8 +94,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Produce json
 // @Param refreshToken body string true "Refresh token"
 // @Success 200 {object} domain.AuthResponse
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req struct {
@@ -124,9 +124,9 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /auth/logout/{sessionId} [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	sessionID := c.Param("sessionId")
@@ -154,8 +154,8 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 // @Param provider query string true "Provider"
 // @Param state query string true "State"
 // @Success 307 {string} string "Redirect to OAuth provider"
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /auth/oauth [get]
 func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
 	provider := c.Param("provider")
@@ -187,8 +187,8 @@ func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
 // @Produce json
 // @Param provider path string true "Provider"
 // @Success 200 {object} domain.AuthResponse
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /auth/oauth/{provider}/callback [get]
 func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	provider := c.Param("provider")

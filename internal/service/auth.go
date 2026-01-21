@@ -31,12 +31,12 @@ func NewAuthService(db *sqlx.DB, tokenService *TokenService, sessionService *Ses
 
 func (as *AuthService) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.AuthResponse, error) {
 	// Check if user already exists
-	existingUser, err := repository.GetUserByEmail(ctx, as.db, req.Email)
+	emailExists, err := repository.EmailExists(ctx, as.db, req.Email)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("failed to check if email exists")
 	}
-	if existingUser != nil {
-		return nil, errors.New("user with this email already exists")
+	if emailExists {
+		return nil, errors.New("email already in use")
 	}
 
 	// Hash password

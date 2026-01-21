@@ -1,16 +1,51 @@
 definitions:
   domain.AuthResponse:
     properties:
-      access_token:
+      accessToken:
         type: string
-      expires_in:
+      expiresIn:
         type: integer
-      refresh_token:
+      refreshToken:
         type: string
-      token_type:
+      tokenType:
         type: string
       user:
         $ref: '#/definitions/domain.User'
+    type: object
+  domain.Clinic:
+    properties:
+      abnNumber:
+        type: string
+      address:
+        type: string
+      city:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      description:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      isActive:
+        type: boolean
+      logoURL:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      postcode:
+        type: string
+      state:
+        type: string
+      updatedAt:
+        type: string
+      website:
+        type: string
     type: object
   domain.LoginRequest:
     properties:
@@ -26,9 +61,9 @@ definitions:
     properties:
       email:
         type: string
-      first_name:
+      firstName:
         type: string
-      last_name:
+      lastName:
         type: string
       password:
         minLength: 8
@@ -41,28 +76,30 @@ definitions:
     type: object
   domain.Session:
     properties:
-      created_at:
+      createdAt:
         type: string
-      expires_at:
+      deletedAt:
+        type: string
+      expiresAt:
         type: string
       id:
         type: string
-      ip_address:
+      ipAddress:
         type: string
-      is_active:
+      isActive:
         type: boolean
-      updated_at:
+      updatedAt:
         type: string
-      user_agent:
+      userAgent:
         type: string
-      user_id:
+      userId:
         type: string
     type: object
   domain.UpdateUserRequest:
     properties:
-      first_name:
+      firstName:
         type: string
-      last_name:
+      lastName:
         type: string
       phone:
         type: string
@@ -126,7 +163,7 @@ paths:
       summary: Login a user
       tags:
       - Auth
-  /auth/logout/{session_id}:
+  /auth/logout/{sessionId}:
     post:
       consumes:
       - application/json
@@ -134,7 +171,7 @@ paths:
       parameters:
       - description: Session ID
         in: path
-        name: session_id
+        name: sessionId
         required: true
         type: string
       produces:
@@ -155,15 +192,20 @@ paths:
       summary: Logout a user
       tags:
       - Auth
-  /auth/oauth/{provider}:
+  /auth/oauth:
     get:
       consumes:
       - application/json
       description: Initiate OAuth flow with a provider
       parameters:
       - description: Provider
-        in: path
+        in: query
         name: provider
+        required: true
+        type: string
+      - description: State
+        in: query
+        name: state
         required: true
         type: string
       produces:
@@ -221,7 +263,7 @@ paths:
       parameters:
       - description: Refresh token
         in: body
-        name: refresh_token
+        name: refreshToken
         required: true
         schema:
           type: string
@@ -273,7 +315,195 @@ paths:
       summary: Register a new user
       tags:
       - Auth
-  /users/{user_id}:
+  /clinic:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all clinics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Retrieve all clinics
+      tags:
+      - Clinic
+    post:
+      consumes:
+      - application/json
+      description: Create a new clinic with the given information
+      parameters:
+      - description: Clinic information
+        in: body
+        name: clinic
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Clinic'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Create a new clinic
+      tags:
+      - Clinic
+  /clinic/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a clinic by ID
+      parameters:
+      - description: Clinic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Delete a clinic by ID
+      tags:
+      - Clinic
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a clinic by ID
+      parameters:
+      - description: Clinic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Retrieve a clinic by ID
+      tags:
+      - Clinic
+    put:
+      consumes:
+      - application/json
+      description: Update a clinic by ID with the given information
+      parameters:
+      - description: Clinic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Clinic information
+        in: body
+        name: clinic
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Clinic'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Update a clinic by ID
+      tags:
+      - Clinic
+  /clinic/abn/{abnNumber}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a clinic by ABN number
+      parameters:
+      - description: ABN number
+        in: path
+        name: abnNumber
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Retrieve a clinic by ABN number
+      tags:
+      - Clinic
+  /users/{userId}:
     get:
       consumes:
       - application/json
@@ -281,7 +511,7 @@ paths:
       parameters:
       - description: User ID
         in: path
-        name: user_id
+        name: userId
         required: true
         type: string
       produces:
@@ -309,12 +539,12 @@ paths:
       parameters:
       - description: User ID
         in: path
-        name: user_id
+        name: userId
         required: true
         type: string
       - description: Update user request
         in: body
-        name: update_user_request
+        name: updateUserRequest
         required: true
         schema:
           $ref: '#/definitions/domain.UpdateUserRequest'
@@ -336,7 +566,7 @@ paths:
       summary: Update current user
       tags:
       - User
-  /users/{user_id}/sessions:
+  /users/{userId}/sessions:
     get:
       consumes:
       - application/json
@@ -344,7 +574,7 @@ paths:
       parameters:
       - description: User ID
         in: path
-        name: user_id
+        name: userId
         required: true
         type: string
       produces:
@@ -367,7 +597,7 @@ paths:
       summary: Get active sessions
       tags:
       - User
-  /users/{user_id}/sessions/{session_id}:
+  /users/{userId}/sessions/{sessionId}:
     delete:
       consumes:
       - application/json
@@ -375,12 +605,12 @@ paths:
       parameters:
       - description: User ID
         in: path
-        name: user_id
+        name: userId
         required: true
         type: string
       - description: Session ID
         in: path
-        name: session_id
+        name: sessionId
         required: true
         type: string
       produces:

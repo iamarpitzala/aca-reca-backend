@@ -31,6 +31,16 @@ func GetUserByEmail(ctx context.Context, db *sqlx.DB, email string) (*domain.Use
 	return &user, nil
 }
 
+func EmailExists(ctx context.Context, db *sqlx.DB, email string) (bool, error) {
+	query := `SELECT COUNT(*) FROM tbl_user WHERE email = $1 AND deleted_at IS NULL`
+	var count int
+	err := db.GetContext(ctx, &count, query, email)
+	if err != nil {
+		return false, errors.New("failed to check if email exists")
+	}
+	return count > 0, nil
+}
+
 func CreateSession(ctx context.Context, db *sqlx.DB, session *domain.Session) error {
 	query := `INSERT INTO tbl_session (id, user_id, refresh_token, is_active, expires_at, created_at, updated_at)
 		VALUES (:id, :user_id, :refresh_token, :is_active, :expires_at, :created_at, :updated_at)`

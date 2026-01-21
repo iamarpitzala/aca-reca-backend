@@ -61,7 +61,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/logout/{session_id}": {
+        "/auth/logout/{sessionId}": {
             "post": {
                 "description": "Logout a user with a session ID",
                 "consumes": [
@@ -78,7 +78,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Session ID",
-                        "name": "session_id",
+                        "name": "sessionId",
                         "in": "path",
                         "required": true
                     }
@@ -105,7 +105,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/oauth/{provider}": {
+        "/auth/oauth": {
             "get": {
                 "description": "Initiate OAuth flow with a provider",
                 "consumes": [
@@ -123,7 +123,14 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Provider",
                         "name": "provider",
-                        "in": "path",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "State",
+                        "name": "state",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -209,7 +216,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Refresh token",
-                        "name": "refresh_token",
+                        "name": "refreshToken",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -285,7 +292,291 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{user_id}": {
+        "/clinic": {
+            "get": {
+                "description": "Retrieve all clinics",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clinic"
+                ],
+                "summary": "Retrieve all clinics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new clinic with the given information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clinic"
+                ],
+                "summary": "Create a new clinic",
+                "parameters": [
+                    {
+                        "description": "Clinic information",
+                        "name": "clinic",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Clinic"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/clinic/abn/{abnNumber}": {
+            "get": {
+                "description": "Retrieve a clinic by ABN number",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clinic"
+                ],
+                "summary": "Retrieve a clinic by ABN number",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ABN number",
+                        "name": "abnNumber",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/clinic/{id}": {
+            "get": {
+                "description": "Retrieve a clinic by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clinic"
+                ],
+                "summary": "Retrieve a clinic by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Clinic ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update a clinic by ID with the given information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clinic"
+                ],
+                "summary": "Update a clinic by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Clinic ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Clinic information",
+                        "name": "clinic",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Clinic"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a clinic by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clinic"
+                ],
+                "summary": "Delete a clinic by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Clinic ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{userId}": {
             "get": {
                 "description": "Get current user by user ID",
                 "consumes": [
@@ -302,7 +593,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "user_id",
+                        "name": "userId",
                         "in": "path",
                         "required": true
                     }
@@ -344,13 +635,13 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "user_id",
+                        "name": "userId",
                         "in": "path",
                         "required": true
                     },
                     {
                         "description": "Update user request",
-                        "name": "update_user_request",
+                        "name": "updateUserRequest",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -380,7 +671,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{user_id}/sessions": {
+        "/users/{userId}/sessions": {
             "get": {
                 "description": "Get active sessions by user ID",
                 "consumes": [
@@ -397,7 +688,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "user_id",
+                        "name": "userId",
                         "in": "path",
                         "required": true
                     }
@@ -427,7 +718,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{user_id}/sessions/{session_id}": {
+        "/users/{userId}/sessions/{sessionId}": {
             "delete": {
                 "description": "Revoke a session by session ID and user ID",
                 "consumes": [
@@ -444,14 +735,14 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "user_id",
+                        "name": "userId",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
                         "description": "Session ID",
-                        "name": "session_id",
+                        "name": "sessionId",
                         "in": "path",
                         "required": true
                     }
@@ -483,20 +774,73 @@ const docTemplate = `{
         "domain.AuthResponse": {
             "type": "object",
             "properties": {
-                "access_token": {
+                "accessToken": {
                     "type": "string"
                 },
-                "expires_in": {
+                "expiresIn": {
                     "type": "integer"
                 },
-                "refresh_token": {
+                "refreshToken": {
                     "type": "string"
                 },
-                "token_type": {
+                "tokenType": {
                     "type": "string"
                 },
                 "user": {
                     "$ref": "#/definitions/domain.User"
+                }
+            }
+        },
+        "domain.Clinic": {
+            "type": "object",
+            "properties": {
+                "abnNumber": {
+                    "type": "string"
+                },
+                "address": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "logoURL": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "postcode": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string"
                 }
             }
         },
@@ -525,10 +869,10 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
-                "first_name": {
+                "firstName": {
                     "type": "string"
                 },
-                "last_name": {
+                "lastName": {
                     "type": "string"
                 },
                 "password": {
@@ -543,28 +887,31 @@ const docTemplate = `{
         "domain.Session": {
             "type": "object",
             "properties": {
-                "created_at": {
+                "createdAt": {
                     "type": "string"
                 },
-                "expires_at": {
+                "deletedAt": {
+                    "type": "string"
+                },
+                "expiresAt": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "ip_address": {
+                "ipAddress": {
                     "type": "string"
                 },
-                "is_active": {
+                "isActive": {
                     "type": "boolean"
                 },
-                "updated_at": {
+                "updatedAt": {
                     "type": "string"
                 },
-                "user_agent": {
+                "userAgent": {
                     "type": "string"
                 },
-                "user_id": {
+                "userId": {
                     "type": "string"
                 }
             }
@@ -572,10 +919,10 @@ const docTemplate = `{
         "domain.UpdateUserRequest": {
             "type": "object",
             "properties": {
-                "first_name": {
+                "firstName": {
                     "type": "string"
                 },
-                "last_name": {
+                "lastName": {
                     "type": "string"
                 },
                 "phone": {

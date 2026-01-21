@@ -27,13 +27,13 @@ func NewUserHandler(authService *service.AuthService) *UserHandler {
 // @Tags User
 // @Accept json
 // @Produce json
-// @Param user_id path string true "User ID"
+// @Param userId path string true "User ID"
 // @Success 200 {object} domain.User
 // @Failure 400 {object} gin.H
 // @Failure 500 {object} gin.H
-// @Router /users/{user_id} [get]
+// @Router /users/{userId} [get]
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
-	userID := c.Param("user_id")
+	userID := c.Param("userId")
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
@@ -50,20 +50,20 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 }
 
 // UpdateCurrentUser updates the current authenticated user
-// PUT /api/v1/users/:user_id
+// PUT /api/v1/users/:userId
 // @Summary Update current user
 // @Description Update current user by user ID
 // @Tags User
 // @Accept json
 // @Produce json
-// @Param user_id path string true "User ID"
-// @Param update_user_request body domain.UpdateUserRequest true "Update user request"
+// @Param userId path string true "User ID"
+// @Param updateUserRequest body domain.UpdateUserRequest true "Update user request"
 // @Success 200 {object} domain.User
 // @Failure 400 {object} gin.H
 // @Failure 500 {object} gin.H
-// @Router /users/{user_id} [put]
+// @Router /users/{userId} [put]
 func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
-	userID := c.Param("user_id")
+	userID := c.Param("userId")
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
@@ -83,23 +83,23 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully", "user": user})
+	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully", "userId": user.ID})
 }
 
 // GetActiveSessions returns all active sessions for the current user
-// GET /api/v1/users/:user_id/sessions
+// GET /api/v1/users/:userId/sessions
 // @Summary Get active sessions
 // @Description Get active sessions by user ID
 // @Tags User
 // @Accept json
 // @Produce json
-// @Param user_id path string true "User ID"
+// @Param userId path string true "User ID"
 // @Success 200 {array} domain.Session
 // @Failure 400 {object} gin.H
 // @Failure 500 {object} gin.H
-// @Router /users/{user_id}/sessions [get]
+// @Router /users/{userId}/sessions [get]
 func (h *UserHandler) GetActiveSessions(c *gin.Context) {
-	userID := c.Param("user_id")
+	userID := c.Param("userId")
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
@@ -112,24 +112,24 @@ func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, sessions)
+	c.JSON(http.StatusOK, gin.H{"message": "sessions retrieved successfully", "sessions": sessions})
 }
 
 // RevokeSession revokes a specific session
-// DELETE /api/v1/users/:user_id/sessions/:session_id
+// DELETE /api/v1/users/:userId/sessions/:sessionId
 // @Summary Revoke a session
 // @Description Revoke a session by session ID and user ID
 // @Tags User
 // @Accept json
 // @Produce json
-// @Param user_id path string true "User ID"
-// @Param session_id path string true "Session ID"
+// @Param userId path string true "User ID"
+// @Param sessionId path string true "Session ID"
 // @Success 200 {object} gin.H
 // @Failure 400 {object} gin.H
 // @Failure 500 {object} gin.H
-// @Router /users/{user_id}/sessions/{session_id} [delete]
+// @Router /users/{userId}/sessions/{sessionId} [delete]
 func (h *UserHandler) RevokeSession(c *gin.Context) {
-	userID := c.Param("user_id")
+	userID := c.Param("userId")
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
@@ -168,5 +168,5 @@ func (h *UserHandler) RevokeSession(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "session revoked successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "session revoked successfully", "sessionId": sessionID})
 }

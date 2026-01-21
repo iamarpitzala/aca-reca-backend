@@ -92,14 +92,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param refresh_token body string true "Refresh token"
+// @Param refreshToken body string true "Refresh token"
 // @Success 200 {object} domain.AuthResponse
 // @Failure 400 {object} gin.H
 // @Failure 500 {object} gin.H
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req struct {
-		RefreshToken string `json:"refresh_token" binding:"required"`
+		RefreshToken string `json:"refreshToken" validate:"required"`
 	}
 
 	if err := utils.BindAndValidate(c, &req); err != nil {
@@ -123,13 +123,13 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param session_id path string true "Session ID"
+// @Param sessionId path string true "Session ID"
 // @Success 200 {object} gin.H
 // @Failure 400 {object} gin.H
 // @Failure 500 {object} gin.H
-// @Router /auth/logout/{session_id} [post]
+// @Router /auth/logout/{sessionId} [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	sessionID := c.Param("session_id")
+	sessionID := c.Param("sessionId")
 	sessionUUID, err := uuid.Parse(sessionID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session ID"})
@@ -151,11 +151,12 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param provider path string true "Provider"
+// @Param provider query string true "Provider"
+// @Param state query string true "State"
 // @Success 307 {string} string "Redirect to OAuth provider"
 // @Failure 400 {object} gin.H
 // @Failure 500 {object} gin.H
-// @Router /auth/oauth/{provider} [get]
+// @Router /auth/oauth [get]
 func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
 	provider := c.Param("provider")
 
@@ -269,6 +270,7 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	if err := h.oauthService.LinkProvider(c.Request.Context(), existingUser.ID, provider, userInfo.ID, userInfo.Email, token); err != nil {
 		// Provider might already be linked, log but continue
 		// In production, you might want to log this error
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to link provider", "details": err.Error()})
 		return
 	}

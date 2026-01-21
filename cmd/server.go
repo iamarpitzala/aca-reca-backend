@@ -57,7 +57,18 @@ func InitServer() {
 	}
 
 	e := gin.New()
-	e.Use(cors.Default())
+
+	// Configure CORS
+	corsConfig := cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
+	e.Use(cors.New(corsConfig))
+
 	e.Use(gin.Recovery())
 	e.Use(gin.Logger())
 
@@ -71,8 +82,8 @@ func InitServer() {
 
 	port := cfg.Server.Port
 
-	if port == "" {
-		port = "8080"
+	if port != "" {
+		port = "8081"
 	}
 
 	//Start server

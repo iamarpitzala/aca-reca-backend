@@ -66,30 +66,33 @@ type OAuthProviderConfig struct {
 }
 
 func Load() *Config {
-	// Default origins including the frontend origin
-	defaultOrigins := []string{
-		"https://preview--zenithive.lovable.app",
-		"https://zenithive.lovable.app",
-		"http://localhost:5173",
-		"http://localhost:8080",
-	}
-
+	env := getEnv("ENV", "development")
 	corsOrigins := getEnv("CORS_ALLOWED_ORIGINS", "")
+
 	var allowedOrigins []string
 	if corsOrigins != "" {
-		allowedOrigins = strings.Split(corsOrigins, ",")
-		// Trim whitespace from each origin
-		for i, origin := range allowedOrigins {
-			allowedOrigins[i] = strings.TrimSpace(origin)
+		origins := strings.Split(corsOrigins, ",")
+		allowedOrigins = make([]string, 0, len(origins))
+		for _, origin := range origins {
+			if trimmed := strings.TrimSpace(origin); trimmed != "" {
+				allowedOrigins = append(allowedOrigins, trimmed)
+			}
 		}
+	} else if env == "production" {
+		allowedOrigins = []string{"https://zenithive.lovable.app"}
 	} else {
-		allowedOrigins = defaultOrigins
+		allowedOrigins = []string{
+			"https://preview--zenithive.lovable.app",
+			"https://zenithive.lovable.app",
+			"http://localhost:5173",
+			"http://localhost:8080",
+		}
 	}
 
 	return &Config{
 		Server: ServerConfig{
 			Port:               getEnv("SERVER_PORT", "8080"),
-			Env:                getEnv("ENV", "development"),
+			Env:                env,
 			CORSAllowedOrigins: allowedOrigins,
 		},
 		DB: DBConfig{

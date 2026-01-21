@@ -624,6 +624,599 @@
 				}
 			],
 			"description": "Clinic management endpoints. All endpoints require authentication."
+		},
+		{
+			"name": "User-Clinic",
+			"item": [
+				{
+					"name": "Associate User with Clinic",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{user_id}}\",\n    \"clinicId\": \"{{clinic_id}}\",\n    \"role\": \"owner\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/user-clinic",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"user-clinic"
+							]
+						},
+						"description": "Associate a user with a clinic. Creates a many-to-many relationship."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User's Clinics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/user-clinic/user/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"user-clinic",
+								"user",
+								"{{user_id}}"
+							]
+						},
+						"description": "Get all clinics associated with a user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Clinic's Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/user-clinic/clinic/{{clinic_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"user-clinic",
+								"clinic",
+								"{{clinic_id}}"
+							]
+						},
+						"description": "Get all users associated with a clinic"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove User from Clinic",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/user-clinic/{{user_clinic_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"user-clinic",
+								"{{user_clinic_id}}"
+							]
+						},
+						"description": "Remove a user-clinic association by association ID"
+					},
+					"response": []
+				}
+			],
+			"description": "User-Clinic association endpoints. All endpoints require authentication."
+		},
+		{
+			"name": "Financial Form",
+			"item": [
+				{
+					"name": "Create Financial Form (Net Method)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"clinicId\": \"{{clinic_id}}\",\n    \"name\": \"Net Method Form\",\n    \"calculationMethod\": \"net\",\n    \"configuration\": {\n        \"commissionPercent\": 40,\n        \"gstOnCommissionPercent\": 10,\n        \"labFeeEnabled\": true,\n        \"superHoldingEnabled\": false\n    },\n    \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-form",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-form"
+							]
+						},
+						"description": "Create a new financial form with Net Method configuration"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Financial Form (Gross Method)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"clinicId\": \"{{clinic_id}}\",\n    \"name\": \"Gross Method Form\",\n    \"calculationMethod\": \"gross\",\n    \"configuration\": {\n        \"serviceFeePercent\": 60,\n        \"gstOnServiceFeePercent\": 10,\n        \"labFeeEnabled\": true,\n        \"labFeePaidBy\": \"clinic\",\n        \"gstOnLabFee\": false,\n        \"merchantFeeEnabled\": false,\n        \"gstOnMerchantFee\": false,\n        \"gstOnPatientFee\": false,\n        \"outworkChargeRateEnabled\": false,\n        \"outworkRatePercent\": 40\n    },\n    \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-form",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-form"
+							]
+						},
+						"description": "Create a new financial form with Gross Method configuration"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Financial Form by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-form/{{financial_form_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-form",
+								"{{financial_form_id}}"
+							]
+						},
+						"description": "Get a financial form by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Financial Forms by Clinic",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-form/clinic/{{clinic_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-form",
+								"clinic",
+								"{{clinic_id}}"
+							]
+						},
+						"description": "Get all financial forms for a clinic"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Financial Form",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"clinicId\": \"{{clinic_id}}\",\n    \"name\": \"Updated Financial Form\",\n    \"calculationMethod\": \"net\",\n    \"configuration\": {\n        \"commissionPercent\": 45,\n        \"gstOnCommissionPercent\": 10,\n        \"labFeeEnabled\": true,\n        \"superHoldingEnabled\": true,\n        \"superPercent\": 12\n    },\n    \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-form/{{financial_form_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-form",
+								"{{financial_form_id}}"
+							]
+						},
+						"description": "Update a financial form by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Financial Form",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-form/{{financial_form_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-form",
+								"{{financial_form_id}}"
+							]
+						},
+						"description": "Delete a financial form by ID (soft delete)"
+					},
+					"response": []
+				}
+			],
+			"description": "Financial form management endpoints. All endpoints require authentication."
+		},
+		{
+			"name": "Financial Calculation",
+			"item": [
+				{
+					"name": "Calculate Financial (Net Method - Without Super)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"formId\": \"{{financial_form_id}}\",\n    \"input\": {\n        \"grossPatientFee\": 11000,\n        \"labFee\": 1000\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-calculation/calculate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-calculation",
+								"calculate"
+							]
+						},
+						"description": "Perform financial calculation using Net Method without super holding"
+					},
+					"response": []
+				},
+				{
+					"name": "Calculate Financial (Net Method - With Super)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"formId\": \"{{financial_form_id}}\",\n    \"input\": {\n        \"grossPatientFee\": 1200\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-calculation/calculate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-calculation",
+								"calculate"
+							]
+						},
+						"description": "Perform financial calculation using Net Method with super holding"
+					},
+					"response": []
+				},
+				{
+					"name": "Calculate Financial (Gross Method - Standard)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"formId\": \"{{financial_form_id}}\",\n    \"input\": {\n        \"grossPatientFee\": 80494.87,\n        \"labFee\": 6575.91\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-calculation/calculate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-calculation",
+								"calculate"
+							]
+						},
+						"description": "Perform financial calculation using Gross Method - Standard (Lab Fee Paid by Clinic)"
+					},
+					"response": []
+				},
+				{
+					"name": "Calculate Financial (Gross Method - With GST on Lab Fee)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"formId\": \"{{financial_form_id}}\",\n    \"input\": {\n        \"grossPatientFee\": 48171.70,\n        \"labFee\": 665.00,\n        \"gstOnLabFee\": 22.50\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-calculation/calculate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-calculation",
+								"calculate"
+							]
+						},
+						"description": "Perform financial calculation using Gross Method with GST on Lab Fee"
+					},
+					"response": []
+				},
+				{
+					"name": "Calculate Financial (Gross Method - With Merchant Fee)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"formId\": \"{{financial_form_id}}\",\n    \"input\": {\n        \"grossPatientFee\": 22706.80,\n        \"merchantFeeInclGST\": 567.86,\n        \"bankFee\": 6.00\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-calculation/calculate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-calculation",
+								"calculate"
+							]
+						},
+						"description": "Perform financial calculation using Gross Method with Merchant Fee / Bank Fee"
+					},
+					"response": []
+				},
+				{
+					"name": "Calculate Financial (Gross Method - GST on Patient Fee + Lab Fee Paid by Dentist)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"formId\": \"{{financial_form_id}}\",\n    \"input\": {\n        \"grossPatientFee\": 29674.80,\n        \"gstOnPatientFee\": -15.62,\n        \"labFeePaidByDentist\": 1427.00\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-calculation/calculate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-calculation",
+								"calculate"
+							]
+						},
+						"description": "Perform financial calculation using Gross Method with GST on Patient Fee and Lab Fee Paid by Dentist"
+					},
+					"response": []
+				},
+				{
+					"name": "Calculate Financial (Gross Method - Outwork Charge Rate)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"formId\": \"{{financial_form_id}}\",\n    \"input\": {\n        \"grossPatientFee\": 27399.80,\n        \"outworkLabFee\": 1899.25,\n        \"outworkMerchantFee\": 20,\n        \"outworkGSTOnLabFee\": 0,\n        \"outworkGSTOnMerchantFee\": 0\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-calculation/calculate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-calculation",
+								"calculate"
+							]
+						},
+						"description": "Perform financial calculation using Gross Method with Outwork Charge Rate"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Calculation History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/financial-calculation/history/{{financial_form_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"financial-calculation",
+								"history",
+								"{{financial_form_id}}"
+							]
+						},
+						"description": "Get calculation history for a financial form"
+					},
+					"response": []
+				}
+			],
+			"description": "Financial calculation endpoints. All endpoints require authentication."
 		}
 	],
 	"variable": [
@@ -654,6 +1247,16 @@
 		},
 		{
 			"key": "session_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "financial_form_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_clinic_id",
 			"value": "",
 			"type": "string"
 		}

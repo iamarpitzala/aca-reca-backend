@@ -13,7 +13,7 @@ import (
 type PayslipHandler struct {
 }
 
-func NewPayshipHandler() *PayslipHandler {
+func NewPayslipHandler() *PayslipHandler {
 	return &PayslipHandler{}
 }
 
@@ -61,6 +61,10 @@ func (h *PayslipHandler) ExportExcelExpanses(c *gin.Context) {
 		"file":    fileName,
 	})
 
+}
+
+func (h *PayslipHandler) GeneratePdf(c *gin.Context) {
+	GenerateInvoiceOne()
 }
 
 // income formate
@@ -178,4 +182,12 @@ func ExpensesFormate(data []domain.ExportExpenses) (string, error) {
 
 	file := "Expenses.xlsx"
 	return file, f.SaveAs(file)
+}
+
+// pdf formatting
+
+func GenerateInvoiceOne() {
+	// pdf := utils.NewPDF()
+	// config := utils.GetDefaultPDFConfig()
+
 }

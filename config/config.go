@@ -69,7 +69,7 @@ func Load() *Config {
 	// Default origins including the frontend origin
 	defaultOrigins := []string{
 		"https://preview--zenithive.lovable.app",
-		"http://localhost:3000",
+		"https://zenithive.lovable.app",
 		"http://localhost:5173",
 		"http://localhost:8080",
 	}

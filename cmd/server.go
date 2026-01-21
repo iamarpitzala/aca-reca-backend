@@ -59,6 +59,12 @@ func InitServer() {
 	e.Use(gin.Recovery())
 	e.Use(gin.Logger())
 
+	if cfg.Server.Env == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
+
 	route.InitRouter(e)
 
 	port := cfg.Server.Port

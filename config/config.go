@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -26,9 +25,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port               string
-	Env                string
-	CORSAllowedOrigins []string
+	Port string
+	Env  string
 }
 
 type DBConfig struct {
@@ -66,34 +64,10 @@ type OAuthProviderConfig struct {
 }
 
 func Load() *Config {
-	env := getEnv("ENV", "development")
-	corsOrigins := getEnv("CORS_ALLOWED_ORIGINS", "")
-
-	var allowedOrigins []string
-	if corsOrigins != "" {
-		origins := strings.Split(corsOrigins, ",")
-		allowedOrigins = make([]string, 0, len(origins))
-		for _, origin := range origins {
-			if trimmed := strings.TrimSpace(origin); trimmed != "" {
-				allowedOrigins = append(allowedOrigins, trimmed)
-			}
-		}
-	} else if env == "production" {
-		allowedOrigins = []string{"https://zenithive.lovable.app"}
-	} else {
-		allowedOrigins = []string{
-			"https://preview--zenithive.lovable.app",
-			"https://zenithive.lovable.app",
-			"http://localhost:5173",
-			"http://localhost:8080",
-		}
-	}
-
 	return &Config{
 		Server: ServerConfig{
-			Port:               getEnv("SERVER_PORT", "8080"),
-			Env:                env,
-			CORSAllowedOrigins: allowedOrigins,
+			Port: getEnv("SERVER_PORT", "8080"),
+			Env:  getEnv("ENV", "development"),
 		},
 		DB: DBConfig{
 			Host:     getEnv("DB_HOST", "localhost"),

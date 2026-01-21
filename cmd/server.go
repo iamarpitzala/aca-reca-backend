@@ -59,13 +59,15 @@ func InitServer() {
 	e := gin.New()
 
 	// Configure CORS
-	e.Use(cors.New(cors.Config{
-		AllowOrigins:     cfg.Server.CORSAllowedOrigins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+	corsConfig := cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"*"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"*"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
-	}))
+	}
+	e.Use(cors.New(corsConfig))
 
 	e.Use(gin.Recovery())
 	e.Use(gin.Logger())

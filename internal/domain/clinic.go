@@ -6,6 +6,20 @@ import (
 	"github.com/google/uuid"
 )
 
+// Australian states/territories
+const (
+	StateNSW = "NSW"
+	StateVIC = "VIC"
+	StateQLD = "QLD"
+	StateSA  = "SA"
+	StateWA  = "WA"
+	StateTAS = "TAS"
+	StateNT  = "NT"
+	StateACT = "ACT"
+)
+
+var ValidStates = []string{StateNSW, StateVIC, StateQLD, StateSA, StateWA, StateTAS, StateNT, StateACT}
+
 type Clinic struct {
 	ID          uuid.UUID  `db:"id" json:"id"`
 	Name        string     `db:"name" json:"name"`

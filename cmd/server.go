@@ -18,6 +18,34 @@ import (
 
 func InitServer() {
 	// Load environment variables
+<<<<<<< HEAD
+	if err := godotenv.Load("./.env"); err != nil {
+		log.Println("No .env file found, using environment variables")
+	}
+
+	// // Load configuration
+	cfg := config.Load()
+
+	// // Initialize database
+	db, err := config.NewConnection(cfg.DB)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	}()
+
+	// // Run migrations
+	if err := config.RunMigrations(db.DB.DB); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// // Initialize Redis
+	rdb := config.NewRedisClient(cfg.Redis)
+	defer rdb.Close()
+=======
 	var envOnce sync.Once
 	envOnce.Do(func() {
 		envFile := ".env"
@@ -54,6 +82,7 @@ func InitServer() {
 	if err := config.RunMigrations(db.DB.DB); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
+>>>>>>> 1f456999060f2be0c56945ba7591106b8554036c
 
 	e := gin.New()
 	e.Use(gin.Recovery())
@@ -62,17 +91,18 @@ func InitServer() {
 	route.InitRouter(e)
 
 	port := cfg.Server.Port
+
 	if port == "" {
 		port = "8080"
 	}
 
-	// Start server
+	//Start server
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: e,
 	}
 
-	// Graceful shutdown
+	// // Graceful shutdown
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
@@ -81,7 +111,7 @@ func InitServer() {
 
 	log.Printf("ACA RECA service started on port %s", port)
 
-	// Wait for interrupt signal
+	// // Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

@@ -3,16 +3,14 @@ package route
 import (
 	"log"
 
+	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
-	"github.com/iamarpitzala/aca-reca-backend/route/auth"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
-
-	_ "github.com/iamarpitzala/aca-reca-backend/docs"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
-
-	"github.com/gin-gonic/gin"
+	"github.com/iamarpitzala/aca-reca-backend/route/auth"
+	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func InitRouter(e *gin.Engine) {
@@ -31,35 +29,15 @@ func InitRouter(e *gin.Engine) {
 
 	authHandler := httpHandler.NewAuthHandler(authService, oauthService)
 	userHandler := httpHandler.NewUserHandler(authService)
+	payslipHandler := httpHandler.NewPayslipHandler()
 
 	// Swagger documentation route
+	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	v1 := e.Group("/api/v1")
 	auth.RegisterAuthRoutes(v1, authHandler)
 	auth.RegisterUserRoutes(v1, userHandler)
+	payslip.RegisterPayslipRoutes(v1, payslipHandler)
 
 }
-
-// // applySubscriptionMiddleware applies subscription middleware to protected routes
-// func applySubscriptionMiddleware(api *gin.RouterGroup, subMiddleware *middleware.SubscriptionMiddleware) {
-// 	// Apply optional subscription middleware to all API routes
-// 	// This adds subscription info to context if available
-// 	api.Use(subMiddleware.OptionalSubscription())
-
-// 	// Protected routes that require active subscription
-// 	protected := api.Group("/protected")
-// 	{
-// 		// Routes that require active subscription
-// 		protected.Use(subMiddleware.RequireActiveSubscription())
-// 		// Add protected routes here
-// 	}
-
-// 	// Premium routes that require premium subscription
-// 	premium := api.Group("/premium")
-// 	{
-// 		// Routes that require premium subscription
-// 		premium.Use(subMiddleware.RequirePremiumSubscription())
-// 		// Add premium routes here
-// 	}
-// }

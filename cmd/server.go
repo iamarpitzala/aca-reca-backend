@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
 	"github.com/iamarpitzala/aca-reca-backend/route"
@@ -56,6 +57,7 @@ func InitServer() {
 	}
 
 	e := gin.New()
+	e.Use(cors.Default())
 	e.Use(gin.Recovery())
 	e.Use(gin.Logger())
 

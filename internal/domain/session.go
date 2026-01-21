@@ -9,15 +9,15 @@ import (
 
 type Session struct {
 	ID           uuid.UUID  `db:"id" json:"id"`
-	UserID       uuid.UUID  `db:"user_id" json:"user_id"`
+	UserID       uuid.UUID  `db:"user_id" json:"userId"`
 	RefreshToken string     `db:"refresh_token" json:"-"`
-	UserAgent    string     `db:"user_agent" json:"user_agent"`
-	IPAddress    string     `db:"ip_address" json:"ip_address"`
-	IsActive     bool       `db:"is_active" json:"is_active"`
-	ExpiresAt    time.Time  `db:"expires_at" json:"expires_at"`
-	CreatedAt    time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt    time.Time  `db:"updated_at" json:"updated_at"`
-	DeletedAt    *time.Time `db:"deleted_at" json:"-"`
+	UserAgent    string     `db:"user_agent" json:"userAgent"`
+	IPAddress    string     `db:"ip_address" json:"ipAddress"`
+	IsActive     bool       `db:"is_active" json:"isActive"`
+	ExpiresAt    time.Time  `db:"expires_at" json:"expiresAt"`
+	CreatedAt    time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt    time.Time  `db:"updated_at" json:"updatedAt"`
+	DeletedAt    *time.Time `db:"deleted_at" json:"deletedAt"`
 }
 
 func (s *Session) IsExpired() bool {
@@ -25,24 +25,24 @@ func (s *Session) IsExpired() bool {
 }
 
 type SessionData struct {
-	UserID    uuid.UUID `json:"user_id"`
+	UserID    uuid.UUID `json:"userId"`
 	Email     string    `json:"email"`
-	SessionID uuid.UUID `json:"session_id"`
-	UserAgent string    `json:"user_agent"`
-	IPAddress string    `json:"ip_address"`
-	CreatedAt time.Time `json:"created_at"`
+	SessionID uuid.UUID `json:"sessionId"`
+	UserAgent string    `json:"userAgent"`
+	IPAddress string    `json:"ipAddress"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type TokenClaims struct {
-	UserID    uuid.UUID `json:"user_id"`
+	UserID    uuid.UUID `json:"userId"`
 	Email     string    `json:"email"`
-	SessionID uuid.UUID `json:"session_id"`
+	SessionID uuid.UUID `json:"sessionId"`
 	jwt.RegisteredClaims
 }
 
 type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int64  `json:"expires_in"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	TokenType    string `json:"tokenType"`
+	ExpiresIn    int64  `json:"expiresIn"`
 }

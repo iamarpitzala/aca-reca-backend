@@ -43,26 +43,3 @@ func InitRouter(e *gin.Engine) {
 	auth.RegisterUserRoutes(v1, userHandler)
 	clinic.RegisterClinicRoutes(v1, clinicHandler)
 }
-
-// // applySubscriptionMiddleware applies subscription middleware to protected routes
-// func applySubscriptionMiddleware(api *gin.RouterGroup, subMiddleware *middleware.SubscriptionMiddleware) {
-// 	// Apply optional subscription middleware to all API routes
-// 	// This adds subscription info to context if available
-// 	api.Use(subMiddleware.OptionalSubscription())
-
-// 	// Protected routes that require active subscription
-// 	protected := api.Group("/protected")
-// 	{
-// 		// Routes that require active subscription
-// 		protected.Use(subMiddleware.RequireActiveSubscription())
-// 		// Add protected routes here
-// 	}
-
-// 	// Premium routes that require premium subscription
-// 	premium := api.Group("/premium")
-// 	{
-// 		// Routes that require premium subscription
-// 		premium.Use(subMiddleware.RequirePremiumSubscription())
-// 		// Add premium routes here
-// 	}
-// }

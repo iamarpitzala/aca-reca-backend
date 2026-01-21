@@ -1,28 +1,28 @@
 definitions:
   domain.AuthResponse:
     properties:
-      access_token:
+      accessToken:
         type: string
-      expires_in:
+      expiresIn:
         type: integer
-      refresh_token:
+      refreshToken:
         type: string
-      token_type:
+      tokenType:
         type: string
       user:
         $ref: '#/definitions/domain.User'
     type: object
   domain.Clinic:
     properties:
-      abn_number:
+      abnNumber:
         type: string
       address:
         type: string
       city:
         type: string
-      created_at:
+      createdAt:
         type: string
-      deleted_at:
+      deletedAt:
         type: string
       description:
         type: string
@@ -30,9 +30,9 @@ definitions:
         type: string
       id:
         type: string
-      is_active:
+      isActive:
         type: boolean
-      logo_url:
+      logoURL:
         type: string
       name:
         type: string
@@ -42,7 +42,7 @@ definitions:
         type: string
       state:
         type: string
-      updated_at:
+      updatedAt:
         type: string
       website:
         type: string
@@ -61,9 +61,9 @@ definitions:
     properties:
       email:
         type: string
-      first_name:
+      firstName:
         type: string
-      last_name:
+      lastName:
         type: string
       password:
         minLength: 8
@@ -76,28 +76,30 @@ definitions:
     type: object
   domain.Session:
     properties:
-      created_at:
+      createdAt:
         type: string
-      expires_at:
+      deletedAt:
+        type: string
+      expiresAt:
         type: string
       id:
         type: string
-      ip_address:
+      ipAddress:
         type: string
-      is_active:
+      isActive:
         type: boolean
-      updated_at:
+      updatedAt:
         type: string
-      user_agent:
+      userAgent:
         type: string
-      user_id:
+      userId:
         type: string
     type: object
   domain.UpdateUserRequest:
     properties:
-      first_name:
+      firstName:
         type: string
-      last_name:
+      lastName:
         type: string
       phone:
         type: string
@@ -161,7 +163,7 @@ paths:
       summary: Login a user
       tags:
       - Auth
-  /auth/logout/{session_id}:
+  /auth/logout/{sessionId}:
     post:
       consumes:
       - application/json
@@ -169,7 +171,7 @@ paths:
       parameters:
       - description: Session ID
         in: path
-        name: session_id
+        name: sessionId
         required: true
         type: string
       produces:
@@ -190,15 +192,20 @@ paths:
       summary: Logout a user
       tags:
       - Auth
-  /auth/oauth/{provider}:
+  /auth/oauth:
     get:
       consumes:
       - application/json
       description: Initiate OAuth flow with a provider
       parameters:
       - description: Provider
-        in: path
+        in: query
         name: provider
+        required: true
+        type: string
+      - description: State
+        in: query
+        name: state
         required: true
         type: string
       produces:
@@ -256,7 +263,7 @@ paths:
       parameters:
       - description: Refresh token
         in: body
-        name: refresh_token
+        name: refreshToken
         required: true
         schema:
           type: string
@@ -463,7 +470,7 @@ paths:
       summary: Update a clinic by ID
       tags:
       - Clinic
-  /clinic/abn/{abn_number}:
+  /clinic/abn/{abnNumber}:
     get:
       consumes:
       - application/json
@@ -471,7 +478,7 @@ paths:
       parameters:
       - description: ABN number
         in: path
-        name: abn_number
+        name: abnNumber
         required: true
         type: string
       produces:
@@ -496,7 +503,7 @@ paths:
       summary: Retrieve a clinic by ABN number
       tags:
       - Clinic
-  /users/{user_id}:
+  /users/{userId}:
     get:
       consumes:
       - application/json
@@ -504,7 +511,7 @@ paths:
       parameters:
       - description: User ID
         in: path
-        name: user_id
+        name: userId
         required: true
         type: string
       produces:
@@ -532,12 +539,12 @@ paths:
       parameters:
       - description: User ID
         in: path
-        name: user_id
+        name: userId
         required: true
         type: string
       - description: Update user request
         in: body
-        name: update_user_request
+        name: updateUserRequest
         required: true
         schema:
           $ref: '#/definitions/domain.UpdateUserRequest'
@@ -559,7 +566,7 @@ paths:
       summary: Update current user
       tags:
       - User
-  /users/{user_id}/sessions:
+  /users/{userId}/sessions:
     get:
       consumes:
       - application/json
@@ -567,7 +574,7 @@ paths:
       parameters:
       - description: User ID
         in: path
-        name: user_id
+        name: userId
         required: true
         type: string
       produces:
@@ -590,7 +597,7 @@ paths:
       summary: Get active sessions
       tags:
       - User
-  /users/{user_id}/sessions/{session_id}:
+  /users/{userId}/sessions/{sessionId}:
     delete:
       consumes:
       - application/json
@@ -598,12 +605,12 @@ paths:
       parameters:
       - description: User ID
         in: path
-        name: user_id
+        name: userId
         required: true
         type: string
       - description: Session ID
         in: path
-        name: session_id
+        name: sessionId
         required: true
         type: string
       produces:

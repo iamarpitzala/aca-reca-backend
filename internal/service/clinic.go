@@ -20,6 +20,7 @@ func NewClinicService(db *sqlx.DB) *ClinicService {
 }
 
 func (cs *ClinicService) CreateClinic(ctx context.Context, clinic *domain.Clinic) error {
+	clinic.ID = uuid.New()
 	return repository.CreateClinic(ctx, cs.db, clinic)
 }
 

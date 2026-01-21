@@ -157,20 +157,20 @@ func (h *ClinicHandler) GetAllClinics(c *gin.Context) {
 }
 
 // GetClinicByABNNumber retrieves a clinic by ABN number
-// GET /api/v1/clinic/abn/:abn_number
+// GET /api/v1/clinic/abn/:abnNumber
 // @Summary Retrieve a clinic by ABN number
 // @Description Retrieve a clinic by ABN number
 // @Tags Clinic
 // @Accept json
 // @Produce json
-// @Param abn_number path string true "ABN number"
+// @Param abnNumber path string true "ABN number"
 // @Success 200 {object} gin.H
 // @Failure 400 {object} gin.H
 // @Failure 404 {object} gin.H
 // @Failure 500 {object} gin.H
-// @Router /clinic/abn/{abn_number} [get]
+// @Router /clinic/abn/{abnNumber} [get]
 func (h *ClinicHandler) GetClinicByABNNumber(c *gin.Context) {
-	abnNumber := c.Param("abn_number")
+	abnNumber := c.Param("abnNumber")
 	clinic, err := h.clinicService.GetClinicByABNNumber(c.Request.Context(), abnNumber)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})

@@ -61,7 +61,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/logout/{session_id}": {
+        "/auth/logout/{sessionId}": {
             "post": {
                 "description": "Logout a user with a session ID",
                 "consumes": [
@@ -78,7 +78,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Session ID",
-                        "name": "session_id",
+                        "name": "sessionId",
                         "in": "path",
                         "required": true
                     }
@@ -105,7 +105,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/oauth/{provider}": {
+        "/auth/oauth": {
             "get": {
                 "description": "Initiate OAuth flow with a provider",
                 "consumes": [
@@ -123,7 +123,14 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Provider",
                         "name": "provider",
-                        "in": "path",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "State",
+                        "name": "state",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -209,7 +216,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Refresh token",
-                        "name": "refresh_token",
+                        "name": "refreshToken",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -364,7 +371,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/clinic/abn/{abn_number}": {
+        "/clinic/abn/{abnNumber}": {
             "get": {
                 "description": "Retrieve a clinic by ABN number",
                 "consumes": [
@@ -381,7 +388,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "ABN number",
-                        "name": "abn_number",
+                        "name": "abnNumber",
                         "in": "path",
                         "required": true
                     }
@@ -569,7 +576,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{user_id}": {
+        "/users/{userId}": {
             "get": {
                 "description": "Get current user by user ID",
                 "consumes": [
@@ -586,7 +593,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "user_id",
+                        "name": "userId",
                         "in": "path",
                         "required": true
                     }
@@ -628,13 +635,13 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "user_id",
+                        "name": "userId",
                         "in": "path",
                         "required": true
                     },
                     {
                         "description": "Update user request",
-                        "name": "update_user_request",
+                        "name": "updateUserRequest",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -664,7 +671,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{user_id}/sessions": {
+        "/users/{userId}/sessions": {
             "get": {
                 "description": "Get active sessions by user ID",
                 "consumes": [
@@ -681,7 +688,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "user_id",
+                        "name": "userId",
                         "in": "path",
                         "required": true
                     }
@@ -711,7 +718,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{user_id}/sessions/{session_id}": {
+        "/users/{userId}/sessions/{sessionId}": {
             "delete": {
                 "description": "Revoke a session by session ID and user ID",
                 "consumes": [
@@ -728,14 +735,14 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "user_id",
+                        "name": "userId",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
                         "description": "Session ID",
-                        "name": "session_id",
+                        "name": "sessionId",
                         "in": "path",
                         "required": true
                     }
@@ -767,16 +774,16 @@ const docTemplate = `{
         "domain.AuthResponse": {
             "type": "object",
             "properties": {
-                "access_token": {
+                "accessToken": {
                     "type": "string"
                 },
-                "expires_in": {
+                "expiresIn": {
                     "type": "integer"
                 },
-                "refresh_token": {
+                "refreshToken": {
                     "type": "string"
                 },
-                "token_type": {
+                "tokenType": {
                     "type": "string"
                 },
                 "user": {
@@ -787,7 +794,7 @@ const docTemplate = `{
         "domain.Clinic": {
             "type": "object",
             "properties": {
-                "abn_number": {
+                "abnNumber": {
                     "type": "string"
                 },
                 "address": {
@@ -796,10 +803,10 @@ const docTemplate = `{
                 "city": {
                     "type": "string"
                 },
-                "created_at": {
+                "createdAt": {
                     "type": "string"
                 },
-                "deleted_at": {
+                "deletedAt": {
                     "type": "string"
                 },
                 "description": {
@@ -811,10 +818,10 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "is_active": {
+                "isActive": {
                     "type": "boolean"
                 },
-                "logo_url": {
+                "logoURL": {
                     "type": "string"
                 },
                 "name": {
@@ -829,7 +836,7 @@ const docTemplate = `{
                 "state": {
                     "type": "string"
                 },
-                "updated_at": {
+                "updatedAt": {
                     "type": "string"
                 },
                 "website": {
@@ -862,10 +869,10 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
-                "first_name": {
+                "firstName": {
                     "type": "string"
                 },
-                "last_name": {
+                "lastName": {
                     "type": "string"
                 },
                 "password": {
@@ -880,28 +887,31 @@ const docTemplate = `{
         "domain.Session": {
             "type": "object",
             "properties": {
-                "created_at": {
+                "createdAt": {
                     "type": "string"
                 },
-                "expires_at": {
+                "deletedAt": {
+                    "type": "string"
+                },
+                "expiresAt": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "ip_address": {
+                "ipAddress": {
                     "type": "string"
                 },
-                "is_active": {
+                "isActive": {
                     "type": "boolean"
                 },
-                "updated_at": {
+                "updatedAt": {
                     "type": "string"
                 },
-                "user_agent": {
+                "userAgent": {
                     "type": "string"
                 },
-                "user_id": {
+                "userId": {
                     "type": "string"
                 }
             }
@@ -909,10 +919,10 @@ const docTemplate = `{
         "domain.UpdateUserRequest": {
             "type": "object",
             "properties": {
-                "first_name": {
+                "firstName": {
                     "type": "string"
                 },
-                "last_name": {
+                "lastName": {
                     "type": "string"
                 },
                 "phone": {

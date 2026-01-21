@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -321,7 +322,7 @@ func (as *AuthService) OAuthLogin(ctx context.Context, userID uuid.UUID) (*domai
 	}
 
 	if err := repository.CreateSession(ctx, as.db, &session); err != nil {
-		return nil, errors.New("failed to create session")
+		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 
 	// Store session in Redis

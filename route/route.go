@@ -21,7 +21,6 @@ func InitRouter(e *gin.Engine) {
 	}
 
 	rdb := config.NewRedisClient(cfg.Redis)
-	defer rdb.Close()
 
 	tokenService := service.NewTokenService(cfg.JWT)
 	sessionService := service.NewSessionService(rdb, cfg.Session)
@@ -33,6 +32,7 @@ func InitRouter(e *gin.Engine) {
 	payslipHandler := httpHandler.NewPayslipHandler()
 
 	// Swagger documentation route
+	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	v1 := e.Group("/api/v1")

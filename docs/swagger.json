@@ -565,6 +565,139 @@
                 }
             }
         },
+        "/payslip/export/expenses": {
+            "post": {
+                "description": "Export Excel Expenses",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payslip"
+                ],
+                "summary": "Export Excel Expenses",
+                "parameters": [
+                    {
+                        "description": "Data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ExportExpenses"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/payslip/export/income": {
+            "post": {
+                "description": "Export Excel Income",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payslip"
+                ],
+                "summary": "Export Excel Income",
+                "parameters": [
+                    {
+                        "description": "Data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ExportIncome"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/payslip/generate/pdf": {
+            "post": {
+                "description": "Generate PDF",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payslip"
+                ],
+                "summary": "Generate PDF",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{userId}": {
             "get": {
                 "description": "Get current user by user ID",
@@ -833,6 +966,88 @@
                 }
             }
         },
+        "domain.ExportExpenses": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "bas": {
+                    "type": "number"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "gst": {
+                    "type": "number"
+                },
+                "net": {
+                    "type": "number"
+                },
+                "q": {
+                    "type": "string"
+                },
+                "remarks": {
+                    "type": "string"
+                },
+                "supplier": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ExportIncome": {
+            "type": "object",
+            "properties": {
+                "adjustments": {
+                    "type": "number"
+                },
+                "dental_practice": {
+                    "type": "string"
+                },
+                "gross_income_g1": {
+                    "type": "number"
+                },
+                "gross_net_lab_fees": {
+                    "type": "number"
+                },
+                "gst_free": {
+                    "type": "number"
+                },
+                "gst_payable_1a": {
+                    "type": "number"
+                },
+                "gst_refundable_1b": {
+                    "type": "number"
+                },
+                "income_type": {
+                    "type": "string"
+                },
+                "lab_fees": {
+                    "type": "number"
+                },
+                "lab_record": {
+                    "type": "string"
+                },
+                "management_fees_g11": {
+                    "type": "number"
+                },
+                "net_payment": {
+                    "type": "number"
+                },
+                "payment_date": {
+                    "type": "string"
+                },
+                "percentage": {
+                    "type": "number"
+                },
+                "q": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.LoginRequest": {
             "type": "object",
             "required": [
@@ -922,34 +1137,37 @@
         "domain.User": {
             "type": "object",
             "properties": {
-                "avatar_url": {
+                "avatarURL": {
                     "type": "string"
                 },
-                "created_at": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
                     "type": "string"
                 },
                 "email": {
                     "type": "string"
                 },
-                "first_name": {
+                "firstName": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "is_active": {
+                "isActive": {
                     "type": "boolean"
                 },
-                "is_email_verified": {
+                "isEmailVerified": {
                     "type": "boolean"
                 },
-                "last_name": {
+                "lastName": {
                     "type": "string"
                 },
                 "phone": {
                     "type": "string"
                 },
-                "updated_at": {
+                "updatedAt": {
                     "type": "string"
                 }
             }

@@ -6,6 +6,15 @@ import (
 	"time"
 )
 
+type RedisConfig struct {
+	Host       string
+	Port       string
+	Password   string
+	DB         int
+	TLSEnabled bool
+}
+
+// Config struct
 type Config struct {
 	Server  ServerConfig
 	DB      DBConfig
@@ -27,13 +36,6 @@ type DBConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
-}
-
-type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
 }
 
 type JWTConfig struct {
@@ -76,10 +78,11 @@ func Load() *Config {
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
 		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
-			Port:     getEnv("REDIS_PORT", "6379"),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       getEnvAsInt("REDIS_DB", 0),
+			Host:       getEnv("REDIS_HOST", "localhost"),
+			Port:       getEnv("REDIS_PORT", "6379"),
+			Password:   getEnv("REDIS_PASSWORD", ""),
+			DB:         getEnvAsInt("REDIS_DB", 0),
+			TLSEnabled: getEnvAsBool("REDIS_TLS_ENABLED", false),
 		},
 		JWT: JWTConfig{
 			SecretKey:       getEnv("JWT_SECRET_KEY", "your-secret-key-change-in-production"),
@@ -135,4 +138,16 @@ func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
 		return value
 	}
 	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	valueStr := getEnv(key, "")
+	if valueStr == "" {
+		return defaultValue
+	}
+	value, err := strconv.ParseBool(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return value
 }

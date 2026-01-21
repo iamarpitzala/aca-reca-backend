@@ -27,9 +27,9 @@ func NewClinicHandler(clinicService *service.ClinicService) *ClinicHandler {
 // @Accept json
 // @Produce json
 // @Param clinic body domain.Clinic true "Clinic information"
-// @Success 201 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 201 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /clinic [post]
 func (h *ClinicHandler) CreateClinic(c *gin.Context) {
 	var clinic domain.Clinic
@@ -53,10 +53,10 @@ func (h *ClinicHandler) CreateClinic(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Clinic ID"
-// @Success 200 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 404 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 404 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /clinic/{id} [get]
 func (h *ClinicHandler) GetClinic(c *gin.Context) {
 	id := c.Param("id")
@@ -82,10 +82,10 @@ func (h *ClinicHandler) GetClinic(c *gin.Context) {
 // @Produce json
 // @Param id path string true "Clinic ID"
 // @Param clinic body domain.Clinic true "Clinic information"
-// @Success 200 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 404 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 404 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /clinic/{id} [put]
 func (h *ClinicHandler) UpdateClinic(c *gin.Context) {
 	id := c.Param("id")
@@ -116,10 +116,10 @@ func (h *ClinicHandler) UpdateClinic(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Clinic ID"
-// @Success 200 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 404 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 404 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /clinic/{id} [delete]
 func (h *ClinicHandler) DeleteClinic(c *gin.Context) {
 	id := c.Param("id")
@@ -143,9 +143,9 @@ func (h *ClinicHandler) DeleteClinic(c *gin.Context) {
 // @Tags Clinic
 // @Accept json
 // @Produce json
-// @Success 200 {object} gin.H
-// @Failure 404 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 404 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /clinic [get]
 func (h *ClinicHandler) GetAllClinics(c *gin.Context) {
 	clinics, err := h.clinicService.GetAllClinics(c.Request.Context())
@@ -164,10 +164,10 @@ func (h *ClinicHandler) GetAllClinics(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param abnNumber path string true "ABN number"
-// @Success 200 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 404 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 404 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /clinic/abn/{abnNumber} [get]
 func (h *ClinicHandler) GetClinicByABNNumber(c *gin.Context) {
 	abnNumber := c.Param("abnNumber")

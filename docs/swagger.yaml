@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   domain.AuthResponse:
     properties:
@@ -101,6 +102,9 @@ definitions:
       q:
         type: string
     type: object
+  domain.H:
+    additionalProperties: true
+    type: object
   domain.LoginRequest:
     properties:
       email:
@@ -183,11 +187,18 @@ definitions:
       updatedAt:
         type: string
     type: object
-  gin.H:
-    additionalProperties: {}
-    type: object
+host: localhost:8080
 info:
-  contact: {}
+  contact:
+    email: support@acareca.com
+    name: API Support
+  description: API documentation for ACA RECA Backend
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: ACA RECA API
+  version: "1.0"
 paths:
   /auth/login:
     post:
@@ -211,11 +222,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Login a user
       tags:
       - Auth
@@ -236,15 +247,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Logout a user
       tags:
       - Auth
@@ -274,11 +285,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Initiate OAuth flow
       tags:
       - Auth
@@ -303,11 +314,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: OAuth callback
       tags:
       - Auth
@@ -333,11 +344,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Refresh a token
       tags:
       - Auth
@@ -363,11 +374,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Register a new user
       tags:
       - Auth
@@ -382,15 +393,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Retrieve all clinics
       tags:
       - Clinic
@@ -411,15 +422,15 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Create a new clinic
       tags:
       - Clinic
@@ -440,19 +451,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Delete a clinic by ID
       tags:
       - Clinic
@@ -472,19 +483,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Retrieve a clinic by ID
       tags:
       - Clinic
@@ -510,19 +521,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Update a clinic by ID
       tags:
       - Clinic
@@ -543,19 +554,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Retrieve a clinic by ABN number
       tags:
       - Clinic
@@ -579,15 +590,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Export Excel Expenses
       tags:
       - Payslip
@@ -611,15 +622,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Export Excel Income
       tags:
       - Payslip
@@ -634,15 +645,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Generate PDF
       tags:
       - Payslip
@@ -667,11 +678,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Get current user
       tags:
       - User
@@ -701,11 +712,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Update current user
       tags:
       - User
@@ -732,11 +743,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Get active sessions
       tags:
       - User
@@ -762,16 +773,25 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Revoke a session
       tags:
       - User
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

@@ -26,7 +26,6 @@ create table tbl_clinic (
 CREATE INDEX idx_clinic_name ON tbl_clinic(name);
 CREATE INDEX idx_clinic_abn_number ON tbl_clinic(abn_number);
 CREATE INDEX idx_clinic_is_active ON tbl_clinic(is_active);
-CREATE INDEX idx_clinic_deleted_at ON tbl_clinic(deleted_at);
 -- +goose StatementEnd
 
 -- +goose Down

@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE tbl_auth_provider (
+CREATE TABLE IF NOT EXISTS tbl_auth_provider (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES tbl_user(id) ON DELETE CASCADE,
     provider VARCHAR(50) NOT NULL,

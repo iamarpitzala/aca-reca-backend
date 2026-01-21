@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-create table tbl_clinic (
+create table IF NOT EXISTS tbl_clinic (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     abn_number VARCHAR(11) NOT NULL,

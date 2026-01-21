@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE tbl_session (
+CREATE TABLE IF NOT EXISTS tbl_session (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES tbl_user(id) ON DELETE CASCADE,
     refresh_token VARCHAR(255) UNIQUE NOT NULL,

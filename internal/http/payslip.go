@@ -17,6 +17,18 @@ func NewPayslipHandler() *PayslipHandler {
 	return &PayslipHandler{}
 }
 
+// Export Excel Income
+// POST /api/v1/payslip/export/income
+// @Summary Export Excel Income
+// @Description Export Excel Income
+// @Tags Payslip
+// @Accept json
+// @Produce json
+// @Param data body []domain.ExportIncome true "Data"
+// @Success 200 {object} gin.H
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /payslip/export/income [post]
 func (h *PayslipHandler) ExportExcelIncome(c *gin.Context) {
 	var data []domain.ExportIncome
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -39,6 +51,18 @@ func (h *PayslipHandler) ExportExcelIncome(c *gin.Context) {
 	})
 }
 
+// Export Excel Expenses
+// POST /api/v1/payslip/export/expenses
+// @Summary Export Excel Expenses
+// @Description Export Excel Expenses
+// @Tags Payslip
+// @Accept json
+// @Produce json
+// @Param data body []domain.ExportExpenses true "Data"
+// @Success 200 {object} gin.H
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /payslip/export/expenses [post]
 func (h *PayslipHandler) ExportExcelExpanses(c *gin.Context) {
 	var data []domain.ExportExpenses
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -57,18 +81,38 @@ func (h *PayslipHandler) ExportExcelExpanses(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Excel created successfully",
+		"message": "Expenses Excel created successfully",
 		"file":    fileName,
 	})
 
 }
 
+// Generate PDF
+// POST /api/v1/payslip/generate/pdf
+// @Summary Generate PDF
+// @Description Generate PDF
+// @Tags Payslip
+// @Accept json
+// @Produce json
+// @Success 200 {object} gin.H
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /payslip/generate/pdf [post]
 func (h *PayslipHandler) GeneratePdf(c *gin.Context) {
-	GenerateInvoiceOne()
+	fileName, err := GenerateInvoiceOne()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "PDF created successfully",
+		"file":    fileName,
+	})
 }
 
 // income formate
-
 func IncomeFormate(data []domain.ExportIncome) (string, error) {
 	f := excelize.NewFile()
 	sheet := "Users_Income"
@@ -128,6 +172,7 @@ func IncomeFormate(data []domain.ExportIncome) (string, error) {
 	return file, f.SaveAs(file)
 }
 
+// expenses formate
 func ExpensesFormate(data []domain.ExportExpenses) (string, error) {
 	f := excelize.NewFile()
 	sheet := "Users_Expenses"
@@ -185,9 +230,9 @@ func ExpensesFormate(data []domain.ExportExpenses) (string, error) {
 }
 
 // pdf formatting
-
-func GenerateInvoiceOne() {
+func GenerateInvoiceOne() (string, error) {
 	// pdf := utils.NewPDF()
 	// config := utils.GetDefaultPDFConfig()
 
+	return "", nil
 }

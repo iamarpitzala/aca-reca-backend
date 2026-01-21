@@ -6,7 +6,8 @@ import (
 )
 
 func RegisterPayslipRoutes(e *gin.RouterGroup, payslipHeander *httpHandler.PayslipHandler) {
-	payslip := e.Group("/payslip/export")
-	payslip.POST("/income", payslipHeander.ExportExcelIncome)
-	payslip.POST("/expanses", payslipHeander.ExportExcelExpanses)
+	payslip := e.Group("/payslip")
+	payslip.POST("/export/income", payslipHeander.ExportExcelIncome)
+	payslip.POST("/export/expenses", payslipHeander.ExportExcelExpanses)
+	payslip.POST("/generate/pdf", payslipHeander.GeneratePdf)
 }

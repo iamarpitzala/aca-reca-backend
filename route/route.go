@@ -3,17 +3,15 @@ package route
 import (
 	"log"
 
+	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
-	"github.com/iamarpitzala/aca-reca-backend/route/auth"
-	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
-
-	_ "github.com/iamarpitzala/aca-reca-backend/docs"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
-
-	"github.com/gin-gonic/gin"
+	"github.com/iamarpitzala/aca-reca-backend/route/auth"
+	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
+	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func InitRouter(e *gin.Engine) {
@@ -33,6 +31,7 @@ func InitRouter(e *gin.Engine) {
 
 	authHandler := httpHandler.NewAuthHandler(authService, oauthService)
 	userHandler := httpHandler.NewUserHandler(authService)
+	payslipHandler := httpHandler.NewPayslipHandler()
 	clinicHandler := httpHandler.NewClinicHandler(clinicService)
 
 	// Swagger documentation route
@@ -42,4 +41,6 @@ func InitRouter(e *gin.Engine) {
 	auth.RegisterAuthRoutes(v1, authHandler)
 	auth.RegisterUserRoutes(v1, userHandler)
 	clinic.RegisterClinicRoutes(v1, clinicHandler)
+	payslip.RegisterPayslipRoutes(v1, payslipHandler)
+
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
+	_ "github.com/iamarpitzala/aca-reca-backend/docs" // swagger docs
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"

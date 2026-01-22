@@ -16,6 +16,7 @@ type DB struct {
 }
 
 func NewConnection(cfg DBConfig) (*DB, error) {
+	// postgresql://acareca:ORO1l28dJM8ZTQeBGoIckp5PfOBVCkm9@dpg-d5o8490gjchc739tqts0-a.oregon-postgres.render.com/acareca
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,

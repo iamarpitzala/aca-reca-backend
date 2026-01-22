@@ -47,6 +47,60 @@ definitions:
       website:
         type: string
     type: object
+  domain.ExportExpenses:
+    properties:
+      amount:
+        type: number
+      bas:
+        type: number
+      category:
+        type: string
+      date:
+        type: string
+      gst:
+        type: number
+      net:
+        type: number
+      q:
+        type: string
+      remarks:
+        type: string
+      supplier:
+        type: string
+    type: object
+  domain.ExportIncome:
+    properties:
+      adjustments:
+        type: number
+      dental_practice:
+        type: string
+      gross_income_g1:
+        type: number
+      gross_net_lab_fees:
+        type: number
+      gst_free:
+        type: number
+      gst_payable_1a:
+        type: number
+      gst_refundable_1b:
+        type: number
+      income_type:
+        type: string
+      lab_fees:
+        type: number
+      lab_record:
+        type: string
+      management_fees_g11:
+        type: number
+      net_payment:
+        type: number
+      payment_date:
+        type: string
+      percentage:
+        type: number
+      q:
+        type: string
+    type: object
   domain.LoginRequest:
     properties:
       email:
@@ -106,25 +160,27 @@ definitions:
     type: object
   domain.User:
     properties:
-      avatar_url:
+      avatarURL:
         type: string
-      created_at:
+      createdAt:
+        type: string
+      deletedAt:
         type: string
       email:
         type: string
-      first_name:
+      firstName:
         type: string
       id:
         type: string
-      is_active:
+      isActive:
         type: boolean
-      is_email_verified:
+      isEmailVerified:
         type: boolean
-      last_name:
+      lastName:
         type: string
       phone:
         type: string
-      updated_at:
+      updatedAt:
         type: string
     type: object
   gin.H:
@@ -503,6 +559,93 @@ paths:
       summary: Retrieve a clinic by ABN number
       tags:
       - Clinic
+  /payslip/export/expenses:
+    post:
+      consumes:
+      - application/json
+      description: Export Excel Expenses
+      parameters:
+      - description: Data
+        in: body
+        name: data
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/domain.ExportExpenses'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Export Excel Expenses
+      tags:
+      - Payslip
+  /payslip/export/income:
+    post:
+      consumes:
+      - application/json
+      description: Export Excel Income
+      parameters:
+      - description: Data
+        in: body
+        name: data
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/domain.ExportIncome'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Export Excel Income
+      tags:
+      - Payslip
+  /payslip/generate/pdf:
+    post:
+      consumes:
+      - application/json
+      description: Generate PDF
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Generate PDF
+      tags:
+      - Payslip
   /users/{userId}:
     get:
       consumes:

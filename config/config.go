@@ -6,6 +6,15 @@ import (
 	"time"
 )
 
+type RedisConfig struct {
+	Host       string
+	Port       string
+	Password   string
+	DB         int
+	TLSEnabled bool
+}
+
+// Config struct
 type Config struct {
 	Server ServerConfig
 	DB     DBConfig
@@ -25,13 +34,6 @@ type DBConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
-}
-
-type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
 }
 
 type JWTConfig struct {
@@ -124,4 +126,16 @@ func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
 		return value
 	}
 	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	valueStr := getEnv(key, "")
+	if valueStr == "" {
+		return defaultValue
+	}
+	value, err := strconv.ParseBool(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return value
 }

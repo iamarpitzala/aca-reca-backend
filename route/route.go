@@ -21,12 +21,9 @@ func InitRouter(e *gin.Engine) {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	rdb := config.NewRedisClient(cfg.Redis)
-
 	tokenService := service.NewTokenService(cfg.JWT)
-	sessionService := service.NewSessionService(rdb, cfg.Session)
 	oauthService := service.NewOAuthService(cfg.OAuth, db.DB)
-	authService := service.NewAuthService(db.DB, tokenService, sessionService, oauthService)
+	authService := service.NewAuthService(db.DB, tokenService, oauthService)
 	clinicService := service.NewClinicService(db.DB)
 
 	authHandler := httpHandler.NewAuthHandler(authService, oauthService)

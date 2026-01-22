@@ -7,12 +7,10 @@ import (
 )
 
 type Config struct {
-	Server  ServerConfig
-	DB      DBConfig
-	Redis   RedisConfig
-	JWT     JWTConfig
-	Session SessionConfig
-	OAuth   OAuthConfig
+	Server ServerConfig
+	DB     DBConfig
+	JWT    JWTConfig
+	OAuth  OAuthConfig
 }
 
 type ServerConfig struct {
@@ -75,20 +73,11 @@ func Load() *Config {
 			DBName:   getEnv("DB_NAME", "acareca"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
-		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
-			Port:     getEnv("REDIS_PORT", "6379"),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       getEnvAsInt("REDIS_DB", 0),
-		},
 		JWT: JWTConfig{
 			SecretKey:       getEnv("JWT_SECRET_KEY", "your-secret-key-change-in-production"),
 			AccessTokenTTL:  getEnvAsDuration("JWT_ACCESS_TTL", 15*time.Minute),
 			RefreshTokenTTL: getEnvAsDuration("JWT_REFRESH_TTL", 7*24*time.Hour),
 			Issuer:          getEnv("JWT_ISSUER", "motocabz-sso"),
-		},
-		Session: SessionConfig{
-			TTL: getEnvAsDuration("SESSION_TTL", 24*time.Hour),
 		},
 		OAuth: OAuthConfig{
 			RedirectURL: getEnv("OAUTH_REDIRECT_URL", "http://localhost:8080/api/v1/auth/oauth"),

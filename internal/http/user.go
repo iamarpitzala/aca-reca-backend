@@ -29,8 +29,8 @@ func NewUserHandler(authService *service.AuthService) *UserHandler {
 // @Produce json
 // @Param userId path string true "User ID"
 // @Success 200 {object} domain.User
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /users/{userId} [get]
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 	userID := c.Param("userId")
@@ -59,8 +59,8 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 // @Param userId path string true "User ID"
 // @Param updateUserRequest body domain.UpdateUserRequest true "Update user request"
 // @Success 200 {object} domain.User
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /users/{userId} [put]
 func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 	userID := c.Param("userId")
@@ -95,8 +95,8 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 // @Produce json
 // @Param userId path string true "User ID"
 // @Success 200 {array} domain.Session
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /users/{userId}/sessions [get]
 func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 	userID := c.Param("userId")
@@ -124,9 +124,9 @@ func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 // @Produce json
 // @Param userId path string true "User ID"
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /users/{userId}/sessions/{sessionId} [delete]
 func (h *UserHandler) RevokeSession(c *gin.Context) {
 	userID := c.Param("userId")

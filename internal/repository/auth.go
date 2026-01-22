@@ -12,8 +12,8 @@ import (
 )
 
 func CreateUser(ctx context.Context, db *sqlx.DB, user *domain.User) error {
-	query := `INSERT INTO tbl_user (id, email, password, first_name, last_name, phone, is_active, created_at, updated_at)
-		VALUES (:id, :email, :password, :first_name, :last_name, :phone, :is_active, :created_at, :updated_at)`
+	query := `INSERT INTO tbl_user (id, email, password, first_name, last_name, phone, created_at, updated_at)
+		VALUES (:id, :email, :password, :first_name, :last_name, :phone, :created_at, :updated_at)`
 	_, err := db.NamedExecContext(ctx, query, user)
 	if err != nil {
 		return err
@@ -22,7 +22,7 @@ func CreateUser(ctx context.Context, db *sqlx.DB, user *domain.User) error {
 }
 
 func GetUserByEmail(ctx context.Context, db *sqlx.DB, email string) (*domain.User, error) {
-	query := `SELECT id, email, password, first_name, last_name, phone, is_active, created_at, updated_at FROM tbl_user WHERE email = $1 AND deleted_at IS NULL`
+	query := `SELECT id, email, password, first_name, last_name, phone, created_at, updated_at FROM tbl_user WHERE email = $1 AND deleted_at IS NULL`
 	var user domain.User
 	err := db.GetContext(ctx, &user, query, email)
 	if err != nil && err != sql.ErrNoRows {
@@ -97,7 +97,7 @@ func GetSessionByID(ctx context.Context, db *sqlx.DB, sessionID uuid.UUID) (*dom
 }
 
 func GetUserByID(ctx context.Context, db *sqlx.DB, userID uuid.UUID) (*domain.User, error) {
-	query := `SELECT id, email, password, first_name, last_name, phone, is_active, created_at, updated_at FROM tbl_user WHERE id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, email, password, first_name, last_name, phone, created_at, updated_at FROM tbl_user WHERE id = $1 AND deleted_at IS NULL`
 	var user domain.User
 	err := db.GetContext(ctx, &user, query, userID)
 	if err != nil {

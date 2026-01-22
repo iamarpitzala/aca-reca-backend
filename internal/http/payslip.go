@@ -25,9 +25,9 @@ func NewPayslipHandler() *PayslipHandler {
 // @Accept json
 // @Produce json
 // @Param data body []domain.ExportIncome true "Data"
-// @Success 200 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /payslip/export/income [post]
 func (h *PayslipHandler) ExportExcelIncome(c *gin.Context) {
 	var data []domain.ExportIncome
@@ -59,9 +59,9 @@ func (h *PayslipHandler) ExportExcelIncome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param data body []domain.ExportExpenses true "Data"
-// @Success 200 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /payslip/export/expenses [post]
 func (h *PayslipHandler) ExportExcelExpanses(c *gin.Context) {
 	var data []domain.ExportExpenses
@@ -94,9 +94,9 @@ func (h *PayslipHandler) ExportExcelExpanses(c *gin.Context) {
 // @Tags Payslip
 // @Accept json
 // @Produce json
-// @Success 200 {object} gin.H
-// @Failure 400 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} domain.H
+// @Failure 400 {object} domain.H
+// @Failure 500 {object} domain.H
 // @Router /payslip/generate/pdf [post]
 func (h *PayslipHandler) GeneratePdf(c *gin.Context) {
 	fileName, err := GenerateInvoiceOne()

@@ -46,3 +46,13 @@ type AuthResponse struct {
 	TokenType    string `json:"tokenType"`
 	ExpiresIn    int64  `json:"expiresIn"`
 }
+
+// ErrorResponse represents a generic error response
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+// MessageResponse represents a generic message response
+type MessageResponse struct {
+	Message string `json:"message"`
+}

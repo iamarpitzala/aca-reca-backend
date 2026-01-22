@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
 	"github.com/iamarpitzala/aca-reca-backend/route"
@@ -56,6 +57,18 @@ func InitServer() {
 	}
 
 	e := gin.New()
+
+	// Configure CORS
+	corsConfig := cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"*"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"*"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
+	e.Use(cors.New(corsConfig))
+
 	e.Use(gin.Recovery())
 	e.Use(gin.Logger())
 

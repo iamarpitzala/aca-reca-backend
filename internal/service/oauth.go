@@ -216,7 +216,6 @@ func (os *OAuthService) CreateUserFromOAuth(ctx context.Context, userInfo *domai
 		FirstName:       userInfo.FirstName,
 		LastName:        userInfo.LastName,
 		AvatarURL:       userInfo.AvatarURL,
-		IsActive:        true,
 		IsEmailVerified: userInfo.EmailVerified,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),

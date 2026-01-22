@@ -5,11 +5,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
+	_ "github.com/iamarpitzala/aca-reca-backend/docs" // swagger docs
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
+	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
+	financial_calculation "github.com/iamarpitzala/aca-reca-backend/route/financial_calculation"
+	financial_form "github.com/iamarpitzala/aca-reca-backend/route/financial_form"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
+	user_clinic "github.com/iamarpitzala/aca-reca-backend/route/user_clinic"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -25,12 +30,19 @@ func InitRouter(e *gin.Engine) {
 	oauthService := service.NewOAuthService(cfg.OAuth, db.DB)
 	authService := service.NewAuthService(db.DB, tokenService, oauthService)
 	clinicService := service.NewClinicService(db.DB)
+	userClinicService := service.NewUserClinicService(db.DB)
+	financialFormService := service.NewFinancialFormService(db.DB)
+	financialCalculationService := service.NewFinancialCalculationService(db.DB)
+	expensesService := service.NewExpensesService(db.DB)
 
 	authHandler := httpHandler.NewAuthHandler(authService, oauthService)
 	userHandler := httpHandler.NewUserHandler(authService)
 	payslipHandler := httpHandler.NewPayslipHandler()
 	clinicHandler := httpHandler.NewClinicHandler(clinicService)
-
+	userClinicHandler := httpHandler.NewUserClinicHandler(userClinicService)
+	financialFormHandler := httpHandler.NewFinancialFormHandler(financialFormService)
+	financialCalculationHandler := httpHandler.NewFinancialCalculationHandler(financialCalculationService)
+	expensesHandler := httpHandler.NewExpensesHandler(expensesService)
 	// Swagger documentation route
 	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -39,5 +51,9 @@ func InitRouter(e *gin.Engine) {
 	auth.RegisterUserRoutes(v1, userHandler)
 	clinic.RegisterClinicRoutes(v1, clinicHandler)
 	payslip.RegisterPayslipRoutes(v1, payslipHandler)
+	user_clinic.RegisterUserClinicRoutes(v1, userClinicHandler)
+	financial_form.RegisterFinancialFormRoutes(v1, financialFormHandler)
+	financial_calculation.RegisterFinancialCalculationRoutes(v1, financialCalculationHandler)
+	expense.RegisterExpensesRoutes(v1, expensesHandler)
 
 }

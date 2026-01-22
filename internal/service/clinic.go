@@ -20,6 +20,16 @@ func NewClinicService(db *sqlx.DB) *ClinicService {
 }
 
 func (cs *ClinicService) CreateClinic(ctx context.Context, clinic *domain.Clinic) error {
+	// Validate state
+	if err := ValidateState(clinic.State); err != nil {
+		return err
+	}
+
+	// Validate ABN
+	if err := ValidateABN(clinic.ABNNumber); err != nil {
+		return err
+	}
+
 	clinic.ID = uuid.New()
 	return repository.CreateClinic(ctx, cs.db, clinic)
 }
@@ -29,6 +39,16 @@ func (cs *ClinicService) GetClinicByID(ctx context.Context, id uuid.UUID) (*doma
 }
 
 func (cs *ClinicService) UpdateClinic(ctx context.Context, clinic *domain.Clinic) error {
+	// Validate state
+	if err := ValidateState(clinic.State); err != nil {
+		return err
+	}
+
+	// Validate ABN
+	if err := ValidateABN(clinic.ABNNumber); err != nil {
+		return err
+	}
+
 	return repository.UpdateClinic(ctx, cs.db, clinic)
 }
 

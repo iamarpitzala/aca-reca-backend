@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   domain.AuthResponse:
     properties:
@@ -45,6 +46,94 @@ definitions:
       updatedAt:
         type: string
       website:
+        type: string
+    type: object
+  domain.ExpenseCategory:
+    properties:
+      clinicId:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      deletedAt:
+        type: string
+      deletedBy:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  domain.ExpenseCategoryType:
+    properties:
+      categoryId:
+        type: string
+      clinicId:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      deletedAt:
+        type: string
+      deletedBy:
+        type: string
+      id:
+        type: string
+      typeId:
+        type: string
+    type: object
+  domain.ExpenseEntry:
+    properties:
+      amount:
+        type: number
+      categoryId:
+        type: string
+      clinicId:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      deletedAt:
+        type: string
+      deletedBy:
+        type: string
+      expenseDate:
+        type: string
+      gstRate:
+        type: number
+      id:
+        type: string
+      isGSTInclusive:
+        type: boolean
+      notes:
+        type: string
+      supplierName:
+        type: string
+      typeId:
+        type: string
+    type: object
+  domain.ExpenseType:
+    properties:
+      clinicId:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      deletedAt:
+        type: string
+      deletedBy:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
         type: string
     type: object
   domain.ExportExpenses:
@@ -100,6 +189,33 @@ definitions:
         type: number
       q:
         type: string
+    type: object
+  domain.FinancialForm:
+    properties:
+      calculationMethod:
+        description: '"net" or "gross"'
+        type: string
+      clinicId:
+        type: string
+      configuration:
+        additionalProperties: true
+        description: JSONB stored as map
+        type: object
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      id:
+        type: string
+      isActive:
+        type: boolean
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  domain.H:
+    additionalProperties: true
     type: object
   domain.LoginRequest:
     properties:
@@ -183,11 +299,18 @@ definitions:
       updatedAt:
         type: string
     type: object
-  gin.H:
-    additionalProperties: {}
-    type: object
+host: localhost:8080
 info:
-  contact: {}
+  contact:
+    email: support@acareca.com
+    name: API Support
+  description: API documentation for ACA RECA Backend
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: ACA RECA API
+  version: "1.0"
 paths:
   /auth/login:
     post:
@@ -211,11 +334,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Login a user
       tags:
       - Auth
@@ -236,15 +359,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Logout a user
       tags:
       - Auth
@@ -274,11 +397,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Initiate OAuth flow
       tags:
       - Auth
@@ -303,11 +426,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: OAuth callback
       tags:
       - Auth
@@ -333,11 +456,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Refresh a token
       tags:
       - Auth
@@ -363,11 +486,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Register a new user
       tags:
       - Auth
@@ -382,15 +505,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Retrieve all clinics
       tags:
       - Clinic
@@ -411,15 +534,15 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Create a new clinic
       tags:
       - Clinic
@@ -440,19 +563,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Delete a clinic by ID
       tags:
       - Clinic
@@ -472,19 +595,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Retrieve a clinic by ID
       tags:
       - Clinic
@@ -510,19 +633,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Update a clinic by ID
       tags:
       - Clinic
@@ -543,22 +666,496 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Retrieve a clinic by ABN number
       tags:
       - Clinic
+  /expenses/category:
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense category with the given information
+      parameters:
+      - description: Expense category information
+        in: body
+        name: expenseCategory
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ExpenseCategory'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ExpenseCategory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new expense category
+      tags:
+      - Expenses
+  /expenses/category-type:
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense category type with the given information
+      parameters:
+      - description: Expense category type information
+        in: body
+        name: expenseCategoryType
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ExpenseCategoryType'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ExpenseCategoryType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new expense category type
+      tags:
+      - Expenses
+  /expenses/category-type/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a expense category type by ID
+      parameters:
+      - description: Expense Category Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ExpenseCategoryType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Retrieve a expense category type by ID
+      tags:
+      - Expenses
+  /expenses/category/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a expense category by ID
+      parameters:
+      - description: Expense Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ExpenseCategory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Retrieve a expense category by ID
+      tags:
+      - Expenses
+  /expenses/entry:
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense entry with the given information
+      parameters:
+      - description: Expense entry information
+        in: body
+        name: expenseEntry
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ExpenseEntry'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ExpenseEntry'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new expense entry
+      tags:
+      - Expenses
+  /expenses/entry/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a expense entry by ID
+      parameters:
+      - description: Expense Entry ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ExpenseEntry'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Retrieve a expense entry by ID
+      tags:
+      - Expenses
+  /expenses/type:
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense type with the given information
+      parameters:
+      - description: Expense type information
+        in: body
+        name: expenseType
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ExpenseType'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ExpenseType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new expense type
+      tags:
+      - Expenses
+  /expenses/type/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a expense type by ID
+      parameters:
+      - description: Expense Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ExpenseType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Retrieve a expense type by ID
+      tags:
+      - Expenses
+  /financial-calculation/calculate:
+    post:
+      consumes:
+      - application/json
+      description: Perform financial calculation based on form configuration and input
+        values
+      parameters:
+      - description: Calculation request
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Calculate financial values
+      tags:
+      - FinancialCalculation
+  /financial-calculation/history/{formId}:
+    get:
+      consumes:
+      - application/json
+      description: Get calculation history for a financial form
+      parameters:
+      - description: Financial Form ID
+        in: path
+        name: formId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Get calculation history
+      tags:
+      - FinancialCalculation
+  /financial-form:
+    post:
+      consumes:
+      - application/json
+      description: Create a new financial form with configuration
+      parameters:
+      - description: Financial form information
+        in: body
+        name: form
+        required: true
+        schema:
+          $ref: '#/definitions/domain.FinancialForm'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new financial form
+      tags:
+      - FinancialForm
+  /financial-form/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a financial form by ID
+      parameters:
+      - description: Financial Form ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Delete financial form
+      tags:
+      - FinancialForm
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a financial form by ID
+      parameters:
+      - description: Financial Form ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Get financial form by ID
+      tags:
+      - FinancialForm
+    put:
+      consumes:
+      - application/json
+      description: Update a financial form by ID
+      parameters:
+      - description: Financial Form ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Financial form information
+        in: body
+        name: form
+        required: true
+        schema:
+          $ref: '#/definitions/domain.FinancialForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Update financial form
+      tags:
+      - FinancialForm
+  /financial-form/clinic/{clinicId}:
+    get:
+      consumes:
+      - application/json
+      description: Get all financial forms for a clinic
+      parameters:
+      - description: Clinic ID
+        in: path
+        name: clinicId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Get clinic's financial forms
+      tags:
+      - FinancialForm
   /payslip/export/expenses:
     post:
       consumes:
@@ -579,15 +1176,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Export Excel Expenses
       tags:
       - Payslip
@@ -611,15 +1208,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Export Excel Income
       tags:
       - Payslip
@@ -634,18 +1231,139 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Generate PDF
       tags:
       - Payslip
+  /user-clinic:
+    post:
+      consumes:
+      - application/json
+      description: Associate a user with a clinic
+      parameters:
+      - description: Association request
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Associate user with clinic
+      tags:
+      - UserClinic
+  /user-clinic/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a user-clinic association
+      parameters:
+      - description: User-Clinic Association ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Remove user from clinic
+      tags:
+      - UserClinic
+  /user-clinic/clinic/{clinicId}:
+    get:
+      consumes:
+      - application/json
+      description: Get all users associated with a clinic
+      parameters:
+      - description: Clinic ID
+        in: path
+        name: clinicId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Get clinic's users
+      tags:
+      - UserClinic
+  /user-clinic/user/{userId}:
+    get:
+      consumes:
+      - application/json
+      description: Get all clinics associated with a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Get user's clinics
+      tags:
+      - UserClinic
   /users/{userId}:
     get:
       consumes:
@@ -667,11 +1385,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Get current user
       tags:
       - User
@@ -701,11 +1419,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Update current user
       tags:
       - User
@@ -732,11 +1450,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Get active sessions
       tags:
       - User
@@ -762,16 +1480,25 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/gin.H'
+            $ref: '#/definitions/domain.H'
       summary: Revoke a session
       tags:
       - User
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

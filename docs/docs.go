@@ -584,6 +584,390 @@ const docTemplate = `{
                 }
             }
         },
+        "/expenses/category": {
+            "post": {
+                "description": "Create a new expense category with the given information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Create a new expense category",
+                "parameters": [
+                    {
+                        "description": "Expense category information",
+                        "name": "expenseCategory",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseCategory"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseCategory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/category-type": {
+            "post": {
+                "description": "Create a new expense category type with the given information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Create a new expense category type",
+                "parameters": [
+                    {
+                        "description": "Expense category type information",
+                        "name": "expenseCategoryType",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseCategoryType"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseCategoryType"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/category-type/{id}": {
+            "get": {
+                "description": "Retrieve a expense category type by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Retrieve a expense category type by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense Category Type ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseCategoryType"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/category/{id}": {
+            "get": {
+                "description": "Retrieve a expense category by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Retrieve a expense category by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseCategory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/entry": {
+            "post": {
+                "description": "Create a new expense entry with the given information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Create a new expense entry",
+                "parameters": [
+                    {
+                        "description": "Expense entry information",
+                        "name": "expenseEntry",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseEntry"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseEntry"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/entry/{id}": {
+            "get": {
+                "description": "Retrieve a expense entry by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Retrieve a expense entry by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense Entry ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseEntry"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/type": {
+            "post": {
+                "description": "Create a new expense type with the given information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Create a new expense type",
+                "parameters": [
+                    {
+                        "description": "Expense type information",
+                        "name": "expenseType",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseType"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseType"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/type/{id}": {
+            "get": {
+                "description": "Retrieve a expense type by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Retrieve a expense type by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense Type ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseType"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
         "/financial-calculation/calculate": {
             "post": {
                 "description": "Perform financial calculation based on form configuration and input values",
@@ -1500,6 +1884,140 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "website": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ExpenseCategory": {
+            "type": "object",
+            "properties": {
+                "clinicId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "deletedBy": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ExpenseCategoryType": {
+            "type": "object",
+            "properties": {
+                "categoryId": {
+                    "type": "string"
+                },
+                "clinicId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "deletedBy": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "typeId": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ExpenseEntry": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "categoryId": {
+                    "type": "string"
+                },
+                "clinicId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "deletedBy": {
+                    "type": "string"
+                },
+                "expenseDate": {
+                    "type": "string"
+                },
+                "gstRate": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isGSTInclusive": {
+                    "type": "boolean"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "supplierName": {
+                    "type": "string"
+                },
+                "typeId": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ExpenseType": {
+            "type": "object",
+            "properties": {
+                "clinicId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "deletedBy": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }

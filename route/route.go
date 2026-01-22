@@ -10,6 +10,7 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
+	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
 	financial_calculation "github.com/iamarpitzala/aca-reca-backend/route/financial_calculation"
 	financial_form "github.com/iamarpitzala/aca-reca-backend/route/financial_form"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
@@ -35,6 +36,7 @@ func InitRouter(e *gin.Engine) {
 	userClinicService := service.NewUserClinicService(db.DB)
 	financialFormService := service.NewFinancialFormService(db.DB)
 	financialCalculationService := service.NewFinancialCalculationService(db.DB)
+	expensesService := service.NewExpensesService(db.DB)
 
 	authHandler := httpHandler.NewAuthHandler(authService, oauthService)
 	userHandler := httpHandler.NewUserHandler(authService)
@@ -43,7 +45,7 @@ func InitRouter(e *gin.Engine) {
 	userClinicHandler := httpHandler.NewUserClinicHandler(userClinicService)
 	financialFormHandler := httpHandler.NewFinancialFormHandler(financialFormService)
 	financialCalculationHandler := httpHandler.NewFinancialCalculationHandler(financialCalculationService)
-
+	expensesHandler := httpHandler.NewExpensesHandler(expensesService)
 	// Swagger documentation route
 	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -55,5 +57,6 @@ func InitRouter(e *gin.Engine) {
 	user_clinic.RegisterUserClinicRoutes(v1, userClinicHandler)
 	financial_form.RegisterFinancialFormRoutes(v1, financialFormHandler)
 	financial_calculation.RegisterFinancialCalculationRoutes(v1, financialCalculationHandler)
+	expense.RegisterExpensesRoutes(v1, expensesHandler)
 
 }

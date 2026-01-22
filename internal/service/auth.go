@@ -53,7 +53,6 @@ func (as *AuthService) Register(ctx context.Context, req *domain.RegisterRequest
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Phone:     req.Phone,
-		IsActive:  true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -114,11 +113,6 @@ func (as *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*do
 	}
 	if user == nil {
 		return nil, errors.New("invalid email or password")
-	}
-
-	// Check if user is active
-	if user.IsActive == false {
-		return nil, errors.New("user account is inactive")
 	}
 
 	// Verify password
@@ -297,10 +291,6 @@ func (as *AuthService) OAuthLogin(ctx context.Context, userID uuid.UUID) (*domai
 	user, err := repository.GetUserByID(ctx, as.db, userID)
 	if err != nil {
 		return nil, err
-	}
-	// Check if user is active
-	if !user.IsActive {
-		return nil, errors.New("user account is inactive")
 	}
 
 	// Generate tokens

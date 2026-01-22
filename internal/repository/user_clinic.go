@@ -57,7 +57,7 @@ func GetClinicUsers(ctx context.Context, db *sqlx.DB, clinicID uuid.UUID) ([]dom
 	query := `SELECT uc.id, uc.user_id, uc.clinic_id, uc.role, uc.created_at, uc.updated_at,
 		u.id as "user.id", u.email as "user.email", u.first_name as "user.firstName",
 		u.last_name as "user.lastName", u.phone as "user.phone", u.avatar_url as "user.avatarURL",
-		u.is_active as "user.isActive", u.is_email_verified as "user.isEmailVerified",
+		u.is_email_verified as "user.isEmailVerified",
 		u.created_at as "user.createdAt", u.updated_at as "user.updatedAt"
 		FROM tbl_user_clinic uc
 		INNER JOIN tbl_user u ON uc.user_id = u.id

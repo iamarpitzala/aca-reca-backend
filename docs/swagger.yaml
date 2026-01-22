@@ -48,6 +48,94 @@ definitions:
       website:
         type: string
     type: object
+  domain.ExpenseCategory:
+    properties:
+      clinicId:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      deletedAt:
+        type: string
+      deletedBy:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  domain.ExpenseCategoryType:
+    properties:
+      categoryId:
+        type: string
+      clinicId:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      deletedAt:
+        type: string
+      deletedBy:
+        type: string
+      id:
+        type: string
+      typeId:
+        type: string
+    type: object
+  domain.ExpenseEntry:
+    properties:
+      amount:
+        type: number
+      categoryId:
+        type: string
+      clinicId:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      deletedAt:
+        type: string
+      deletedBy:
+        type: string
+      expenseDate:
+        type: string
+      gstRate:
+        type: number
+      id:
+        type: string
+      isGSTInclusive:
+        type: boolean
+      notes:
+        type: string
+      supplierName:
+        type: string
+      typeId:
+        type: string
+    type: object
+  domain.ExpenseType:
+    properties:
+      clinicId:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      deletedAt:
+        type: string
+      deletedBy:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   domain.ExportExpenses:
     properties:
       amount:
@@ -594,6 +682,258 @@ paths:
       summary: Retrieve a clinic by ABN number
       tags:
       - Clinic
+  /expenses/category:
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense category with the given information
+      parameters:
+      - description: Expense category information
+        in: body
+        name: expenseCategory
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ExpenseCategory'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ExpenseCategory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new expense category
+      tags:
+      - Expenses
+  /expenses/category-type:
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense category type with the given information
+      parameters:
+      - description: Expense category type information
+        in: body
+        name: expenseCategoryType
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ExpenseCategoryType'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ExpenseCategoryType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new expense category type
+      tags:
+      - Expenses
+  /expenses/category-type/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a expense category type by ID
+      parameters:
+      - description: Expense Category Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ExpenseCategoryType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Retrieve a expense category type by ID
+      tags:
+      - Expenses
+  /expenses/category/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a expense category by ID
+      parameters:
+      - description: Expense Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ExpenseCategory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Retrieve a expense category by ID
+      tags:
+      - Expenses
+  /expenses/entry:
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense entry with the given information
+      parameters:
+      - description: Expense entry information
+        in: body
+        name: expenseEntry
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ExpenseEntry'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ExpenseEntry'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new expense entry
+      tags:
+      - Expenses
+  /expenses/entry/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a expense entry by ID
+      parameters:
+      - description: Expense Entry ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ExpenseEntry'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Retrieve a expense entry by ID
+      tags:
+      - Expenses
+  /expenses/type:
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense type with the given information
+      parameters:
+      - description: Expense type information
+        in: body
+        name: expenseType
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ExpenseType'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ExpenseType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new expense type
+      tags:
+      - Expenses
+  /expenses/type/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a expense type by ID
+      parameters:
+      - description: Expense Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ExpenseType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Retrieve a expense type by ID
+      tags:
+      - Expenses
   /financial-calculation/calculate:
     post:
       consumes:

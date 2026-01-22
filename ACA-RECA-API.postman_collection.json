@@ -1217,6 +1217,264 @@
 				}
 			],
 			"description": "Financial calculation endpoints. All endpoints require authentication."
+		},
+		{
+			"name": "Expenses",
+			"item": [
+				{
+					"name": "Create Expense Type",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"clinicId\": \"{{clinic_id}}\",\n    \"name\": \"Office Supplies\",\n    \"description\": \"Expenses for office supplies and stationery\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expense/type",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expense",
+								"type"
+							]
+						},
+						"description": "Create a new expense type"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Expense Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"clinicId\": \"{{clinic_id}}\",\n    \"name\": \"Utilities\",\n    \"description\": \"Monthly utility expenses\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expense/category",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expense",
+								"category"
+							]
+						},
+						"description": "Create a new expense category"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Expense Category Type",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"clinicId\": \"{{clinic_id}}\",\n    \"typeId\": \"{{expense_type_id}}\",\n    \"categoryId\": \"{{expense_category_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expense/category-type",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expense",
+								"category-type"
+							]
+						},
+						"description": "Create a new expense category type association"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Expense Entry",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"clinicId\": \"{{clinic_id}}\",\n    \"categoryId\": \"{{expense_category_id}}\",\n    \"typeId\": \"{{expense_type_id}}\",\n    \"amount\": 150.00,\n    \"gstRate\": 10.0,\n    \"isGSTInclusive\": true,\n    \"expenseDate\": \"2026-01-22T00:00:00Z\",\n    \"supplierName\": \"ABC Supplies\",\n    \"notes\": \"Monthly office supplies purchase\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expense/entry",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expense",
+								"entry"
+							]
+						},
+						"description": "Create a new expense entry"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Expense Type by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expense/type/{{expense_type_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expense",
+								"type",
+								"{{expense_type_id}}"
+							]
+						},
+						"description": "Get an expense type by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Expense Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expense/category/{{expense_category_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expense",
+								"category",
+								"{{expense_category_id}}"
+							]
+						},
+						"description": "Get an expense category by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Expense Category Type by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expense/category-type/{{expense_category_type_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expense",
+								"category-type",
+								"{{expense_category_type_id}}"
+							]
+						},
+						"description": "Get an expense category type by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Expense Entry by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expense/entry/{{expense_entry_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expense",
+								"entry",
+								"{{expense_entry_id}}"
+							]
+						},
+						"description": "Get an expense entry by ID"
+					},
+					"response": []
+				}
+			],
+			"description": "Expense management endpoints. All endpoints require authentication."
 		}
 	],
 	"variable": [
@@ -1257,6 +1515,26 @@
 		},
 		{
 			"key": "user_clinic_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "expense_type_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "expense_category_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "expense_category_type_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "expense_entry_id",
 			"value": "",
 			"type": "string"
 		}

@@ -14,7 +14,6 @@ type User struct {
 	LastName        string     `db:"last_name" json:"lastName"`
 	Phone           string     `db:"phone" json:"phone"`
 	AvatarURL       string     `db:"avatar_url" json:"avatarURL"`
-	IsActive        bool       `db:"is_active" json:"isActive"`
 	IsEmailVerified bool       `db:"is_email_verified" json:"isEmailVerified"`
 	CreatedAt       time.Time  `db:"created_at" json:"createdAt"`
 	UpdatedAt       time.Time  `db:"updated_at" json:"updatedAt"`

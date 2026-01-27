@@ -227,6 +227,23 @@ definitions:
     - email
     - password
     type: object
+  domain.Quarter:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      endDate:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      startDate:
+        type: string
+      updatedAt:
+        type: string
+    type: object
   domain.RegisterRequest:
     properties:
       email:
@@ -288,8 +305,6 @@ definitions:
         type: string
       id:
         type: string
-      isActive:
-        type: boolean
       isEmailVerified:
         type: boolean
       lastName:
@@ -1243,6 +1258,163 @@ paths:
       summary: Generate PDF
       tags:
       - Payslip
+  /quarter:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all financial quarters
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Quarter'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List financial quarters
+      tags:
+      - Quarter
+    post:
+      consumes:
+      - application/json
+      description: Create a new financial quarter with the given information
+      parameters:
+      - description: Financial Quarter
+        in: body
+        name: quarter
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Quarter'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Quarter'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new financial quarter
+      tags:
+      - Quarter
+  /quarter/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a financial quarter by its ID
+      parameters:
+      - description: Quarter ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a financial quarter
+      tags:
+      - Quarter
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a financial quarter by its ID
+      parameters:
+      - description: Quarter ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Quarter'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a financial quarter
+      tags:
+      - Quarter
+    put:
+      consumes:
+      - application/json
+      description: Update a financial quarter's details by its ID
+      parameters:
+      - description: Quarter ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Financial Quarter
+        in: body
+        name: quarter
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Quarter'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a financial quarter
+      tags:
+      - Quarter
   /user-clinic:
     post:
       consumes:

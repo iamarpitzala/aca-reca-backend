@@ -187,6 +187,7 @@ func (h *ExpensesHandler) CreateExpenseEntry(c *gin.Context) {
 	expenseEntry.ID = uuid.New()
 	expenseEntry.CreatedBy = userIDUUID
 	expenseEntry.CreatedAt = time.Now()
+	expenseEntry.DeletedAt = nil
 
 	err := h.expensesService.CreateExpenseEntry(c.Request.Context(), &expenseEntry)
 	if err != nil {

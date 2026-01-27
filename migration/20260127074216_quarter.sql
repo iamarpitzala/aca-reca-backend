@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS tbl_quarter(
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL
-)
+);
 
 ALTER TABLE tbl_quarter
 ADD CONSTRAINT chk_quarter_date_range

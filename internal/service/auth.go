@@ -14,18 +14,16 @@ import (
 )
 
 type AuthService struct {
-	db             *sqlx.DB
-	tokenService   *TokenService
-	sessionService *SessionService
-	oauthService   *OAuthService
+	db           *sqlx.DB
+	tokenService *TokenService
+	oauthService *OAuthService
 }
 
-func NewAuthService(db *sqlx.DB, tokenService *TokenService, sessionService *SessionService, oauthService *OAuthService) *AuthService {
+func NewAuthService(db *sqlx.DB, tokenService *TokenService, oauthService *OAuthService) *AuthService {
 	return &AuthService{
-		db:             db,
-		tokenService:   tokenService,
-		sessionService: sessionService,
-		oauthService:   oauthService,
+		db:           db,
+		tokenService: tokenService,
+		oauthService: oauthService,
 	}
 }
 
@@ -85,17 +83,6 @@ func (as *AuthService) Register(ctx context.Context, req *domain.RegisterRequest
 		return nil, err
 	}
 
-	// Store session in Redis
-	sessionData := &domain.SessionData{
-		UserID:    user.ID,
-		Email:     user.Email,
-		SessionID: sessionID,
-	}
-
-	if err := as.sessionService.StoreSession(ctx, sessionID, sessionData); err != nil {
-		return nil, err
-	}
-
 	return &domain.AuthResponse{
 		User:         &user,
 		AccessToken:  tokenPair.AccessToken,
@@ -140,17 +127,6 @@ func (as *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*do
 
 	err = repository.CreateSession(ctx, as.db, &session)
 	if err != nil {
-		return nil, err
-	}
-
-	// Store session in Redis
-	sessionData := &domain.SessionData{
-		UserID:    user.ID,
-		Email:     user.Email,
-		SessionID: sessionID,
-	}
-
-	if err := as.sessionService.StoreSession(ctx, sessionID, sessionData); err != nil {
 		return nil, err
 	}
 
@@ -203,18 +179,6 @@ func (as *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*
 		return nil, err
 	}
 
-	// Update session in Redis
-	sessionData := &domain.SessionData{
-		UserID:    user.ID,
-		Email:     user.Email,
-		SessionID: session.ID,
-	}
-
-	if err := as.sessionService.StoreSession(ctx, session.ID, sessionData); err != nil {
-		// Log error but don't fail refresh
-		_ = err
-	}
-
 	return &domain.AuthResponse{
 		AccessToken:  newTokenPair.AccessToken,
 		RefreshToken: newTokenPair.RefreshToken,
@@ -227,11 +191,6 @@ func (as *AuthService) Logout(ctx context.Context, sessionID uuid.UUID) error {
 	// Deactivate session in database
 	err := repository.DeleteSession(ctx, as.db, sessionID)
 	if err != nil {
-		return err
-	}
-
-	// Delete session from Redis
-	if err := as.sessionService.DeleteSession(ctx, sessionID); err != nil {
 		return err
 	}
 
@@ -313,17 +272,6 @@ func (as *AuthService) OAuthLogin(ctx context.Context, userID uuid.UUID) (*domai
 
 	if err := repository.CreateSession(ctx, as.db, &session); err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
-	}
-
-	// Store session in Redis
-	sessionData := &domain.SessionData{
-		UserID:    user.ID,
-		Email:     user.Email,
-		SessionID: sessionID,
-	}
-
-	if err := as.sessionService.StoreSession(ctx, sessionID, sessionData); err != nil {
-		return nil, err
 	}
 
 	// Remove password from response

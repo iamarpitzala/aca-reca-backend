@@ -18,12 +18,14 @@ func CreateFinancialForm(ctx context.Context, db *sqlx.DB, form *domain.Financia
 		return errors.New("failed to marshal configuration")
 	}
 
-	query := `INSERT INTO tbl_financial_form (id, clinic_id, name, calculation_method, configuration, is_active, created_at, updated_at)
-		VALUES (:id, :clinic_id, :name, :calculation_method, :configuration, :is_active, :created_at, :updated_at)`
+	query := `INSERT INTO tbl_financial_form (id, clinic_id, quarter_id, gst_id, name, calculation_method, configuration, is_active, created_at, updated_at)
+		VALUES (:id, :clinic_id, :quarter_id, :gst_id, :name, :calculation_method, :configuration, :is_active, :created_at, :updated_at)`
 
 	args := map[string]interface{}{
 		"id":                 form.ID,
 		"clinic_id":          form.ClinicID,
+		"quarter_id":         form.QuarterID,
+		"gst_id":             form.GSTID,
 		"name":               form.Name,
 		"calculation_method": form.CalculationMethod,
 		"configuration":      string(configJSON),
@@ -44,6 +46,7 @@ func GetFinancialFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*doma
 		ID                uuid.UUID       `db:"id"`
 		ClinicID          uuid.UUID       `db:"clinic_id"`
 		QuarterID         uuid.UUID       `db:"quarter_id"`
+		GstID             *int            `db:"gst_id"`
 		Name              string          `db:"name"`
 		CalculationMethod string          `db:"calculation_method"`
 		Configuration     json.RawMessage `db:"configuration"`
@@ -53,7 +56,7 @@ func GetFinancialFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*doma
 		DeletedAt         *time.Time      `db:"deleted_at"`
 	}
 
-	query := `SELECT id, clinic_id, quarter_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
+	query := `SELECT id, clinic_id, quarter_id, gst_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
 		FROM tbl_financial_form WHERE id = $1 AND deleted_at IS NULL`
 
 	var row formRow
@@ -74,6 +77,7 @@ func GetFinancialFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*doma
 		ID:                row.ID,
 		ClinicID:          row.ClinicID,
 		QuarterID:         row.QuarterID,
+		GSTID:             row.GstID,
 		Name:              row.Name,
 		CalculationMethod: row.CalculationMethod,
 		Configuration:     config,
@@ -89,6 +93,7 @@ func GetFinancialFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid
 		ID                uuid.UUID       `db:"id"`
 		ClinicID          uuid.UUID       `db:"clinic_id"`
 		QuarterID         uuid.UUID       `db:"quarter_id"`
+		GSTID             *int            `db:"gst_id"`
 		Name              string          `db:"name"`
 		CalculationMethod string          `db:"calculation_method"`
 		Configuration     json.RawMessage `db:"configuration"`
@@ -98,7 +103,7 @@ func GetFinancialFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid
 		DeletedAt         *time.Time      `db:"deleted_at"`
 	}
 
-	query := `SELECT id, clinic_id, quarter_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
+	query := `SELECT id, clinic_id, quarter_id, gst_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
 		FROM tbl_financial_form WHERE clinic_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC`
 
 	var rows []formRow
@@ -117,6 +122,8 @@ func GetFinancialFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid
 		forms[i] = domain.FinancialForm{
 			ID:                row.ID,
 			ClinicID:          row.ClinicID,
+			QuarterID:         row.QuarterID,
+			GSTID:             row.GSTID,
 			Name:              row.Name,
 			CalculationMethod: row.CalculationMethod,
 			Configuration:     config,
@@ -162,4 +169,15 @@ func DeleteFinancialForm(ctx context.Context, db *sqlx.DB, id uuid.UUID) error {
 		return err
 	}
 	return nil
+}
+
+// GST Repository
+func GetGSTByID(ctx context.Context, db *sqlx.DB, id int) (*domain.GST, error) {
+	query := `SELECT id, name, type, percentage FROM tbl_gst WHERE id = $1`
+	var gst domain.GST
+	err := db.GetContext(ctx, &gst, query, id)
+	if err != nil {
+		return nil, err
+	}
+	return &gst, nil
 }

@@ -7,10 +7,19 @@ import (
 )
 
 // FinancialForm represents a financial form configuration
+
+type GST struct {
+	ID         uuid.UUID `db:"id" json:"id"`
+	Name       string    `db:"name" json:"name"`
+	Type       string    `db:"type" json:"type"`
+	Percentage float64   `db:"percentage" json:"percentage"`
+}
+
 type FinancialForm struct {
 	ID                uuid.UUID              `db:"id" json:"id"`
 	ClinicID          uuid.UUID              `db:"clinic_id" json:"clinicId"`
 	QuarterID         uuid.UUID              `db:"quarter_id" json:"quarterId"`
+	GSTID             *int                   `db:"gst_id" json:"gstId"`
 	Name              string                 `db:"name" json:"name"`
 	CalculationMethod string                 `db:"calculation_method" json:"calculationMethod"` // "net" or "gross"
 	Configuration     map[string]interface{} `db:"configuration" json:"configuration"`          // JSONB stored as map
@@ -18,6 +27,8 @@ type FinancialForm struct {
 	CreatedAt         time.Time              `db:"created_at" json:"createdAt"`
 	UpdatedAt         time.Time              `db:"updated_at" json:"updatedAt"`
 	DeletedAt         *time.Time             `db:"deleted_at" json:"deletedAt"`
+	GST               *GST                   `db:"gst" json:"gst,omitempty"`
+	Quarter           *Quarter               `db:"quarter" json:"quarter,omitempty"`
 }
 
 // NetMethodConfig represents configuration for Net Method
@@ -36,11 +47,10 @@ type GrossMethodConfig struct {
 	LabFeeEnabled            bool    `json:"labFeeEnabled"`            // Default: true
 	LabFeePaidBy             string  `json:"labFeePaidBy"`             // "clinic" or "dentist"
 	GSTOnLabFee              bool    `json:"gstOnLabFee"`              // Default: false
-	MerchantFeeEnabled       bool    `json:"merchantFeeEnabled"`       // Default: false
-	GSTOnMerchantFee         bool    `json:"gstOnMerchantFee"`         // Default: false
 	GSTOnPatientFee          bool    `json:"gstOnPatientFee"`          // Default: false
 	OutworkChargeRateEnabled bool    `json:"outworkChargeRateEnabled"` // Default: false
-	OutworkRatePercent       float64 `json:"outworkRatePercent"`       // Default: 40%
+	OutworkRatePercent       float64 `json:"outworkRatePercent"`
+	// Default: 40%
 }
 
 // CalculationInput represents input values for calculations

@@ -39,6 +39,15 @@ func (fcs *FinancialCalculationService) CalculateFinancial(ctx context.Context, 
 		return nil, nil, err
 	}
 
+	var gst *domain.GST
+	if form.GSTID != nil {
+		gst, err = repository.GetGSTByID(ctx, fcs.db, *form.GSTID)
+		form.GST = gst
+		if err != nil {
+			return nil, nil, errors.New("GST not found")
+		}
+	}
+
 	var result *domain.CalculationResult
 	var basMapping *domain.BASMapping
 
@@ -46,7 +55,7 @@ func (fcs *FinancialCalculationService) CalculateFinancial(ctx context.Context, 
 	if form.CalculationMethod == "net" {
 		result, basMapping, err = fcs.calculateNetMethod(form.Configuration, input)
 	} else if form.CalculationMethod == "gross" {
-		result, basMapping, err = fcs.calculateGrossMethod(form.Configuration, input)
+		result, basMapping, err = fcs.calculateGrossMethod(form, input)
 	} else {
 		return nil, nil, errors.New("invalid calculation method")
 	}
@@ -164,9 +173,9 @@ func (fcs *FinancialCalculationService) calculateNetMethod(config map[string]int
 }
 
 // calculateGrossMethod performs Gross Method calculations
-func (fcs *FinancialCalculationService) calculateGrossMethod(config map[string]interface{}, input domain.CalculationInput) (*domain.CalculationResult, *domain.BASMapping, error) {
+func (fcs *FinancialCalculationService) calculateGrossMethod(form *domain.FinancialForm, input domain.CalculationInput) (*domain.CalculationResult, *domain.BASMapping, error) {
 	// Parse config
-	configJSON, _ := json.Marshal(config)
+	configJSON, _ := json.Marshal(form.Configuration)
 	var grossConfig domain.GrossMethodConfig
 	if err := json.Unmarshal(configJSON, &grossConfig); err != nil {
 		return nil, nil, errors.New("invalid gross method configuration")
@@ -192,7 +201,7 @@ func (fcs *FinancialCalculationService) calculateGrossMethod(config map[string]i
 	// Determine which variant to use
 	if grossConfig.OutworkChargeRateEnabled {
 		return fcs.calculateGrossMethodB5(grossConfig, input, A)
-	} else if grossConfig.GSTOnPatientFee && grossConfig.LabFeePaidBy == "dentist" {
+ if grossConfig.GSTOnPatientFee && grossConfig.LabFeePaidBy == "dentist" {
 		return fcs.calculateGrossMethodB4(grossConfig, input, A)
 	} else if grossConfig.MerchantFeeEnabled {
 		return fcs.calculateGrossMethodB3(grossConfig, input, A)
@@ -392,17 +401,14 @@ func (fcs *FinancialCalculationService) calculateGrossMethodB5(config domain.Gro
 	// w = Lab Fee
 	w := input.OutworkLabFee
 
-	// x = Merchant Fee
-	x := input.OutworkMerchantFee
+	// x = GST on Lab Fee
+	x := input.OutworkGSTOnLabFee
 
-	// y = GST on Lab Fee
-	y := input.OutworkGSTOnLabFee
-
-	// z = GST on Merchant Fee
-	z := input.OutworkGSTOnMerchantFee
+	// y = GST on Merchant Fee
+	y := input.OutworkGSTOnMerchantFee
 
 	// B = Total Outwork Charge
-	B := w + x + y + z
+	B := w + x + y
 
 	// C = Net Patient Fee
 	C := A - B

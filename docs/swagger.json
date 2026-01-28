@@ -2082,6 +2082,9 @@
                 "city": {
                     "type": "string"
                 },
+                "clinicShare": {
+                    "type": "integer"
+                },
                 "createdAt": {
                     "type": "string"
                 },
@@ -2106,10 +2109,16 @@
                 "name": {
                     "type": "string"
                 },
+                "ownerShare": {
+                    "type": "integer"
+                },
                 "phone": {
                     "type": "string"
                 },
                 "postcode": {
+                    "type": "string"
+                },
+                "shareType": {
                     "type": "string"
                 },
                 "state": {

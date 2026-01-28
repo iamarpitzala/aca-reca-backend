@@ -13,7 +13,6 @@ type Session struct {
 	RefreshToken string     `db:"refresh_token" json:"-"`
 	UserAgent    string     `db:"user_agent" json:"userAgent"`
 	IPAddress    string     `db:"ip_address" json:"ipAddress"`
-	IsActive     bool       `db:"is_active" json:"isActive"`
 	ExpiresAt    time.Time  `db:"expires_at" json:"expiresAt"`
 	CreatedAt    time.Time  `db:"created_at" json:"createdAt"`
 	UpdatedAt    time.Time  `db:"updated_at" json:"updatedAt"`

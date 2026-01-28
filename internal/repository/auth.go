@@ -42,8 +42,8 @@ func EmailExists(ctx context.Context, db *sqlx.DB, email string) (bool, error) {
 }
 
 func CreateSession(ctx context.Context, db *sqlx.DB, session *domain.Session) error {
-	query := `INSERT INTO tbl_session (id, user_id, refresh_token, is_active, expires_at, created_at, updated_at)
-		VALUES (:id, :user_id, :refresh_token, :is_active, :expires_at, :created_at, :updated_at)`
+	query := `INSERT INTO tbl_session (id, user_id, refresh_token, expires_at, created_at, updated_at)
+		VALUES (:id, :user_id, :refresh_token, :expires_at, :created_at, :updated_at)`
 
 	_, err := db.NamedExecContext(ctx, query, session)
 	if err != nil {
@@ -53,7 +53,7 @@ func CreateSession(ctx context.Context, db *sqlx.DB, session *domain.Session) er
 }
 
 func GetSessionByRefreshToken(ctx context.Context, db *sqlx.DB, refreshToken string) (*domain.Session, error) {
-	query := `SELECT id, user_id, refresh_token, is_active, expires_at, created_at, updated_at FROM tbl_session WHERE refresh_token = $1 AND deleted_at IS NULL`
+	query := `SELECT id, user_id, refresh_token,expires_at, created_at, updated_at FROM tbl_session WHERE refresh_token = $1 AND deleted_at IS NULL`
 	var session domain.Session
 	err := db.GetContext(ctx, &session, query, refreshToken)
 	if err != nil {
@@ -66,7 +66,7 @@ func GetSessionByRefreshToken(ctx context.Context, db *sqlx.DB, refreshToken str
 }
 
 func UpdateSession(ctx context.Context, db *sqlx.DB, session *domain.Session) error {
-	query := `UPDATE tbl_session SET refresh_token = :refresh_token, is_active = :is_active, expires_at = :expires_at, updated_at = :updated_at WHERE id = :id`
+	query := `UPDATE tbl_session SET refresh_token = :refresh_token, expires_at = :expires_at, updated_at = :updated_at WHERE id = :id`
 	_, err := db.NamedExecContext(ctx, query, session)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func DeleteSession(ctx context.Context, db *sqlx.DB, sessionID uuid.UUID) error 
 }
 
 func GetSessionByID(ctx context.Context, db *sqlx.DB, sessionID uuid.UUID) (*domain.Session, error) {
-	query := `SELECT id, user_id, refresh_token, is_active, expires_at, created_at, updated_at FROM tbl_session WHERE id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, user_id, refresh_token, expires_at, created_at, updated_at FROM tbl_session WHERE id = $1 AND deleted_at IS NULL`
 	var session domain.Session
 	err := db.GetContext(ctx, &session, query, sessionID)
 	if err != nil {
@@ -121,7 +121,7 @@ func UpdateUser(ctx context.Context, db *sqlx.DB, user *domain.User) error {
 func GetUserSessions(ctx context.Context, db *sqlx.DB, userId uuid.UUID) ([]domain.Session, error) {
 	var sessions []domain.Session
 	err := db.Select(&sessions,
-		"SELECT id, user_id, refresh_token, is_active, expires_at, created_at, updated_at FROM tbl_session WHERE user_id = $1 AND is_active = $2 AND deleted_at IS NULL",
+		"SELECT id, user_id, refresh_token, expires_at, created_at, updated_at FROM tbl_session WHERE user_id = $1 AND deleted_at IS NULL",
 		userId, true)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func GetUserSessions(ctx context.Context, db *sqlx.DB, userId uuid.UUID) ([]doma
 }
 
 func RevokeSession(ctx context.Context, db *sqlx.DB, sessionID uuid.UUID) error {
-	_, err := db.Exec("UPDATE tbl_session SET is_active = $1, updated_at = $2 WHERE id = $3", false, time.Now(), sessionID)
+	_, err := db.Exec("UPDATE tbl_session SET updated_at = $2 WHERE id = $3", false, time.Now(), sessionID)
 	if err != nil {
 		return errors.New("failed to revoke session")
 	}

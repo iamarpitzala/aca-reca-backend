@@ -2084,6 +2084,9 @@ const docTemplate = `{
                 "city": {
                     "type": "string"
                 },
+                "clinicShare": {
+                    "type": "integer"
+                },
                 "createdAt": {
                     "type": "string"
                 },
@@ -2108,10 +2111,16 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "ownerShare": {
+                    "type": "integer"
+                },
                 "phone": {
                     "type": "string"
                 },
                 "postcode": {
+                    "type": "string"
+                },
+                "shareType": {
                     "type": "string"
                 },
                 "state": {

@@ -25,6 +25,8 @@ func (qs *QuarterService) CreateQuarter(ctx context.Context, form *domain.Quarte
 
 	form.ID = uuid.New()
 	form.CreatedAt = time.Now()
+	form.UpdatedAt = &form.CreatedAt
+	form.DeletedAt = nil
 
 	return repository.CreateQuarter(ctx, qs.db, form)
 }

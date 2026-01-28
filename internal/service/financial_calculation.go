@@ -118,7 +118,7 @@ func (fcs *FinancialCalculationService) calculateNetMethod(config map[string]int
 	if netConfig.SuperHoldingEnabled {
 		// A2. With Super Holding
 		// F = Commission Component = D ÷ 1.12
-		F := D / 1.12
+		F := D / (1 + netConfig.SuperPercent/100.0)
 
 		// E = Super Component = F × 12%
 		E := F * (netConfig.SuperPercent / 100.0)

@@ -33,7 +33,6 @@ type Clinic struct {
 	Website     *string   `db:"website" json:"website"`
 	LogoURL     *string   `db:"logo_url" json:"logoURL"`
 	Description *string   `db:"description" json:"description"`
-	IsActive    bool      `db:"is_active" json:"isActive"`
 
 	ShareType   string `db:"share_type" json:"shareType"`
 	ClinicShare int    `db:"clinic_share" json:"clinicShare"`

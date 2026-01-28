@@ -1,18 +1,21 @@
 -- +goose Up
 -- +goose StatementBegin
 ALTER TABLE tbl_clinic
-    ADD COLUMN share_type VARCHAR(50) NOT NULL DEFAULT 'FIXED',
-    ADD COLUMN clinic_share INT NOT NULL DEFAULT 0,
-    ADD COLUMN owner_share INT NOT NULL DEFAULT 0;
-
--- Optional but highly recommended guardrails
-ALTER TABLE tbl_clinic
-    ADD CONSTRAINT chk_share_percentage
-    CHECK (clinic_share + owner_share = 100);
+    ADD COLUMN share_type VARCHAR(50) NOT NULL DEFAULT 'PERCENTAGE',
+    ADD COLUMN clinic_share INT NOT NULL DEFAULT 50,
+    ADD COLUMN owner_share INT NOT NULL DEFAULT 50;
 
 ALTER TABLE tbl_clinic
     ADD CONSTRAINT chk_share_type
     CHECK (share_type IN ('FIXED', 'PERCENTAGE'));
+
+ALTER TABLE tbl_clinic
+    ADD CONSTRAINT chk_share_percentage
+    CHECK (
+        share_type != 'PERCENTAGE'
+        OR (clinic_share + owner_share = 100)
+    );
+
 -- +goose StatementEnd
 
 

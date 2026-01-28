@@ -15,10 +15,10 @@ func RegisterClinicRoutes(e *gin.RouterGroup, clinicHandler *httpHandler.ClinicH
 	tokenService := service.NewTokenService(cfg.JWT)
 	clinic.Use(middleware.AuthMiddleware(tokenService))
 
-	clinic.POST("/", clinicHandler.CreateClinic)
+	clinic.POST("", clinicHandler.CreateClinic)
 	clinic.GET("/:id", clinicHandler.GetClinic)
 	clinic.PUT("/:id", clinicHandler.UpdateClinic)
 	clinic.DELETE("/:id", clinicHandler.DeleteClinic)
-	clinic.GET("/", clinicHandler.GetAllClinics)
+	clinic.GET("", clinicHandler.GetAllClinics)
 	clinic.GET("/abn/:abnNumber", clinicHandler.GetClinicByABNNumber)
 }

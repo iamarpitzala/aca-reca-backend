@@ -59,15 +59,14 @@ func InitServer() {
 	e := gin.New()
 
 	// Configure CORS
-	corsConfig := cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"*"},
-		AllowHeaders:     []string{"*"},
-		ExposeHeaders:    []string{"*"},
+	e.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000", "https://preview--zenithive.lovable.app", "https://zenithive.lovable.app"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
-	}
-	e.Use(cors.New(corsConfig))
+	}))
 
 	e.Use(gin.Recovery())
 	e.Use(gin.Logger())

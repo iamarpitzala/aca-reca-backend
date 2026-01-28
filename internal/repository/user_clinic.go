@@ -40,7 +40,7 @@ func GetUserClinics(ctx context.Context, db *sqlx.DB, userID uuid.UUID) ([]domai
 		c.address as "clinic.address", c.city as "clinic.city", c.state as "clinic.state",
 		c.postcode as "clinic.postcode", c.phone as "clinic.phone", c.email as "clinic.email",
 		c.website as "clinic.website", c.logo_url as "clinic.logoURL", c.description as "clinic.description",
-		c.is_active as "clinic.isActive",, c.share_type as "clinic.shareType",
+		c.share_type as "clinic.shareType",
 		c.clinic_share as "clinic.clinicShare", c.owner_share as "clinic.ownerShare",
 		created_at as "clinic.createdAt", c.updated_at as "clinic.updatedAt"
 		FROM tbl_user_clinic uc

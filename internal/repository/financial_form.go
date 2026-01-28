@@ -43,6 +43,7 @@ func GetFinancialFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*doma
 	type formRow struct {
 		ID                uuid.UUID       `db:"id"`
 		ClinicID          uuid.UUID       `db:"clinic_id"`
+		QuarterID         uuid.UUID       `db:"quarter_id"`
 		Name              string          `db:"name"`
 		CalculationMethod string          `db:"calculation_method"`
 		Configuration     json.RawMessage `db:"configuration"`
@@ -52,7 +53,7 @@ func GetFinancialFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*doma
 		DeletedAt         *time.Time      `db:"deleted_at"`
 	}
 
-	query := `SELECT id, clinic_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
+	query := `SELECT id, clinic_id, quarter_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
 		FROM tbl_financial_form WHERE id = $1 AND deleted_at IS NULL`
 
 	var row formRow
@@ -72,6 +73,7 @@ func GetFinancialFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*doma
 	return &domain.FinancialForm{
 		ID:                row.ID,
 		ClinicID:          row.ClinicID,
+		QuarterID:         row.QuarterID,
 		Name:              row.Name,
 		CalculationMethod: row.CalculationMethod,
 		Configuration:     config,
@@ -86,6 +88,7 @@ func GetFinancialFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid
 	type formRow struct {
 		ID                uuid.UUID       `db:"id"`
 		ClinicID          uuid.UUID       `db:"clinic_id"`
+		QuarterID         uuid.UUID       `db:"quarter_id"`
 		Name              string          `db:"name"`
 		CalculationMethod string          `db:"calculation_method"`
 		Configuration     json.RawMessage `db:"configuration"`
@@ -95,7 +98,7 @@ func GetFinancialFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid
 		DeletedAt         *time.Time      `db:"deleted_at"`
 	}
 
-	query := `SELECT id, clinic_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
+	query := `SELECT id, clinic_id, quarter_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
 		FROM tbl_financial_form WHERE clinic_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC`
 
 	var rows []formRow

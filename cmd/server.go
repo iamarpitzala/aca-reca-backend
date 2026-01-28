@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"log"
+	
 	"net/http"
 	"os"
 	"os/signal"
@@ -60,13 +61,18 @@ func InitServer() {
 
 	// Configure CORS
 	corsConfig := cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"*"},
-		AllowHeaders:     []string{"*"},
-		ExposeHeaders:    []string{"*"},
+		AllowOrigins: []string{"*"},
+		},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{
+			"Origin", "Content-Type", "Authorization",
+			"Accept", "X-Requested-With",
+		},
+		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
+	
 	e.Use(cors.New(corsConfig))
 
 	e.Use(gin.Recovery())

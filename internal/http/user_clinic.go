@@ -54,13 +54,14 @@ func (h *UserClinicHandler) AssociateUserWithClinic(c *gin.Context) {
 // GetUserClinics retrieves all clinics for a user
 // GET /api/v1/user-clinic/user/:userId
 // @Summary Get user's clinics
-// @Description Get all clinics associated with a user
+// @Description Get all clinics associated with a user. Users can only fetch their own clinics.
 // @Tags UserClinic
 // @Accept json
 // @Produce json
 // @Param userId path string true "User ID"
 // @Success 200 {object} domain.H
 // @Failure 400 {object} domain.H
+// @Failure 403 {object} domain.H
 // @Failure 500 {object} domain.H
 // @Router /user-clinic/user/{userId} [get]
 func (h *UserClinicHandler) GetUserClinics(c *gin.Context) {
@@ -68,6 +69,18 @@ func (h *UserClinicHandler) GetUserClinics(c *gin.Context) {
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		return
+	}
+
+	// Verify the requesting user can only fetch their own clinics
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+	authUserUUID, ok := authUserID.(uuid.UUID)
+	if !ok || authUserUUID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you can only view your own clinics"})
 		return
 	}
 

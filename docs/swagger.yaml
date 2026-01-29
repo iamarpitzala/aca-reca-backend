@@ -33,8 +33,6 @@ definitions:
         type: string
       id:
         type: string
-      isActive:
-        type: boolean
       logoURL:
         type: string
       name:
@@ -197,28 +195,8 @@ definitions:
         type: string
     type: object
   domain.FinancialForm:
-    properties:
-      calculationMethod:
-        description: '"net" or "gross"'
-        type: string
-      clinicId:
-        type: string
-      configuration:
-        additionalProperties: true
-        description: JSONB stored as map
-        type: object
-      createdAt:
-        type: string
-      deletedAt:
-        type: string
-      id:
-        type: string
-      isActive:
-        type: boolean
-      name:
-        type: string
-      updatedAt:
-        type: string
+    type: object
+  domain.FinancialFormRequest:
     type: object
   domain.H:
     additionalProperties: true
@@ -279,8 +257,6 @@ definitions:
         type: string
       ipAddress:
         type: string
-      isActive:
-        type: boolean
       updatedAt:
         type: string
       userAgent:
@@ -955,66 +931,6 @@ paths:
       summary: Retrieve a expense type by ID
       tags:
       - Expenses
-  /financial-calculation/calculate:
-    post:
-      consumes:
-      - application/json
-      description: Perform financial calculation based on form configuration and input
-        values
-      parameters:
-      - description: Calculation request
-        in: body
-        name: request
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.H'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/domain.H'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/domain.H'
-      summary: Calculate financial values
-      tags:
-      - FinancialCalculation
-  /financial-calculation/history/{formId}:
-    get:
-      consumes:
-      - application/json
-      description: Get calculation history for a financial form
-      parameters:
-      - description: Financial Form ID
-        in: path
-        name: formId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.H'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/domain.H'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/domain.H'
-      summary: Get calculation history
-      tags:
-      - FinancialCalculation
   /financial-form:
     post:
       consumes:
@@ -1026,7 +942,7 @@ paths:
         name: form
         required: true
         schema:
-          $ref: '#/definitions/domain.FinancialForm'
+          $ref: '#/definitions/domain.FinancialFormRequest'
       produces:
       - application/json
       responses:
@@ -1668,6 +1584,29 @@ paths:
           schema:
             $ref: '#/definitions/domain.H'
       summary: Revoke a session
+      tags:
+      - User
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Get current authenticated user from JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Get current user (me)
       tags:
       - User
 schemes:

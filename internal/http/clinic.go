@@ -10,19 +10,21 @@ import (
 )
 
 type ClinicHandler struct {
-	clinicService *service.ClinicService
+	clinicService     *service.ClinicService
+	userClinicService *service.UserClinicService
 }
 
-func NewClinicHandler(clinicService *service.ClinicService) *ClinicHandler {
+func NewClinicHandler(clinicService *service.ClinicService, userClinicService *service.UserClinicService) *ClinicHandler {
 	return &ClinicHandler{
-		clinicService: clinicService,
+		clinicService:     clinicService,
+		userClinicService: userClinicService,
 	}
 }
 
-// CreateClinic creates a new clinic
+// CreateClinic creates a new clinic and associates the creating user as owner
 // POST /api/v1/clinic
 // @Summary Create a new clinic
-// @Description Create a new clinic with the given information
+// @Description Create a new clinic with the given information. The creating user is automatically associated as owner.
 // @Tags Clinic
 // @Accept json
 // @Produce json
@@ -32,6 +34,11 @@ func NewClinicHandler(clinicService *service.ClinicService) *ClinicHandler {
 // @Failure 500 {object} domain.H
 // @Router /clinic [post]
 func (h *ClinicHandler) CreateClinic(c *gin.Context) {
+	userID, ok := h.getAuthUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
 	var clinic domain.Clinic
 	if err := c.ShouldBindJSON(&clinic); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -42,19 +49,47 @@ func (h *ClinicHandler) CreateClinic(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "clinic created successfully", "clinic_id": clinic.ID})
+	// Auto-associate the creating user as owner so they can access the clinic
+	_, err = h.userClinicService.AssociateUserWithClinic(c.Request.Context(), userID, clinic.ID, "owner")
+	if err != nil {
+		// Log but don't fail - clinic was created
+		c.JSON(http.StatusCreated, gin.H{"message": "clinic created successfully", "clinic_id": clinic.ID, "clinic": clinic})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "clinic created successfully", "clinic_id": clinic.ID, "clinic": clinic})
 }
 
-// GetClinic retrieves a clinic by ID
+// getAuthUserID extracts user ID from JWT context
+func (h *ClinicHandler) getAuthUserID(c *gin.Context) (uuid.UUID, bool) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		return uuid.Nil, false
+	}
+	userUUID, ok := userIDVal.(uuid.UUID)
+	return userUUID, ok
+}
+
+// checkClinicAccess verifies the authenticated user has access to the clinic
+func (h *ClinicHandler) checkClinicAccess(c *gin.Context, clinicID uuid.UUID) bool {
+	userID, ok := h.getAuthUserID(c)
+	if !ok {
+		return false
+	}
+	hasAccess, err := h.userClinicService.UserHasAccessToClinic(c.Request.Context(), userID, clinicID)
+	return err == nil && hasAccess
+}
+
+// GetClinic retrieves a clinic by ID (requires user to be associated with the clinic)
 // GET /api/v1/clinic/:id
 // @Summary Retrieve a clinic by ID
-// @Description Retrieve a clinic by ID
+// @Description Retrieve a clinic by ID. User must be associated with the clinic.
 // @Tags Clinic
 // @Accept json
 // @Produce json
 // @Param id path string true "Clinic ID"
 // @Success 200 {object} domain.H
 // @Failure 400 {object} domain.H
+// @Failure 403 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
 // @Router /clinic/{id} [get]
@@ -65,18 +100,22 @@ func (h *ClinicHandler) GetClinic(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
+	if !h.checkClinicAccess(c, idUUID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
+		return
+	}
 	clinic, err := h.clinicService.GetClinicByID(c.Request.Context(), idUUID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "clinic retrieved successfully", "clinic_id": clinic.ID})
+	c.JSON(http.StatusOK, clinic)
 }
 
-// UpdateClinic updates a clinic by ID
+// UpdateClinic updates a clinic by ID (requires user to be associated with the clinic)
 // PUT /api/v1/clinic/:id
 // @Summary Update a clinic by ID
-// @Description Update a clinic by ID with the given information
+// @Description Update a clinic by ID. User must be associated with the clinic.
 // @Tags Clinic
 // @Accept json
 // @Produce json
@@ -84,6 +123,7 @@ func (h *ClinicHandler) GetClinic(c *gin.Context) {
 // @Param clinic body domain.Clinic true "Clinic information"
 // @Success 200 {object} domain.H
 // @Failure 400 {object} domain.H
+// @Failure 403 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
 // @Router /clinic/{id} [put]
@@ -94,30 +134,34 @@ func (h *ClinicHandler) UpdateClinic(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
-	var clinic domain.Clinic
-	if err := c.ShouldBindJSON(&clinic); err != nil {
+	if !h.checkClinicAccess(c, idUUID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
+		return
+	}
+	var req domain.UpdateClinicRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	clinic.ID = idUUID
-	err = h.clinicService.UpdateClinic(c.Request.Context(), &clinic)
+	clinic, err := h.clinicService.UpdateClinicPartial(c.Request.Context(), idUUID, &req)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "clinic updated successfully", "clinic_id": clinic.ID})
+	c.JSON(http.StatusOK, clinic)
 }
 
-// DeleteClinic deletes a clinic by ID
+// DeleteClinic deletes a clinic by ID (requires user to be associated with the clinic)
 // DELETE /api/v1/clinic/:id
 // @Summary Delete a clinic by ID
-// @Description Delete a clinic by ID
+// @Description Delete a clinic by ID. User must be associated with the clinic.
 // @Tags Clinic
 // @Accept json
 // @Produce json
 // @Param id path string true "Clinic ID"
 // @Success 200 {object} domain.H
 // @Failure 400 {object} domain.H
+// @Failure 403 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
 // @Router /clinic/{id} [delete]
@@ -128,6 +172,10 @@ func (h *ClinicHandler) DeleteClinic(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
+	if !h.checkClinicAccess(c, idUUID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
+		return
+	}
 	err = h.clinicService.DeleteClinic(c.Request.Context(), idUUID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -136,36 +184,46 @@ func (h *ClinicHandler) DeleteClinic(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "clinic deleted successfully", "clinic_id": idUUID})
 }
 
-// GetAllClinics retrieves all clinics
+// GetAllClinics retrieves clinics the current user has access to
 // GET /api/v1/clinic
-// @Summary Retrieve all clinics
-// @Description Retrieve all clinics
+// @Summary Retrieve user's clinics
+// @Description Retrieve all clinics the authenticated user is associated with
 // @Tags Clinic
 // @Accept json
 // @Produce json
 // @Success 200 {object} domain.H
-// @Failure 404 {object} domain.H
+// @Failure 401 {object} domain.H
 // @Failure 500 {object} domain.H
 // @Router /clinic [get]
 func (h *ClinicHandler) GetAllClinics(c *gin.Context) {
-	clinics, err := h.clinicService.GetAllClinics(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	userID, ok := h.getAuthUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
+	}
+	userClinics, err := h.userClinicService.GetUserClinics(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	clinics := make([]domain.Clinic, 0, len(userClinics))
+	for _, uc := range userClinics {
+		clinics = append(clinics, uc.Clinic)
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "clinics retrieved successfully", "clinics": clinics})
 }
 
-// GetClinicByABNNumber retrieves a clinic by ABN number
+// GetClinicByABNNumber retrieves a clinic by ABN number (requires user to be associated)
 // GET /api/v1/clinic/abn/:abnNumber
 // @Summary Retrieve a clinic by ABN number
-// @Description Retrieve a clinic by ABN number
+// @Description Retrieve a clinic by ABN number. User must be associated with the clinic.
 // @Tags Clinic
 // @Accept json
 // @Produce json
 // @Param abnNumber path string true "ABN number"
 // @Success 200 {object} domain.H
 // @Failure 400 {object} domain.H
+// @Failure 403 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
 // @Router /clinic/abn/{abnNumber} [get]
@@ -176,5 +234,9 @@ func (h *ClinicHandler) GetClinicByABNNumber(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "clinic retrieved successfully", "clinic": clinic})
+	if !h.checkClinicAccess(c, clinic.ID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
+		return
+	}
+	c.JSON(http.StatusOK, clinic)
 }

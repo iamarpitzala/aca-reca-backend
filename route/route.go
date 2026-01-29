@@ -11,7 +11,6 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
 	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
-	financial_calculation "github.com/iamarpitzala/aca-reca-backend/route/financial_calculation"
 	financial_form "github.com/iamarpitzala/aca-reca-backend/route/financial_form"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
 	"github.com/iamarpitzala/aca-reca-backend/route/quarter"
@@ -33,17 +32,17 @@ func InitRouter(e *gin.Engine) {
 	clinicService := service.NewClinicService(db.DB)
 	userClinicService := service.NewUserClinicService(db.DB)
 	financialFormService := service.NewFinancialFormService(db.DB)
-	financialCalculationService := service.NewFinancialCalculationService(db.DB)
+	// financialCalculationService := service.NewFinancialCalculationService(db.DB)
 	expensesService := service.NewExpensesService(db.DB)
 	quarterService := service.NewQuarterService(db.DB)
 
-	authHandler := httpHandler.NewAuthHandler(authService, oauthService)
+	authHandler := httpHandler.NewAuthHandler(authService, oauthService, cfg.OAuth.FrontendURL)
 	userHandler := httpHandler.NewUserHandler(authService)
 	payslipHandler := httpHandler.NewPayslipHandler()
-	clinicHandler := httpHandler.NewClinicHandler(clinicService)
+	clinicHandler := httpHandler.NewClinicHandler(clinicService, userClinicService)
 	userClinicHandler := httpHandler.NewUserClinicHandler(userClinicService)
 	financialFormHandler := httpHandler.NewFinancialFormHandler(financialFormService)
-	financialCalculationHandler := httpHandler.NewFinancialCalculationHandler(financialCalculationService)
+	// financialCalculationHandler := httpHandler.NewFinancialCalculationHandler(financialCalculationService)
 	expensesHandler := httpHandler.NewExpensesHandler(expensesService)
 	quarterHandler := httpHandler.NewQuarterHandler(quarterService)
 	// Swagger documentation route
@@ -56,7 +55,7 @@ func InitRouter(e *gin.Engine) {
 	payslip.RegisterPayslipRoutes(v1, payslipHandler)
 	user_clinic.RegisterUserClinicRoutes(v1, userClinicHandler)
 	financial_form.RegisterFinancialFormRoutes(v1, financialFormHandler)
-	financial_calculation.RegisterFinancialCalculationRoutes(v1, financialCalculationHandler)
+	// financial_calculation.RegisterFinancialCalculationRoutes(v1, financialCalculationHandler)
 	quarter.RegisterQuarterRoutes(v1, quarterHandler)
 	expense.RegisterExpensesRoutes(v1, expensesHandler)
 }

@@ -20,6 +20,38 @@ func NewUserHandler(authService *service.AuthService) *UserHandler {
 	}
 }
 
+// GetMe returns the current authenticated user from JWT
+// GET /api/v1/users/me
+// @Summary Get current user (me)
+// @Description Get current authenticated user from JWT token
+// @Tags User
+// @Accept json
+// @Produce json
+// @Success 200 {object} domain.User
+// @Failure 401 {object} domain.H
+// @Failure 500 {object} domain.H
+// @Router /users/me [get]
+func (h *UserHandler) GetMe(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+	userUUID, ok := userIDVal.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user context"})
+		return
+	}
+
+	user, err := h.authService.GetUserByID(c.Request.Context(), userUUID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
 // GetCurrentUser returns the current authenticated user
 // GET /api/v1/users/:user_id
 // @Summary Get current user
@@ -83,7 +115,7 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully", "userId": user.ID})
+	c.JSON(http.StatusOK, user)
 }
 
 // GetActiveSessions returns all active sessions for the current user

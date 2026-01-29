@@ -19,8 +19,12 @@ func RegisterExpensesRoutes(e *gin.RouterGroup, expensesHandler *httpHandler.Exp
 	expense.POST("/category", expensesHandler.CreateExpenseCategory)
 	expense.POST("/category-type", expensesHandler.CreateExpenseCategoryType)
 	expense.POST("/entry", expensesHandler.CreateExpenseEntry)
+	expense.GET("/type/clinic/:clinicId", expensesHandler.GetExpenseTypesByClinicID)
 	expense.GET("/type/:id", expensesHandler.GetExpenseTypeByID)
+	expense.GET("/category/clinic/:clinicId", expensesHandler.GetExpenseCategoriesByClinicID)
 	expense.GET("/category/:id", expensesHandler.GetExpenseCategoryByID)
+	expense.PUT("/category/:id", expensesHandler.UpdateExpenseCategory)
+	expense.DELETE("/category/:id", expensesHandler.DeleteExpenseCategory)
 	expense.GET("/category-type/:id", expensesHandler.GetExpenseCategoryTypeByID)
 	expense.GET("/entry/:id", expensesHandler.GetExpenseEntryByID)
 }

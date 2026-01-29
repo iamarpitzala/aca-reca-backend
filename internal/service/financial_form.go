@@ -21,9 +21,14 @@ func NewFinancialFormService(db *sqlx.DB) *FinancialFormService {
 	}
 }
 
-func (ffs *FinancialFormService) CreateFinancialForm(ctx context.Context, form *domain.FinancialForm) error {
+func (ffs *FinancialFormService) CreateFinancialForm(ctx context.Context, ff *domain.FinancialFormRequest) error {
+
+	form, err := ff.ToRepo()
+	if err != nil {
+		return err
+	}
 	// Verify clinic exists
-	_, err := repository.GetClinicByID(ctx, ffs.db, form.ClinicID)
+	_, err = repository.GetClinicByID(ctx, ffs.db, form.ClinicID)
 	if err != nil {
 		return errors.New("clinic not found")
 	}
@@ -34,17 +39,15 @@ func (ffs *FinancialFormService) CreateFinancialForm(ctx context.Context, form *
 	}
 
 	form.ID = uuid.New()
-	form.CreatedAt = time.Now()
-	form.UpdatedAt = time.Now()
 
 	return repository.CreateFinancialForm(ctx, ffs.db, form)
 }
 
-func (ffs *FinancialFormService) GetFinancialFormByID(ctx context.Context, id uuid.UUID) (*domain.FinancialForm, error) {
+func (ffs *FinancialFormService) GetFinancialFormByID(ctx context.Context, id uuid.UUID) (*domain.FinancialFormResponse, error) {
 	return repository.GetFinancialFormByID(ctx, ffs.db, id)
 }
 
-func (ffs *FinancialFormService) GetFinancialFormsByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.FinancialForm, error) {
+func (ffs *FinancialFormService) GetFinancialFormsByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.FinancialFormResponse, error) {
 	return repository.GetFinancialFormsByClinicID(ctx, ffs.db, clinicID)
 }
 

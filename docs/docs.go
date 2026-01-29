@@ -968,96 +968,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/financial-calculation/calculate": {
-            "post": {
-                "description": "Perform financial calculation based on form configuration and input values",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "FinancialCalculation"
-                ],
-                "summary": "Calculate financial values",
-                "parameters": [
-                    {
-                        "description": "Calculation request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    }
-                }
-            }
-        },
-        "/financial-calculation/history/{formId}": {
-            "get": {
-                "description": "Get calculation history for a financial form",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "FinancialCalculation"
-                ],
-                "summary": "Get calculation history",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Financial Form ID",
-                        "name": "formId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    }
-                }
-            }
-        },
         "/financial-form": {
             "post": {
                 "description": "Create a new financial form with configuration",
@@ -1078,7 +988,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.FinancialForm"
+                            "$ref": "#/definitions/domain.FinancialFormRequest"
                         }
                     }
                 ],
@@ -1857,6 +1767,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me": {
+            "get": {
+                "description": "Get current authenticated user from JWT token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get current user (me)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{userId}": {
             "get": {
                 "description": "Get current user by user ID",
@@ -2101,9 +2046,6 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
-                },
-                "isActive": {
-                    "type": "boolean"
                 },
                 "logoURL": {
                     "type": "string"
@@ -2351,39 +2293,10 @@ const docTemplate = `{
             }
         },
         "domain.FinancialForm": {
-            "type": "object",
-            "properties": {
-                "calculationMethod": {
-                    "description": "\"net\" or \"gross\"",
-                    "type": "string"
-                },
-                "clinicId": {
-                    "type": "string"
-                },
-                "configuration": {
-                    "description": "JSONB stored as map",
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isActive": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
+            "type": "object"
+        },
+        "domain.FinancialFormRequest": {
+            "type": "object"
         },
         "domain.H": {
             "type": "object",
@@ -2472,9 +2385,6 @@ const docTemplate = `{
                 },
                 "ipAddress": {
                     "type": "string"
-                },
-                "isActive": {
-                    "type": "boolean"
                 },
                 "updatedAt": {
                     "type": "string"

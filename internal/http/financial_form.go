@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
+	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type FinancialFormHandler struct {
@@ -26,13 +27,13 @@ func NewFinancialFormHandler(financialFormService *service.FinancialFormService)
 // @Tags FinancialForm
 // @Accept json
 // @Produce json
-// @Param form body domain.FinancialForm true "Financial form information"
+// @Param form body domain.FinancialFormRequest true "Financial form information"
 // @Success 201 {object} domain.H
 // @Failure 400 {object} domain.H
 // @Failure 500 {object} domain.H
 // @Router /financial-form [post]
 func (h *FinancialFormHandler) CreateFinancialForm(c *gin.Context) {
-	var form domain.FinancialForm
+	var form domain.FinancialFormRequest
 	if err := c.ShouldBindJSON(&form); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -44,7 +45,7 @@ func (h *FinancialFormHandler) CreateFinancialForm(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "financial form created successfully", "form": form})
+	utils.JSONResponse(c, http.StatusCreated, "financial form created successfully", nil, nil)
 }
 
 // GetFinancialForm retrieves a financial form by ID
@@ -74,7 +75,7 @@ func (h *FinancialFormHandler) GetFinancialForm(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "financial form retrieved successfully", "form": form})
+	utils.JSONResponse(c, http.StatusOK, "financial form retrieved successfully", form, nil)
 }
 
 // GetFinancialFormsByClinic retrieves all financial forms for a clinic
@@ -103,7 +104,7 @@ func (h *FinancialFormHandler) GetFinancialFormsByClinic(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "financial forms retrieved successfully", "forms": forms})
+	utils.JSONResponse(c, http.StatusOK, "financial forms retrieved successfully", forms, nil)
 }
 
 // UpdateFinancialForm updates a financial form
@@ -141,7 +142,7 @@ func (h *FinancialFormHandler) UpdateFinancialForm(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "financial form updated successfully", "form": form})
+	utils.JSONResponse(c, http.StatusOK, "financial form updated successfully", form, nil)
 }
 
 // DeleteFinancialForm deletes a financial form
@@ -171,5 +172,5 @@ func (h *FinancialFormHandler) DeleteFinancialForm(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "financial form deleted successfully", "id": id})
+	utils.JSONResponse(c, http.StatusOK, "financial form deleted successfully", nil, nil)
 }

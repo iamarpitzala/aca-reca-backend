@@ -9,7 +9,7 @@ import (
 )
 
 func RegisterFinancialFormRoutes(e *gin.RouterGroup, financialFormHandler *httpHandler.FinancialFormHandler) {
-	financialForm := e.Group("/financial-form")
+	financialForm := e.Group("/form")
 	cfg := config.Load()
 
 	tokenService := service.NewTokenService(cfg.JWT)

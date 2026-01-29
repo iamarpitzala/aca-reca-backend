@@ -82,6 +82,7 @@ func (as *AuthService) Register(ctx context.Context, req *domain.RegisterRequest
 		return nil, err
 	}
 
+	user.Password = ""
 	return &domain.AuthResponse{
 		User:         &user,
 		AccessToken:  tokenPair.AccessToken,
@@ -97,13 +98,13 @@ func (as *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*do
 	if err != nil {
 		return nil, err
 	}
-	if user == nil {
+	if user == nil || user.ID == uuid.Nil {
 		return nil, errors.New("invalid email or password")
 	}
 
 	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return nil, errors.New("invalid password")
+		return nil, errors.New("invalid email or password")
 	}
 
 	// Generate tokens
@@ -128,6 +129,7 @@ func (as *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*do
 		return nil, err
 	}
 
+	user.Password = ""
 	return &domain.AuthResponse{
 		User:         user,
 		AccessToken:  tokenPair.AccessToken,

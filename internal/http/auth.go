@@ -1,7 +1,10 @@
 package http
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -19,12 +22,14 @@ func contains(s, substr string) bool {
 type AuthHandler struct {
 	authService  *service.AuthService
 	oauthService *service.OAuthService
+	frontendURL  string
 }
 
-func NewAuthHandler(authService *service.AuthService, oauthService *service.OAuthService) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService, oauthService *service.OAuthService, frontendURL string) *AuthHandler {
 	return &AuthHandler{
 		authService:  authService,
 		oauthService: oauthService,
+		frontendURL:  frontendURL,
 	}
 }
 
@@ -163,8 +168,18 @@ func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
 	// Generate state token for CSRF protection
 	state := uuid.New().String()
 
-	// Store state in session/cookie (in production, use secure cookie)
-	c.SetCookie("oauth_state", state, 600, "/", "", false, true)
+	// Store state in cookie; SameSite=Lax so cookie is sent when Google redirects back
+	secure := c.Request.URL.Scheme == "https" || c.Request.TLS != nil
+	cookie := &http.Cookie{
+		Name:     "oauth_state",
+		Value:    state,
+		Path:     "/",
+		MaxAge:   600,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	}
+	http.SetCookie(c.Writer, cookie)
 
 	authURL, err := h.oauthService.GetAuthURL(provider, state)
 	if err != nil {
@@ -262,7 +277,7 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, response)
+		h.redirectToFrontendWithTokens(c, response)
 		return
 	}
 
@@ -282,5 +297,29 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	h.redirectToFrontendWithTokens(c, response)
+}
+
+// redirectToFrontendWithTokens redirects the browser to the frontend callback with tokens in the URL hash (not logged).
+func (h *AuthHandler) redirectToFrontendWithTokens(c *gin.Context, response *domain.AuthResponse) {
+	if h.frontendURL == "" {
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	redirectURL, err := url.Parse(strings.TrimSuffix(h.frontendURL, "/") + "/auth/callback")
+	if err != nil {
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	q := redirectURL.Query()
+	q.Set("access_token", response.AccessToken)
+	q.Set("refresh_token", response.RefreshToken)
+	if response.User != nil {
+		userJSON, _ := json.Marshal(response.User)
+		q.Set("user", base64.URLEncoding.EncodeToString(userJSON))
+	}
+	redirectURL.RawQuery = q.Encode()
+	redirectURL.Fragment = redirectURL.RawQuery
+	redirectURL.RawQuery = ""
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL.String())
 }

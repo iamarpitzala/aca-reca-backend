@@ -42,3 +42,20 @@ type Clinic struct {
 	UpdatedAt time.Time  `db:"updated_at" json:"updatedAt"`
 	DeletedAt *time.Time `db:"deleted_at" json:"deletedAt"`
 }
+
+// UpdateClinicRequest supports partial updates - nil/omitted fields are not updated
+type UpdateClinicRequest struct {
+	Name        *string `json:"name"`
+	ABNNumber   *string `json:"abnNumber"`
+	Address     *string `json:"address"`
+	City        *string `json:"city"`
+	State       *string `json:"state"`
+	Postcode    *string `json:"postcode"`
+	Phone       *string `json:"phone"`
+	Email       *string `json:"email"`
+	Website     *string `json:"website"`
+	LogoURL     *string `json:"logoURL"`
+	Description *string `json:"description"`
+	ClinicShare *int    `json:"clinicShare"`
+	OwnerShare  *int    `json:"ownerShare"`
+}

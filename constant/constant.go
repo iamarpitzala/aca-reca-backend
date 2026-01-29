@@ -1,0 +1,13 @@
+package constants
+
+const (
+	INCLUSIVE = "INCLUSIVE"
+	EXCLUSIVE = "EXCLUSIVE"
+	Manual    = "MANUAL"
+
+	PERCENTAGE = "PERCENTAGE"
+	FIXED      = "FIXED"
+
+	PAID_BY_CLINIC = "PAID_BY_CLINIC"
+	PAID_BY_OWNER  = "PAID_BY_OWNER"
+)

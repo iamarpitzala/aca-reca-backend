@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,53 +13,21 @@ import (
 )
 
 func CreateFinancialForm(ctx context.Context, db *sqlx.DB, form *domain.FinancialForm) error {
-	configJSON, err := json.Marshal(form.Configuration)
-	if err != nil {
-		return errors.New("failed to marshal configuration")
-	}
+	query := `INSERT INTO tbl_financial_form (id, clinic_id, quarter_id, name, calculation_method, configuration, is_active, created_at, updated_at)
+		VALUES (:id, :clinic_id, :quarter_id,  :name, :calculation_method, :configuration, :is_active, :created_at, :updated_at)`
 
-	query := `INSERT INTO tbl_financial_form (id, clinic_id, quarter_id, gst_id, name, calculation_method, configuration, is_active, created_at, updated_at)
-		VALUES (:id, :clinic_id, :quarter_id, :gst_id, :name, :calculation_method, :configuration, :is_active, :created_at, :updated_at)`
-
-	args := map[string]interface{}{
-		"id":                 form.ID,
-		"clinic_id":          form.ClinicID,
-		"quarter_id":         form.QuarterID,
-		"gst_id":             form.GSTID,
-		"name":               form.Name,
-		"calculation_method": form.CalculationMethod,
-		"configuration":      string(configJSON),
-		"is_active":          form.IsActive,
-		"created_at":         form.CreatedAt,
-		"updated_at":         form.UpdatedAt,
-	}
-
-	_, err = db.NamedExecContext(ctx, query, args)
+	_, err := db.NamedExecContext(ctx, query, form)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetFinancialFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*domain.FinancialForm, error) {
-	type formRow struct {
-		ID                uuid.UUID       `db:"id"`
-		ClinicID          uuid.UUID       `db:"clinic_id"`
-		QuarterID         uuid.UUID       `db:"quarter_id"`
-		GstID             *int            `db:"gst_id"`
-		Name              string          `db:"name"`
-		CalculationMethod string          `db:"calculation_method"`
-		Configuration     json.RawMessage `db:"configuration"`
-		IsActive          bool            `db:"is_active"`
-		CreatedAt         time.Time       `db:"created_at"`
-		UpdatedAt         time.Time       `db:"updated_at"`
-		DeletedAt         *time.Time      `db:"deleted_at"`
-	}
-
-	query := `SELECT id, clinic_id, quarter_id, gst_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
+func GetFinancialFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*domain.FinancialFormResponse, error) {
+	query := `SELECT id, clinic_id, quarter_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
 		FROM tbl_financial_form WHERE id = $1 AND deleted_at IS NULL`
 
-	var row formRow
+	var row domain.FinancialForm
 	err := db.GetContext(ctx, &row, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -68,94 +36,62 @@ func GetFinancialFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*doma
 		return nil, errors.New("failed to get financial form")
 	}
 
-	var config map[string]interface{}
-	if err := json.Unmarshal(row.Configuration, &config); err != nil {
-		return nil, errors.New("failed to unmarshal configuration")
+	response, err := row.ToFinancialFormResponse()
+	if err != nil {
+		return &domain.FinancialFormResponse{}, err
 	}
 
-	return &domain.FinancialForm{
-		ID:                row.ID,
-		ClinicID:          row.ClinicID,
-		QuarterID:         row.QuarterID,
-		GSTID:             row.GstID,
-		Name:              row.Name,
-		CalculationMethod: row.CalculationMethod,
-		Configuration:     config,
-		IsActive:          row.IsActive,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
-		DeletedAt:         row.DeletedAt,
-	}, nil
+	return response, nil
 }
 
-func GetFinancialFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid.UUID) ([]domain.FinancialForm, error) {
-	type formRow struct {
-		ID                uuid.UUID       `db:"id"`
-		ClinicID          uuid.UUID       `db:"clinic_id"`
-		QuarterID         uuid.UUID       `db:"quarter_id"`
-		GSTID             *int            `db:"gst_id"`
-		Name              string          `db:"name"`
-		CalculationMethod string          `db:"calculation_method"`
-		Configuration     json.RawMessage `db:"configuration"`
-		IsActive          bool            `db:"is_active"`
-		CreatedAt         time.Time       `db:"created_at"`
-		UpdatedAt         time.Time       `db:"updated_at"`
-		DeletedAt         *time.Time      `db:"deleted_at"`
+func GetFinancialFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid.UUID) ([]domain.FinancialFormResponse, error) {
+
+	query := `
+		SELECT
+			id,
+			clinic_id,
+			quarter_id,
+			name,
+			calculation_method,
+			configuration,
+			is_active,
+			created_at,
+			updated_at,
+			deleted_at
+		FROM tbl_financial_form
+		WHERE clinic_id = $1
+		  AND deleted_at IS NULL
+		ORDER BY created_at DESC
+	`
+
+	var rows []domain.FinancialForm
+	if err := db.SelectContext(ctx, &rows, query, clinicID); err != nil {
+		return nil, fmt.Errorf("failed to get financial forms for clinic %s: %w", clinicID, err)
 	}
 
-	query := `SELECT id, clinic_id, quarter_id, gst_id, name, calculation_method, configuration, is_active, created_at, updated_at, deleted_at
-		FROM tbl_financial_form WHERE clinic_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC`
+	responses := make([]domain.FinancialFormResponse, 0, len(rows))
 
-	var rows []formRow
-	err := db.SelectContext(ctx, &rows, query, clinicID)
-	if err != nil {
-		return nil, errors.New("failed to get financial forms")
-	}
-
-	forms := make([]domain.FinancialForm, len(rows))
-	for i, row := range rows {
-		var config map[string]interface{}
-		if err := json.Unmarshal(row.Configuration, &config); err != nil {
-			return nil, errors.New("failed to unmarshal configuration")
+	for _, row := range rows {
+		resp, err := row.ToFinancialFormResponse()
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to map financial form %s: %w",
+				row.ID,
+				err,
+			)
 		}
-
-		forms[i] = domain.FinancialForm{
-			ID:                row.ID,
-			ClinicID:          row.ClinicID,
-			QuarterID:         row.QuarterID,
-			GSTID:             row.GSTID,
-			Name:              row.Name,
-			CalculationMethod: row.CalculationMethod,
-			Configuration:     config,
-			IsActive:          row.IsActive,
-			CreatedAt:         row.CreatedAt,
-			UpdatedAt:         row.UpdatedAt,
-			DeletedAt:         row.DeletedAt,
-		}
+		responses = append(responses, *resp)
 	}
 
-	return forms, nil
+	return responses, nil
 }
 
 func UpdateFinancialForm(ctx context.Context, db *sqlx.DB, form *domain.FinancialForm) error {
-	configJSON, err := json.Marshal(form.Configuration)
-	if err != nil {
-		return errors.New("failed to marshal configuration")
-	}
 
 	query := `UPDATE tbl_financial_form SET name = :name, calculation_method = :calculation_method, 
 		configuration = :configuration, is_active = :is_active, updated_at = :updated_at WHERE id = :id`
 
-	args := map[string]interface{}{
-		"id":                 form.ID,
-		"name":               form.Name,
-		"calculation_method": form.CalculationMethod,
-		"configuration":      string(configJSON),
-		"is_active":          form.IsActive,
-		"updated_at":         form.UpdatedAt,
-	}
-
-	_, err = db.NamedExecContext(ctx, query, args)
+	_, err := db.NamedExecContext(ctx, query, form)
 	if err != nil {
 		return err
 	}

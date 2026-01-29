@@ -1,56 +1,204 @@
 package domain
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	constants "github.com/iamarpitzala/aca-reca-backend/constant"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 // FinancialForm represents a financial form configuration
 
 type GST struct {
-	ID         uuid.UUID `db:"id" json:"id"`
-	Name       string    `db:"name" json:"name"`
-	Type       string    `db:"type" json:"type"`
-	Percentage float64   `db:"percentage" json:"percentage"`
+	ID         uuid.UUID `db:"id"`
+	Name       string    `db:"name"`
+	Type       string    `db:"type"`
+	Percentage float64   `db:"percentage"`
+}
+
+type GSTResponse struct {
+	ID         uuid.UUID `json:"id"`
+	Name       string    `json:"name"`
+	Type       string    `json:"type"`
+	Percentage float64   `json:"percentage"`
+}
+
+func (g *GST) ToResponse() *GSTResponse {
+	return &GSTResponse{
+		ID:         g.ID,
+		Name:       g.Name,
+		Type:       g.Type,
+		Percentage: g.Percentage,
+	}
+}
+
+type FinancialFormRequest struct {
+	ID                uuid.UUID       `json:"id"`
+	ClinicID          uuid.UUID       `json:"clinicId"`
+	QuarterID         uuid.UUID       `json:"quarterId"`
+	Name              string          `json:"name"`
+	CalculationMethod string          `json:"calculationMethod"` // net | gross
+	Configuration     json.RawMessage `json:"configuration"`     // JSONB
+	IsActive          bool            `json:"isActive"`
 }
 
 type FinancialForm struct {
-	ID                uuid.UUID              `db:"id" json:"id"`
-	ClinicID          uuid.UUID              `db:"clinic_id" json:"clinicId"`
-	QuarterID         uuid.UUID              `db:"quarter_id" json:"quarterId"`
-	GSTID             *int                   `db:"gst_id" json:"gstId"`
-	Name              string                 `db:"name" json:"name"`
-	CalculationMethod string                 `db:"calculation_method" json:"calculationMethod"` // "net" or "gross"
-	Configuration     map[string]interface{} `db:"configuration" json:"configuration"`          // JSONB stored as map
-	IsActive          bool                   `db:"is_active" json:"isActive"`
-	CreatedAt         time.Time              `db:"created_at" json:"createdAt"`
-	UpdatedAt         time.Time              `db:"updated_at" json:"updatedAt"`
-	DeletedAt         *time.Time             `db:"deleted_at" json:"deletedAt"`
-	GST               *GST                   `db:"gst" json:"gst,omitempty"`
-	Quarter           *Quarter               `db:"quarter" json:"quarter,omitempty"`
+	ID                uuid.UUID       `db:"id"`
+	ClinicID          uuid.UUID       `db:"clinic_id"`
+	QuarterID         uuid.UUID       `db:"quarter_id"`
+	Name              string          `db:"name"`
+	CalculationMethod string          `db:"calculation_method"` // net | gross
+	Configuration     json.RawMessage `db:"configuration"`      // JSONB
+	IsActive          bool            `db:"is_active"`
+	CreatedAt         time.Time       `db:"created_at"`
+	UpdatedAt         time.Time       `db:"updated_at"`
+	DeletedAt         *time.Time      `db:"deleted_at"`
 }
 
-// NetMethodConfig represents configuration for Net Method
+func (rr *FinancialFormRequest) ToRepo() (*FinancialForm, error) {
+	if rr.CalculationMethod != "net" && rr.CalculationMethod != "gross" {
+		return nil, fmt.Errorf("invalid calculation method: %s", rr.CalculationMethod)
+	}
+
+	id := rr.ID
+	if id == uuid.Nil {
+		id = uuid.New()
+	}
+
+	now := time.Now()
+	return &FinancialForm{
+		ID:                id,
+		ClinicID:          rr.ClinicID,
+		QuarterID:         rr.QuarterID,
+		Name:              rr.Name,
+		CalculationMethod: rr.CalculationMethod,
+		Configuration:     rr.Configuration,
+		IsActive:          rr.IsActive,
+		CreatedAt:         now,
+		UpdatedAt:         now,
+	}, nil
+}
+
+type FinancialFormResponse struct {
+	ID                uuid.UUID              `json:"id"`
+	ClinicID          uuid.UUID              `json:"clinicId"`
+	QuarterID         uuid.UUID              `json:"quarterId"`
+	Name              string                 `json:"name"`
+	CalculationMethod string                 `json:"calculationMethod"`
+	Configuration     map[string]interface{} `json:"configuration"`
+	IsActive          bool                   `json:"isActive"`
+	CreatedAt         time.Time              `json:"createdAt"`
+	UpdatedAt         time.Time              `json:"updatedAt"`
+	DeletedAt         *time.Time             `json:"deletedAt,omitempty"`
+}
+
 type NetMethodConfig struct {
-	CommissionPercent      float64 `json:"commissionPercent"`      // Default: 40%
-	GSTOnCommissionPercent float64 `json:"gstOnCommissionPercent"` // Default: 10%
-	LabFeeEnabled          bool    `json:"labFeeEnabled"`          // Default: true
-	SuperHoldingEnabled    bool    `json:"superHoldingEnabled"`    // Default: false
-	SuperPercent           float64 `json:"superPercent"`           // Fixed: 12% (non-editable when enabled)
+	CommissionType      string   `json:"commissionType"`
+	ClinicCommission    float64  `json:"clinicCommission"`
+	OwnerCommission     float64  `json:"ownerCommission"`
+	SuperHoldingEnabled bool     `json:"superHoldingEnabled"`
+	SuperPercent        *float64 `json:"superPercent,omitempty"`
+	LabFees             bool     `json:"labFees"`
 }
 
-// GrossMethodConfig represents configuration for Gross Method
 type GrossMethodConfig struct {
-	ServiceFeePercent        float64 `json:"serviceFeePercent"`        // Default: 60%
-	GSTOnServiceFeePercent   float64 `json:"gstOnServiceFeePercent"`   // Default: 10%
-	LabFeeEnabled            bool    `json:"labFeeEnabled"`            // Default: true
-	LabFeePaidBy             string  `json:"labFeePaidBy"`             // "clinic" or "dentist"
-	GSTOnLabFee              bool    `json:"gstOnLabFee"`              // Default: false
-	GSTOnPatientFee          bool    `json:"gstOnPatientFee"`          // Default: false
-	OutworkChargeRateEnabled bool    `json:"outworkChargeRateEnabled"` // Default: false
-	OutworkRatePercent       float64 `json:"outworkRatePercent"`
-	// Default: 40%
+	CommissionType     string   `json:"commissionType"`
+	ClinicCommission   float64  `json:"clinicCommission"`
+	OwnerCommission    float64  `json:"ownerCommission"`
+	PaidBy             string   `json:"paidBy"` // clinic | owner
+	GSTOnLabFee        bool     `json:"gstOnLabFee"`
+	OutworkRateEnabled bool     `json:"outworkRateEnabled"`
+	OutworkRatePercent *float64 `json:"outworkRatePercent,omitempty"`
+}
+
+func (f *FinancialForm) ToFinancialFormResponse() (*FinancialFormResponse, error) {
+	var cfg map[string]interface{}
+	var err error
+
+	switch f.CalculationMethod {
+	case "net":
+		var netCfg NetMethodConfig
+		if err := json.Unmarshal(f.Configuration, &netCfg); err != nil {
+			return nil, err
+		}
+		cfg, err = util.StructToMap(netCfg)
+
+	case "gross":
+		var grossCfg GrossMethodConfig
+		if err := json.Unmarshal(f.Configuration, &grossCfg); err != nil {
+			return nil, err
+		}
+		cfg, err = util.StructToMap(grossCfg)
+
+	default:
+		return nil, fmt.Errorf("invalid calculation method: %s", f.CalculationMethod)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &FinancialFormResponse{
+		ID:                f.ID,
+		ClinicID:          f.ClinicID,
+		QuarterID:         f.QuarterID,
+		Name:              f.Name,
+		CalculationMethod: f.CalculationMethod,
+		Configuration:     cfg,
+		IsActive:          f.IsActive,
+		CreatedAt:         f.CreatedAt,
+		UpdatedAt:         f.UpdatedAt,
+		DeletedAt:         f.DeletedAt,
+	}, nil
+}
+
+func (n NetMethodConfig) Validate() error {
+	if n.CommissionType == constants.PERCENTAGE {
+
+		if n.ClinicCommission < 0 || n.OwnerCommission < 0 {
+			return fmt.Errorf("commission values cannot be negative")
+		}
+
+		if n.ClinicCommission+n.OwnerCommission != 100 {
+			return fmt.Errorf("clinic + owner commission must be 100")
+		}
+
+		if n.SuperHoldingEnabled {
+			if n.SuperPercent == nil {
+				return fmt.Errorf("superPercent required when superHoldingEnabled")
+			}
+			if *n.SuperPercent <= 0 || *n.SuperPercent > 100 {
+				return fmt.Errorf("superPercent must be between 1 and 100")
+			}
+		}
+	}
+
+	return nil
+}
+
+func (g GrossMethodConfig) Validate() error {
+	if g.CommissionType == constants.PERCENTAGE {
+
+		if g.ClinicCommission < 0 || g.OwnerCommission < 0 {
+			return fmt.Errorf("commission values cannot be negative")
+		}
+
+		if g.ClinicCommission+g.OwnerCommission != 100 {
+			return fmt.Errorf("clinic + owner commission must be 100")
+		}
+
+		switch g.PaidBy {
+		case constants.PAID_BY_CLINIC, constants.PAID_BY_OWNER:
+			// valid
+		default:
+			return fmt.Errorf("paidBy must be clinic or owner")
+		}
+	}
+
+	return nil
 }
 
 // CalculationInput represents input values for calculations

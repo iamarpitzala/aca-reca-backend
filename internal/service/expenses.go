@@ -35,6 +35,10 @@ func (es *ExpensesService) CreateExpenseEntry(ctx context.Context, expenseEntry 
 	return repository.CreateExpenseEntry(ctx, es.db, expenseEntry)
 }
 
+func (es *ExpensesService) GetExpenseTypesByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.ExpenseType, error) {
+	return repository.GetExpenseTypesByClinicID(ctx, es.db, clinicID)
+}
+
 func (es *ExpensesService) GetExpenseTypeByID(ctx context.Context, id uuid.UUID) (*domain.ExpenseType, error) {
 	return repository.GetExpenseTypeByID(ctx, es.db, id)
 }
@@ -49,4 +53,16 @@ func (es *ExpensesService) GetExpenseCategoryTypeByID(ctx context.Context, id uu
 
 func (es *ExpensesService) GetExpenseEntryByID(ctx context.Context, id uuid.UUID) (*domain.ExpenseEntry, error) {
 	return repository.GetExpenseEntryByID(ctx, es.db, id)
+}
+
+func (es *ExpensesService) GetExpenseCategoriesByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.ExpenseCategory, error) {
+	return repository.GetExpenseCategoriesByClinicID(ctx, es.db, clinicID)
+}
+
+func (es *ExpensesService) UpdateExpenseCategory(ctx context.Context, category *domain.ExpenseCategory) error {
+	return repository.UpdateExpenseCategory(ctx, es.db, category)
+}
+
+func (es *ExpensesService) DeleteExpenseCategory(ctx context.Context, id uuid.UUID, deletedBy uuid.UUID) error {
+	return repository.DeleteExpenseCategory(ctx, es.db, id, deletedBy)
 }

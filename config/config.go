@@ -48,8 +48,9 @@ type SessionConfig struct {
 }
 
 type OAuthConfig struct {
-	RedirectURL string
-	Providers   map[string]OAuthProviderConfig
+	RedirectURL  string
+	FrontendURL  string // Where to redirect after OAuth success (tokens in hash)
+	Providers    map[string]OAuthProviderConfig
 }
 
 type OAuthProviderConfig struct {
@@ -82,7 +83,10 @@ func Load() *Config {
 			Issuer:          getEnv("JWT_ISSUER", "motocabz-sso"),
 		},
 		OAuth: OAuthConfig{
+			// OAUTH_REDIRECT_URL: base for OAuth callbacks (e.g. http://localhost:8080/api/v1/auth/oauth -> .../google/callback)
 			RedirectURL: getEnv("OAUTH_REDIRECT_URL", "http://localhost:8080/api/v1/auth/oauth"),
+			// FRONTEND_URL: where to redirect after OAuth success (tokens in hash)
+			FrontendURL: getEnv("FRONTEND_URL", "http://localhost:5173"),
 			Providers: map[string]OAuthProviderConfig{
 				"google": {
 					ClientID:     getEnv("GOOGLE_CLIENT_ID", ""),

@@ -26,5 +26,6 @@ func RegisterExpensesRoutes(e *gin.RouterGroup, expensesHandler *httpHandler.Exp
 	expense.PUT("/category/:id", expensesHandler.UpdateExpenseCategory)
 	expense.DELETE("/category/:id", expensesHandler.DeleteExpenseCategory)
 	expense.GET("/category-type/:id", expensesHandler.GetExpenseCategoryTypeByID)
+	expense.GET("/entry/clinic/:clinicId", expensesHandler.GetExpenseEntriesByClinicID)
 	expense.GET("/entry/:id", expensesHandler.GetExpenseEntryByID)
 }

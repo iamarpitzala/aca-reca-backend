@@ -301,6 +301,18 @@ func (h *ExpensesHandler) GetExpenseEntryByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "expense entry retrieved successfully", "expenseEntry": expenseEntry})
 }
 
+// GetExpenseEntriesByClinicID retrieves all expense entries for a clinic
+// GET /api/v1/expense/entry/clinic/:clinicId
+func (h *ExpensesHandler) GetExpenseEntriesByClinicID(c *gin.Context) {
+	clinicID := c.Param("clinicId")
+	entries, err := h.expensesService.GetExpenseEntriesByClinicID(c.Request.Context(), uuid.MustParse(clinicID))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "expense entries retrieved successfully", "expenseEntries": entries})
+}
+
 // GetExpenseCategoriesByClinicID retrieves all expense categories for a clinic
 // GET /api/v1/expense/category/clinic/:clinicId
 // @Summary List expense categories by clinic

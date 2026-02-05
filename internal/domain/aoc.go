@@ -41,13 +41,13 @@ type AccountType struct {
 }
 
 type AccountTax struct {
-	ID            int        `db:"id"`
-	AccountTypeID int        `db:"account_type_id"`
-	Name          string     `db:"name"`
-	Description   string     `db:"description"`
-	CreatedAt     time.Time  `db:"created_at"`
-	UpdatedAt     time.Time  `db:"updated_at"`
-	DeletedAt     *time.Time `db:"deleted_at"`
+	ID          int        `db:"id"`
+	Name        string     `db:"name"`
+	Rate        float64    `db:"rate"`
+	Description string     `db:"description"`
+	CreatedAt   time.Time  `db:"created_at"`
+	UpdatedAt   time.Time  `db:"updated_at"`
+	DeletedAt   *time.Time `db:"deleted_at"`
 }
 
 type AOC struct {

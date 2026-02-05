@@ -32,20 +32,20 @@ func (as *AOSService) CreateAOC(ctx context.Context, aoc *domain.AOCRequest) err
 		return err
 	}
 
-	_, err = repository.GetAOCByAccountTypeID(ctx, as.db, aocRepo.AccountTypeID)
+	accountType, err := repository.GetAccountTypeByID(ctx, as.db, aocRepo.AccountTypeID)
 	if err != nil {
-		if err != sql.ErrNoRows {
-			return errors.New("account type not found")
-		}
 		return err
 	}
+	if accountType == nil {
+		return errors.New("account type not found")
+	}
 
-	_, err = repository.GetAOCByAccountTaxID(ctx, as.db, aocRepo.AccountTaxID)
+	accountTax, err := repository.GetAccountTaxByID(ctx, as.db, aocRepo.AccountTaxID)
 	if err != nil {
-		if err != sql.ErrNoRows {
-			return errors.New("account tax not found")
-		}
 		return err
+	}
+	if accountTax == nil {
+		return errors.New("account tax not found")
 	}
 
 	return repository.CreateAOC(ctx, as.db, aocRepo)
@@ -123,4 +123,9 @@ func (as *AOSService) DeleteAOC(ctx context.Context, id uuid.UUID) error {
 func (as *AOSService) GetAOCType(ctx context.Context) ([]domain.AccountType, error) {
 	accountTypes, err := repository.GetAllAOCType(ctx, as.db)
 	return accountTypes, err
+}
+
+func (as *AOSService) GetAccountTax(ctx context.Context) ([]domain.AccountTax, error) {
+	taxes, err := repository.GetAllAccountTax(ctx, as.db)
+	return taxes, err
 }

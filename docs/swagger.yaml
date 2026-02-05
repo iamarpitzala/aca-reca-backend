@@ -40,6 +40,23 @@ definitions:
       updatedAt:
         type: string
     type: object
+  domain.AccountTax:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      rate:
+        type: number
+      updatedAt:
+        type: string
+    type: object
   domain.AuthResponse:
     properties:
       accessToken:
@@ -421,6 +438,25 @@ paths:
           schema:
             $ref: '#/definitions/domain.H'
       summary: Create a new aoc
+      tags:
+      - AOC
+  /aoc/tax:
+    get:
+      consumes:
+      - application/json
+      description: Get all account tax types
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.AccountTax'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Get all account tax types
       tags:
       - AOC
   /auth/login:

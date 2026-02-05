@@ -55,6 +55,56 @@ func (h *AOCHandler) GetAllAOCType(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	utils.JSONResponse(c, http.StatusOK, "account types retrieved successfully", response, nil)
+}
+
+// GetAllAccountTax gets all account tax types
+// GET /api/v1/aoc/tax
+// @Summary Get all account tax types
+// @Description Get all account tax types
+// @Tags AOC
+// @Accept json
+// @Produce json
+// @Success 200 {object} domain.AccountTax
+// @Failure 500 {object} domain.H
+// @Router /aoc/tax [get]
+func (h *AOCHandler) GetAllAccountTax(c *gin.Context) {
+	response, err := h.aocService.GetAccountTax(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "account taxes retrieved successfully", response, nil)
+}
+
+// GetAOCByAccountTaxID gets accounts by account tax id
+// GET /api/v1/aoc/account-tax/:accountTaxId
+// @Summary Get a aoc by account tax id
+// @Description Get a aoc by account tax id
+// @Tags AOC
+// @Accept json
+// @Produce json
+// @Param accountTaxId path string true "AOC Account Tax ID"
+// @Success 200 {object} domain.AOCResponse
+// @Failure 400 {object} domain.H
+// @Failure 404 {object} domain.H
+// @Failure 500 {object} domain.H
+func (h *AOCHandler) GetAOCByAccountTaxID(c *gin.Context) {
+	accountTaxId := c.Param("accountTaxId")
+	accountTaxIdInt, err := strconv.Atoi(accountTaxId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account tax id"})
+		return
+	}
+	response, err := h.aocService.GetAOCByAccountTaxID(c.Request.Context(), accountTaxIdInt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
 	utils.JSONResponse(c, http.StatusOK, "aocs retrieved successfully", response, nil)
 }
 

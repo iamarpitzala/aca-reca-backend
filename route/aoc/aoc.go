@@ -16,10 +16,12 @@ func RegisterAOCRoutes(e *gin.RouterGroup, aocHandler *httpHandler.AOCHandler) {
 	aoc.Use(middleware.AuthMiddleware(tokenService))
 
 	aoc.GET("/type", aocHandler.GetAllAOCType)
+	aoc.GET("/tax", aocHandler.GetAllAccountTax)
 	aoc.POST("/", aocHandler.CreateAOC)
 	aoc.GET("/:id", aocHandler.GetAOCByID)
 	aoc.GET("/code/:code", aocHandler.GetAOCByCode)
 	aoc.GET("/account-type/:accountTypeId", aocHandler.GetAOCByAccountTypeID)
+	aoc.GET("/account-tax/:accountTaxId", aocHandler.GetAOCByAccountTaxID)
 	aoc.PUT("/:id", aocHandler.UpdateAOC)
 	aoc.DELETE("/:id", aocHandler.DeleteAOC)
 }

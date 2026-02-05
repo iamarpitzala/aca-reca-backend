@@ -1,56 +1,89 @@
 -- +goose Up
 -- +goose StatementBegin
+
+-- =========================
+-- Account Type Master
+-- =========================
 CREATE TABLE IF NOT EXISTS tbl_account_type (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    id SMALLSERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ
 );
 
+-- =========================
+-- Account Tax Master
+-- =========================
 CREATE TABLE IF NOT EXISTS tbl_account_tax (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    id SMALLSERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    rate NUMERIC(5,2) NOT NULL DEFAULT 0, -- e.g. 10.00
     description TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ
 );
 
-INSERT INTO tbl_account_type (name, description) VALUES
-('Asset', 'Asset account type'),
-('Liability', 'Liability account type'),
-('Equity', 'Equity account type'),
-('Revenue', 'Revenue account type'),
-('Expense', 'Expense account type');
+-- =========================
+-- Seed Account Types (Idempotent)
+-- =========================
+INSERT INTO tbl_account_type (name, description)
+VALUES
+    ('Asset', 'Asset account type'),
+    ('Liability', 'Liability account type'),
+    ('Equity', 'Equity account type'),
+    ('Revenue', 'Revenue account type'),
+    ('Expense', 'Expense account type')
+ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO tbl_account_tax (name, description) VALUES
-('Tax Exempt(0%)', 'Tax Exempt account type'),
-('Tax on Purchase(0%)', 'Tax on Purchase account type'),
-('Tax on Sale(0%)', 'Tax on Sale account type');
+-- =========================
+-- Seed Tax Types (Xero-style)
+-- =========================
+INSERT INTO tbl_account_tax (name, rate, description)
+VALUES
+    ('Tax Exempt', 0.00, 'No tax applied'),
+    ('Tax on Purchases', 0.00, 'GST/VAT on purchases'),
+    ('Tax on Sales', 0.00, 'GST/VAT on sales')
+ON CONFLICT (name) DO NOTHING;
 
-
-CREATE TABLE IF NOT EXISTS tbl_aoc (
+-- =========================
+-- Chart of Accounts
+-- =========================
+CREATE TABLE IF NOT EXISTS tbl_account (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tbl_account_type_id INT NOT NULL REFERENCES tbl_account_type(id) ON DELETE CASCADE,
-    tbl_account_tax_id INT NOT NULL REFERENCES tbl_account_tax(id) ON DELETE CASCADE,
-    code VARCHAR(4) NOT NULL UNIQUE,
+
+    account_type_id SMALLINT NOT NULL
+        REFERENCES tbl_account_type(id),
+
+    account_tax_id SMALLINT NOT NULL
+        REFERENCES tbl_account_tax(id),
+
+    code VARCHAR(10) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ,
+
+    CONSTRAINT uq_account_code UNIQUE (code),
+    CONSTRAINT uq_account_name UNIQUE (name)
 );
 
+CREATE INDEX IF NOT EXISTS idx_account_type
+    ON tbl_account(account_type_id);
 
-
+CREATE INDEX IF NOT EXISTS idx_account_tax
+    ON tbl_account(account_tax_id);
 
 -- +goose StatementEnd
 
+
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS tbl_aoc;
+DROP TABLE IF EXISTS tbl_account;
 DROP TABLE IF EXISTS tbl_account_tax;
 DROP TABLE IF EXISTS tbl_account_type;
 -- +goose StatementEnd

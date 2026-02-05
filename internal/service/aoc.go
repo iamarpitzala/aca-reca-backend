@@ -119,3 +119,8 @@ func (as *AOSService) UpdateAOC(ctx context.Context, aoc *domain.AOC) error {
 func (as *AOSService) DeleteAOC(ctx context.Context, id uuid.UUID) error {
 	return repository.DeleteAOC(ctx, as.db, id)
 }
+
+func (as *AOSService) GetAOCType(ctx context.Context) ([]domain.AccountType, error) {
+	accountTypes, err := repository.GetAllAOCType(ctx, as.db)
+	return accountTypes, err
+}

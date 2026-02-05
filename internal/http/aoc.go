@@ -49,6 +49,15 @@ func (h *AOCHandler) CreateAOC(c *gin.Context) {
 	utils.JSONResponse(c, http.StatusCreated, "aoc created successfully", nil, nil)
 }
 
+func (h *AOCHandler) GetAllAOCType(c *gin.Context) {
+	response, err := h.aocService.GetAOCType(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "aocs retrieved successfully", response, nil)
+}
+
 // GetAOCByID gets a aoc by id
 // GET /api/v1/aoc/:id
 // @Summary Get a aoc by id

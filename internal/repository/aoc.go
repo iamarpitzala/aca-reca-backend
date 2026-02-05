@@ -88,3 +88,13 @@ func GetAOCByAccountTaxID(ctx context.Context, db *sqlx.DB, accountTaxID int) ([
 	}
 	return aocs, nil
 }
+
+func GetAllAOCType(ctx context.Context, db *sqlx.DB) ([]domain.AccountType, error) {
+	query := `SELECT id, name, description, created_at, updated_at FROM tbl_account_type WHERE deleted_at IS NULL`
+	var accountTypes []domain.AccountType
+	err := db.SelectContext(ctx, &accountTypes, query)
+	if err != nil {
+		return nil, errors.New("failed to get all account types")
+	}
+	return accountTypes, nil
+}

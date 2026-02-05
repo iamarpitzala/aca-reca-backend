@@ -8,6 +8,7 @@ import (
 	_ "github.com/iamarpitzala/aca-reca-backend/docs" // swagger docs
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
+	"github.com/iamarpitzala/aca-reca-backend/route/aoc"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
 	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
@@ -35,6 +36,7 @@ func InitRouter(e *gin.Engine) {
 	// financialCalculationService := service.NewFinancialCalculationService(db.DB)
 	expensesService := service.NewExpensesService(db.DB)
 	quarterService := service.NewQuarterService(db.DB)
+	aosService := service.NewAOSService(db.DB)
 
 	authHandler := httpHandler.NewAuthHandler(authService, oauthService, cfg.OAuth.FrontendURL)
 	userHandler := httpHandler.NewUserHandler(authService)
@@ -45,6 +47,7 @@ func InitRouter(e *gin.Engine) {
 	// financialCalculationHandler := httpHandler.NewFinancialCalculationHandler(financialCalculationService)
 	expensesHandler := httpHandler.NewExpensesHandler(expensesService)
 	quarterHandler := httpHandler.NewQuarterHandler(quarterService)
+	aosHandler := httpHandler.NewAOCHandler(aosService)
 	// Swagger documentation route
 	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -58,4 +61,5 @@ func InitRouter(e *gin.Engine) {
 	// financial_calculation.RegisterFinancialCalculationRoutes(v1, financialCalculationHandler)
 	quarter.RegisterQuarterRoutes(v1, quarterHandler)
 	expense.RegisterExpensesRoutes(v1, expensesHandler)
+	aoc.RegisterAOCRoutes(v1, aosHandler)
 }

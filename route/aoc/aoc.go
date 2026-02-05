@@ -15,6 +15,7 @@ func RegisterAOCRoutes(e *gin.RouterGroup, aocHandler *httpHandler.AOCHandler) {
 	tokenService := service.NewTokenService(cfg.JWT)
 	aoc.Use(middleware.AuthMiddleware(tokenService))
 
+	aoc.GET("/type", aocHandler.GetAllAOCType)
 	aoc.POST("/", aocHandler.CreateAOC)
 	aoc.GET("/:id", aocHandler.GetAOCByID)
 	aoc.GET("/code/:code", aocHandler.GetAOCByCode)

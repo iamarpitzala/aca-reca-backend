@@ -104,6 +104,16 @@ func GetExpenseEntryByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*domai
 	return &expenseEntry, nil
 }
 
+func GetExpenseEntriesByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid.UUID) ([]domain.ExpenseEntry, error) {
+	query := `SELECT id, clinic_id, category_id, type_id, amount, gst_rate, is_gst_inclusive, expense_date, supplier_name, notes, created_at, created_by, deleted_at, deleted_by FROM tbl_expense_entry WHERE clinic_id = $1 AND deleted_at IS NULL ORDER BY expense_date DESC`
+	var entries []domain.ExpenseEntry
+	err := db.SelectContext(ctx, &entries, query, clinicID)
+	if err != nil {
+		return nil, errors.New("failed to list expense entries for clinic")
+	}
+	return entries, nil
+}
+
 func GetExpenseCategoriesByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid.UUID) ([]domain.ExpenseCategory, error) {
 	query := `SELECT id, clinic_id, name, description, created_at, created_by, deleted_at, deleted_by FROM tbl_expense_category WHERE clinic_id = $1 AND deleted_at IS NULL ORDER BY name`
 	var categories []domain.ExpenseCategory

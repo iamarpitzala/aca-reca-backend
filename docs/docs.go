@@ -23,6 +23,52 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/aoc": {
+            "post": {
+                "description": "Create a new aoc with the given information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AOC"
+                ],
+                "summary": "Create a new aoc",
+                "parameters": [
+                    {
+                        "description": "AOC information",
+                        "name": "aoc",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.AOCRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.AOCResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login a user with email and password",
@@ -302,7 +348,7 @@ const docTemplate = `{
         },
         "/clinic": {
             "get": {
-                "description": "Retrieve all clinics",
+                "description": "Retrieve all clinics the authenticated user is associated with",
                 "consumes": [
                     "application/json"
                 ],
@@ -312,7 +358,7 @@ const docTemplate = `{
                 "tags": [
                     "Clinic"
                 ],
-                "summary": "Retrieve all clinics",
+                "summary": "Retrieve user's clinics",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -320,8 +366,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/domain.H"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/domain.H"
                         }
@@ -335,7 +381,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Create a new clinic with the given information",
+                "description": "Create a new clinic with the given information. The creating user is automatically associated as owner.",
                 "consumes": [
                     "application/json"
                 ],
@@ -381,7 +427,7 @@ const docTemplate = `{
         },
         "/clinic/abn/{abnNumber}": {
             "get": {
-                "description": "Retrieve a clinic by ABN number",
+                "description": "Retrieve a clinic by ABN number. User must be associated with the clinic.",
                 "consumes": [
                     "application/json"
                 ],
@@ -414,6 +460,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/domain.H"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -431,7 +483,7 @@ const docTemplate = `{
         },
         "/clinic/{id}": {
             "get": {
-                "description": "Retrieve a clinic by ID",
+                "description": "Retrieve a clinic by ID. User must be associated with the clinic.",
                 "consumes": [
                     "application/json"
                 ],
@@ -464,6 +516,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/domain.H"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -479,7 +537,7 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Update a clinic by ID with the given information",
+                "description": "Update a clinic by ID. User must be associated with the clinic.",
                 "consumes": [
                     "application/json"
                 ],
@@ -521,6 +579,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/domain.H"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -536,7 +600,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Delete a clinic by ID",
+                "description": "Delete a clinic by ID. User must be associated with the clinic.",
                 "consumes": [
                     "application/json"
                 ],
@@ -551,6 +615,166 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Clinic ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/expense/category/clinic/{clinicId}": {
+            "get": {
+                "description": "Retrieve all expense categories for a clinic",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "List expense categories by clinic",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Clinic ID",
+                        "name": "clinicId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ExpenseCategory"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/expense/category/{id}": {
+            "put": {
+                "description": "Update an expense category with the given information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Update an expense category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Expense category update",
+                        "name": "expenseCategory",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseCategory"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ExpenseCategory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Soft-delete an expense category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Delete an expense category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense Category ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -1675,7 +1899,7 @@ const docTemplate = `{
         },
         "/user-clinic/user/{userId}": {
             "get": {
-                "description": "Get all clinics associated with a user",
+                "description": "Get all clinics associated with a user. Users can only fetch their own clinics.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1704,6 +1928,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.H"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/domain.H"
                         }
@@ -1997,6 +2227,65 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.AOCRequest": {
+            "type": "object",
+            "required": [
+                "accountTaxId",
+                "accountTypeId",
+                "code",
+                "name"
+            ],
+            "properties": {
+                "accountTaxId": {
+                    "type": "integer"
+                },
+                "accountTypeId": {
+                    "type": "integer"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.AOCResponse": {
+            "type": "object",
+            "properties": {
+                "accountTaxId": {
+                    "type": "integer"
+                },
+                "accountTypeId": {
+                    "type": "integer"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.AuthResponse": {
             "type": "object",
             "properties": {
@@ -2293,10 +2582,75 @@ const docTemplate = `{
             }
         },
         "domain.FinancialForm": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "calculationMethod": {
+                    "description": "net | gross",
+                    "type": "string"
+                },
+                "clinicID": {
+                    "type": "string"
+                },
+                "configuration": {
+                    "description": "JSONB",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quarterID": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
         },
         "domain.FinancialFormRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "calculationMethod": {
+                    "description": "net | gross",
+                    "type": "string"
+                },
+                "clinicId": {
+                    "type": "string"
+                },
+                "configuration": {
+                    "description": "JSONB",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quarterId": {
+                    "type": "string"
+                }
+            }
         },
         "domain.H": {
             "type": "object",

@@ -55,6 +55,10 @@ func (es *ExpensesService) GetExpenseEntryByID(ctx context.Context, id uuid.UUID
 	return repository.GetExpenseEntryByID(ctx, es.db, id)
 }
 
+func (es *ExpensesService) GetExpenseEntriesByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.ExpenseEntry, error) {
+	return repository.GetExpenseEntriesByClinicID(ctx, es.db, clinicID)
+}
+
 func (es *ExpensesService) GetExpenseCategoriesByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.ExpenseCategory, error) {
 	return repository.GetExpenseCategoriesByClinicID(ctx, es.db, clinicID)
 }

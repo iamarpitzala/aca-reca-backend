@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"log"
-	
+
 	"net/http"
 	"os"
 	"os/signal"
@@ -71,7 +71,7 @@ func InitServer() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
-	
+
 	e.Use(cors.New(corsConfig))
 
 	e.Use(gin.Recovery())

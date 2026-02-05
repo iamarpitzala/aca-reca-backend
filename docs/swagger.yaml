@@ -1,5 +1,45 @@
 basePath: /api/v1
 definitions:
+  domain.AOCRequest:
+    properties:
+      accountTaxId:
+        type: integer
+      accountTypeId:
+        type: integer
+      code:
+        type: string
+      description:
+        maxLength: 255
+        type: string
+      name:
+        type: string
+    required:
+    - accountTaxId
+    - accountTypeId
+    - code
+    - name
+    type: object
+  domain.AOCResponse:
+    properties:
+      accountTaxId:
+        type: integer
+      accountTypeId:
+        type: integer
+      code:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
   domain.AuthResponse:
     properties:
       accessToken:
@@ -195,8 +235,52 @@ definitions:
         type: string
     type: object
   domain.FinancialForm:
+    properties:
+      calculationMethod:
+        description: net | gross
+        type: string
+      clinicID:
+        type: string
+      configuration:
+        description: JSONB
+        items:
+          type: integer
+        type: array
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      id:
+        type: string
+      isActive:
+        type: boolean
+      name:
+        type: string
+      quarterID:
+        type: string
+      updatedAt:
+        type: string
     type: object
   domain.FinancialFormRequest:
+    properties:
+      calculationMethod:
+        description: net | gross
+        type: string
+      clinicId:
+        type: string
+      configuration:
+        description: JSONB
+        items:
+          type: integer
+        type: array
+      id:
+        type: string
+      isActive:
+        type: boolean
+      name:
+        type: string
+      quarterId:
+        type: string
     type: object
   domain.H:
     additionalProperties: true
@@ -309,6 +393,36 @@ info:
   title: ACA RECA API
   version: "1.0"
 paths:
+  /aoc:
+    post:
+      consumes:
+      - application/json
+      description: Create a new aoc with the given information
+      parameters:
+      - description: AOC information
+        in: body
+        name: aoc
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AOCRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.AOCResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Create a new aoc
+      tags:
+      - AOC
   /auth/login:
     post:
       consumes:
@@ -495,7 +609,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all clinics
+      description: Retrieve all clinics the authenticated user is associated with
       produces:
       - application/json
       responses:
@@ -503,21 +617,22 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/domain.H'
-        "404":
-          description: Not Found
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/domain.H'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/domain.H'
-      summary: Retrieve all clinics
+      summary: Retrieve user's clinics
       tags:
       - Clinic
     post:
       consumes:
       - application/json
-      description: Create a new clinic with the given information
+      description: Create a new clinic with the given information. The creating user
+        is automatically associated as owner.
       parameters:
       - description: Clinic information
         in: body
@@ -547,7 +662,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Delete a clinic by ID
+      description: Delete a clinic by ID. User must be associated with the clinic.
       parameters:
       - description: Clinic ID
         in: path
@@ -563,6 +678,10 @@ paths:
             $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/domain.H'
         "404":
@@ -579,7 +698,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve a clinic by ID
+      description: Retrieve a clinic by ID. User must be associated with the clinic.
       parameters:
       - description: Clinic ID
         in: path
@@ -597,6 +716,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/domain.H'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
@@ -611,7 +734,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: Update a clinic by ID with the given information
+      description: Update a clinic by ID. User must be associated with the clinic.
       parameters:
       - description: Clinic ID
         in: path
@@ -635,6 +758,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/domain.H'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.H'
         "404":
           description: Not Found
           schema:
@@ -650,11 +777,49 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve a clinic by ABN number
+      description: Retrieve a clinic by ABN number. User must be associated with the
+        clinic.
       parameters:
       - description: ABN number
         in: path
         name: abnNumber
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.H'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Retrieve a clinic by ABN number
+      tags:
+      - Clinic
+  /expense/category/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft-delete an expense category
+      parameters:
+      - description: Expense Category ID
+        in: path
+        name: id
         required: true
         type: string
       produces:
@@ -676,9 +841,78 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/domain.H'
-      summary: Retrieve a clinic by ABN number
+      summary: Delete an expense category
       tags:
-      - Clinic
+      - Expenses
+    put:
+      consumes:
+      - application/json
+      description: Update an expense category with the given information
+      parameters:
+      - description: Expense Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Expense category update
+        in: body
+        name: expenseCategory
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ExpenseCategory'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ExpenseCategory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: Update an expense category
+      tags:
+      - Expenses
+  /expense/category/clinic/{clinicId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all expense categories for a clinic
+      parameters:
+      - description: Clinic ID
+        in: path
+        name: clinicId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.ExpenseCategory'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.H'
+      summary: List expense categories by clinic
+      tags:
+      - Expenses
   /expenses/category:
     post:
       consumes:
@@ -1433,7 +1667,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all clinics associated with a user
+      description: Get all clinics associated with a user. Users can only fetch their
+        own clinics.
       parameters:
       - description: User ID
         in: path
@@ -1449,6 +1684,10 @@ paths:
             $ref: '#/definitions/domain.H'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.H'
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/domain.H'
         "500":

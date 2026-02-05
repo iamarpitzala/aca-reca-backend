@@ -11,13 +11,24 @@ CREATE TABLE IF NOT EXISTS tbl_account_type (
 
 CREATE TABLE IF NOT EXISTS tbl_account_tax (
     id SERIAL PRIMARY KEY,
-    tbl_account_type_id INT NOT NULL REFERENCES tbl_account_type(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL
 );
+
+INSERT INTO tbl_account_type (name, description) VALUES
+('Asset', 'Asset account type'),
+('Liability', 'Liability account type'),
+('Equity', 'Equity account type'),
+('Revenue', 'Revenue account type'),
+('Expense', 'Expense account type');
+
+INSERT INTO tbl_account_tax (name, description) VALUES
+('Tax Exempt(0%)', 'Tax Exempt account type'),
+('Tax on Purchase(0%)', 'Tax on Purchase account type'),
+('Tax on Sale(0%)', 'Tax on Sale account type');
 
 
 CREATE TABLE IF NOT EXISTS tbl_aoc (
@@ -32,12 +43,7 @@ CREATE TABLE IF NOT EXISTS tbl_aoc (
     deleted_at TIMESTAMP NULL
 );
 
-INSERT INTO tbl_account_type (name, description) VALUES
-('Asset', 'Asset account type'),
-('Liability', 'Liability account type'),
-('Equity', 'Equity account type'),
-('Revenue', 'Revenue account type'),
-('Expense', 'Expense account type');
+
 
 
 -- +goose StatementEnd

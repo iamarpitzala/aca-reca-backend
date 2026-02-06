@@ -49,6 +49,22 @@ func (h *AOCHandler) CreateAOC(c *gin.Context) {
 	utils.JSONResponse(c, http.StatusCreated, "aoc created successfully", nil, nil)
 }
 
+// GetAllAOCs returns all chart of accounts entries
+// GET /api/v1/aoc
+// @Summary Get all AOCs
+// @Description Get all chart of accounts entries
+// @Tags AOC
+// @Success 200 {array} domain.AOCResponse
+// @Router /aoc [get]
+func (h *AOCHandler) GetAllAOCs(c *gin.Context) {
+	response, err := h.aocService.GetAllAOCs(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "aocs retrieved successfully", response, nil)
+}
+
 func (h *AOCHandler) GetAllAOCType(c *gin.Context) {
 	response, err := h.aocService.GetAOCType(c.Request.Context())
 	if err != nil {

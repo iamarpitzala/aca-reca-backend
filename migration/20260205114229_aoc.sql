@@ -43,9 +43,11 @@ ON CONFLICT (name) DO NOTHING;
 -- =========================
 INSERT INTO tbl_account_tax (name, rate, description)
 VALUES
-    ('Tax Exempt', 0.00, 'No tax applied'),
-    ('Tax on Purchases', 0.00, 'GST/VAT on purchases'),
-    ('Tax on Sales', 0.00, 'GST/VAT on sales')
+    ('GST on Income', 0.00, 'Taxable sales / revenue'),
+    ('GST on Expenses', 0.00, 'Taxable purchases / expenses'),
+    ('GST Free Expenses', 0.00, 'GST free expenses'),
+    ('GST Free Income', 0.00, 'GST-free expenses'),
+    ('BAS Excluded', 0.00, 'Balance sheet items')
 ON CONFLICT (name) DO NOTHING;
 
 -- =========================

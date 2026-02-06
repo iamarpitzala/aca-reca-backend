@@ -18,6 +18,7 @@ func RegisterAOCRoutes(e *gin.RouterGroup, aocHandler *httpHandler.AOCHandler) {
 	aoc.GET("/type", aocHandler.GetAllAOCType)
 	aoc.GET("/tax", aocHandler.GetAllAccountTax)
 	aoc.POST("/", aocHandler.CreateAOC)
+	aoc.GET("", aocHandler.GetAllAOCs)
 	aoc.GET("/:id", aocHandler.GetAOCByID)
 	aoc.GET("/code/:code", aocHandler.GetAOCByCode)
 	aoc.GET("/account-type/:accountTypeId", aocHandler.GetAOCByAccountTypeID)

@@ -95,19 +95,19 @@ func (h *AOCHandler) GetAllAccountTax(c *gin.Context) {
 }
 
 // GetAOCByAccountTaxID gets accounts by account tax id
-// GET /api/v1/aoc/account-tax/:accountTaxId
+// GET /api/v1/aoc/account-tax/:id
 // @Summary Get a aoc by account tax id
 // @Description Get a aoc by account tax id
 // @Tags AOC
 // @Accept json
 // @Produce json
-// @Param accountTaxId path string true "AOC Account Tax ID"
+// @Param id path string true "AOC ID"
 // @Success 200 {object} domain.AOCResponse
 // @Failure 400 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
 func (h *AOCHandler) GetAOCByAccountTaxID(c *gin.Context) {
-	accountTaxId := c.Param("accountTaxId")
+	accountTaxId := c.Param("id")
 	accountTaxIdInt, err := strconv.Atoi(accountTaxId)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account tax id"})
@@ -183,19 +183,19 @@ func (h *AOCHandler) GetAOCByCode(c *gin.Context) {
 }
 
 // GetAOCByAccountTypeID gets a aoc by account type id
-// GET /api/v1/aoc/account-type/:accountTypeId
+// GET /api/v1/aoc/account-type/:id
 // @Summary Get a aoc by account type id
 // @Description Get a aoc by account type id
 // @Tags AOC
 // @Accept json
 // @Produce json
-// @Param accountTypeId path string true "AOC Account Type ID"
+// @Param id path string true "AOC ID"
 // @Success 200 {object} domain.AOCResponse
 // @Failure 400 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
 func (h *AOCHandler) GetAOCByAccountTypeID(c *gin.Context) {
-	accountTypeId := c.Param("accountTypeId")
+	accountTypeId := c.Param("id")
 	accountTypeIdInt, err := strconv.Atoi(accountTypeId)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account type id"})

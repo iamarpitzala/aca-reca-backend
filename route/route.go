@@ -62,4 +62,5 @@ func InitRouter(e *gin.Engine) {
 	quarter.RegisterQuarterRoutes(v1, quarterHandler)
 	expense.RegisterExpensesRoutes(v1, expensesHandler)
 	aoc.RegisterAOCRoutes(v1, aosHandler)
+
 }

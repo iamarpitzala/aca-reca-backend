@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -201,6 +202,46 @@ func (h *AOCHandler) GetAOCByAccountTypeID(c *gin.Context) {
 		return
 	}
 	response, err := h.aocService.GetAOCByAccountTypeID(c.Request.Context(), accountTypeIdInt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "aocs retrieved successfully", response, nil)
+}
+
+// GetAOCsByAccountTypeIDs returns accounts for the given account type IDs.
+// GET /api/v1/aoc/account-types?typeIds=1,2,3
+// @Summary Get accounts by type IDs
+// @Description Get accounts whose type is in the given comma-separated type IDs
+// @Tags AOC
+// @Param typeIds query string true "Comma-separated account type IDs (e.g. 1,2,3)"
+// @Success 200 {array} domain.AOCResponse
+// @Router /aoc/account-types [get]
+func (h *AOCHandler) GetAOCsByAccountTypeIDs(c *gin.Context) {
+	typeIdsParam := c.Query("typeIds")
+	if typeIdsParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "typeIds query parameter is required"})
+		return
+	}
+	parts := strings.Split(typeIdsParam, ",")
+	accountTypeIDs := make([]int, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		id, err := strconv.Atoi(p)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid type id: " + p})
+			return
+		}
+		accountTypeIDs = append(accountTypeIDs, id)
+	}
+	if len(accountTypeIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one valid type id is required"})
+		return
+	}
+	response, err := h.aocService.GetAOCsByAccountTypeIDs(c.Request.Context(), accountTypeIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

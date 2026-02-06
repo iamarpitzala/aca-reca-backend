@@ -85,6 +85,28 @@ func GetAOCByAccountTypeID(ctx context.Context, db *sqlx.DB, accountTypeID int) 
 	return aocs, nil
 }
 
+// GetAOCsByAccountTypeIDs returns accounts whose account_type_id is in the given list.
+func GetAOCsByAccountTypeIDs(ctx context.Context, db *sqlx.DB, accountTypeIDs []int) ([]domain.AOC, error) {
+	if len(accountTypeIDs) == 0 {
+		return []domain.AOC{}, nil
+	}
+	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_type_id IN (?) AND deleted_at IS NULL ORDER BY code`
+	query, args, err := sqlx.In(query, accountTypeIDs)
+	if err != nil {
+		return nil, err
+	}
+	query = db.Rebind(query)
+	var aocs []domain.AOC
+	err = db.SelectContext(ctx, &aocs, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	if aocs == nil {
+		aocs = []domain.AOC{}
+	}
+	return aocs, nil
+}
+
 func GetAOCByAccountTaxID(ctx context.Context, db *sqlx.DB, accountTaxID int) ([]domain.AOC, error) {
 	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_tax_id = $1 AND deleted_at IS NULL`
 	var aocs []domain.AOC

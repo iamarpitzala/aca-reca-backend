@@ -79,6 +79,18 @@ func (as *AOSService) GetAOCByAccountTypeID(ctx context.Context, accountTypeID i
 	return responses, nil
 }
 
+func (as *AOSService) GetAOCsByAccountTypeIDs(ctx context.Context, accountTypeIDs []int) ([]domain.AOCResponse, error) {
+	aocs, err := repository.GetAOCsByAccountTypeIDs(ctx, as.db, accountTypeIDs)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]domain.AOCResponse, 0, len(aocs))
+	for _, aoc := range aocs {
+		responses = append(responses, *aoc.ToResponse())
+	}
+	return responses, nil
+}
+
 func (as *AOSService) GetAOCByAccountTaxID(ctx context.Context, accountTaxID int) ([]domain.AOCResponse, error) {
 	aocs, err := repository.GetAOCByAccountTaxID(ctx, as.db, accountTaxID)
 	if err != nil {

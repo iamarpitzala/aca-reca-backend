@@ -50,11 +50,14 @@ func DeleteAOC(ctx context.Context, db *sqlx.DB, id uuid.UUID) error {
 }
 
 func GetAllAOCs(ctx context.Context, db *sqlx.DB) ([]domain.AOC, error) {
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE deleted_at IS NULL`
+	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE deleted_at IS NULL ORDER BY code`
 	var aocs []domain.AOC
 	err := db.SelectContext(ctx, &aocs, query)
 	if err != nil {
-		return nil, errors.New("failed to get all aocs")
+		return nil, err
+	}
+	if aocs == nil {
+		aocs = []domain.AOC{}
 	}
 	return aocs, nil
 }

@@ -202,14 +202,10 @@ func (h *AOCHandler) GetAOCByAccountTypeID(c *gin.Context) {
 	}
 	response, err := h.aocService.GetAOCByAccountTypeID(c.Request.Context(), accountTypeIdInt)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
-			return
-		}
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	utils.JSONResponse(c, http.StatusOK, "aoc retrieved successfully", response, nil)
+	utils.JSONResponse(c, http.StatusOK, "aocs retrieved successfully", response, nil)
 }
 
 // UpdateAOC updates a aoc

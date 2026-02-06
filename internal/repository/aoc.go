@@ -73,11 +73,14 @@ func GetAOCByCode(ctx context.Context, db *sqlx.DB, code string) (*domain.AOC, e
 }
 
 func GetAOCByAccountTypeID(ctx context.Context, db *sqlx.DB, accountTypeID int) ([]domain.AOC, error) {
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_type_id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_type_id = $1 AND deleted_at IS NULL ORDER BY code`
 	var aocs []domain.AOC
 	err := db.SelectContext(ctx, &aocs, query, accountTypeID)
 	if err != nil {
-		return nil, errors.New("failed to get aocs by account type id")
+		return nil, err
+	}
+	if aocs == nil {
+		aocs = []domain.AOC{}
 	}
 	return aocs, nil
 }

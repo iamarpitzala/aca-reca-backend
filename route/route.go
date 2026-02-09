@@ -11,6 +11,7 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/route/aoc"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
+	custom_form "github.com/iamarpitzala/aca-reca-backend/route/custom_form"
 	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
 	financial_form "github.com/iamarpitzala/aca-reca-backend/route/financial_form"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
@@ -33,6 +34,7 @@ func InitRouter(e *gin.Engine) {
 	clinicService := service.NewClinicService(db.DB)
 	userClinicService := service.NewUserClinicService(db.DB)
 	financialFormService := service.NewFinancialFormService(db.DB)
+	customFormService := service.NewCustomFormService(db.DB)
 	// financialCalculationService := service.NewFinancialCalculationService(db.DB)
 	expensesService := service.NewExpensesService(db.DB)
 	quarterService := service.NewQuarterService(db.DB)
@@ -44,6 +46,7 @@ func InitRouter(e *gin.Engine) {
 	clinicHandler := httpHandler.NewClinicHandler(clinicService, userClinicService)
 	userClinicHandler := httpHandler.NewUserClinicHandler(userClinicService)
 	financialFormHandler := httpHandler.NewFinancialFormHandler(financialFormService)
+	customFormHandler := httpHandler.NewCustomFormHandler(customFormService)
 	// financialCalculationHandler := httpHandler.NewFinancialCalculationHandler(financialCalculationService)
 	expensesHandler := httpHandler.NewExpensesHandler(expensesService)
 	quarterHandler := httpHandler.NewQuarterHandler(quarterService)
@@ -58,6 +61,7 @@ func InitRouter(e *gin.Engine) {
 	payslip.RegisterPayslipRoutes(v1, payslipHandler)
 	user_clinic.RegisterUserClinicRoutes(v1, userClinicHandler)
 	financial_form.RegisterFinancialFormRoutes(v1, financialFormHandler)
+	custom_form.RegisterCustomFormRoutes(v1, customFormHandler)
 	// financial_calculation.RegisterFinancialCalculationRoutes(v1, financialCalculationHandler)
 	quarter.RegisterQuarterRoutes(v1, quarterHandler)
 	expense.RegisterExpensesRoutes(v1, expensesHandler)

@@ -24,10 +24,10 @@ type gstCfg struct {
 
 // Value from client: fieldId, value, optional manualGstAmount
 type entryValue struct {
-	FieldID        string      `json:"fieldId"`
-	FieldName      string      `json:"fieldName"`
-	Value          interface{} `json:"value"`
-	ManualGstAmount *float64   `json:"manualGstAmount"`
+	FieldID         string      `json:"fieldId"`
+	FieldName       string      `json:"fieldName"`
+	Value           interface{} `json:"value"`
+	ManualGstAmount *float64    `json:"manualGstAmount"`
 }
 
 // Deductions from request (for service fee % and override)
@@ -53,23 +53,23 @@ type basMapping struct {
 	ExpensesG11  float64 `json:"expensesG11"`
 }
 type calculationsOutput struct {
-	FieldTotals               []fieldCalc   `json:"fieldTotals"`
-	TotalBaseAmount           float64       `json:"totalBaseAmount"`
-	TotalGSTAmount            float64       `json:"totalGSTAmount"`
-	TotalAmount               float64       `json:"totalAmount"`
-	NetPayable                float64       `json:"netPayable"`
-	NetReceivable             float64       `json:"netReceivable"`
-	BasMapping                basMapping    `json:"basMapping"`
-	NetFee                    *float64      `json:"netFee,omitempty"`
-	ServiceFeeBase            *float64      `json:"serviceFeeBase,omitempty"`
-	GstOnServiceFee           *float64      `json:"gstOnServiceFee,omitempty"`
-	TotalServiceFee           *float64      `json:"totalServiceFee,omitempty"`
-	TotalReductions           *float64      `json:"totalReductions,omitempty"`
-	TotalReimbursements       *float64      `json:"totalReimbursements,omitempty"`
-	ReductionBreakdown        []fieldCalc   `json:"reductionBreakdown,omitempty"`
-	ReimbursementBreakdown    []fieldCalc   `json:"reimbursementBreakdown,omitempty"`
-	SubtotalAfterDeductions   *float64      `json:"subtotalAfterDeductions,omitempty"`
-	RemittedAmount            *float64      `json:"remittedAmount,omitempty"`
+	FieldTotals             []fieldCalc `json:"fieldTotals"`
+	TotalBaseAmount         float64     `json:"totalBaseAmount"`
+	TotalGSTAmount          float64     `json:"totalGSTAmount"`
+	TotalAmount             float64     `json:"totalAmount"`
+	NetPayable              float64     `json:"netPayable"`
+	NetReceivable           float64     `json:"netReceivable"`
+	BasMapping              basMapping  `json:"basMapping"`
+	NetFee                  *float64    `json:"netFee,omitempty"`
+	ServiceFeeBase          *float64    `json:"serviceFeeBase,omitempty"`
+	GstOnServiceFee         *float64    `json:"gstOnServiceFee,omitempty"`
+	TotalServiceFee         *float64    `json:"totalServiceFee,omitempty"`
+	TotalReductions         *float64    `json:"totalReductions,omitempty"`
+	TotalReimbursements     *float64    `json:"totalReimbursements,omitempty"`
+	ReductionBreakdown      []fieldCalc `json:"reductionBreakdown,omitempty"`
+	ReimbursementBreakdown  []fieldCalc `json:"reimbursementBreakdown,omitempty"`
+	SubtotalAfterDeductions *float64    `json:"subtotalAfterDeductions,omitempty"`
+	RemittedAmount          *float64    `json:"remittedAmount,omitempty"`
 }
 
 func round2(n float64) float64 { return math.Round(n*100) / 100 }
@@ -96,7 +96,7 @@ func calcGST(amount, rate float64, gstType string, manualGst *float64) (base, gs
 		if manualGst != nil {
 			m = *manualGst
 		}
-		return round2(amount), round2(m), round2(amount+m)
+		return round2(amount), round2(m), round2(amount + m)
 	}
 	if rate == 0 {
 		return amount, 0, amount

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"strconv"
+	"strings"
 )
 
 // Field definitions for parsing form.Fields JSONB (subset needed for calculation)
@@ -30,10 +31,11 @@ type entryValue struct {
 	ManualGstAmount *float64    `json:"manualGstAmount"`
 }
 
-// Deductions from request (for service fee % and override)
+// Deductions from request (for service fee % and override; entry-level payment responsibility overrides per-field when set)
 type deductionsInput struct {
-	ServiceFacilityFeePercent *float64 `json:"serviceFacilityFeePercent"`
-	ServiceFeeOverride        *float64 `json:"serviceFeeOverride"`
+	ServiceFacilityFeePercent  *float64 `json:"serviceFacilityFeePercent"`
+	ServiceFeeOverride         *float64 `json:"serviceFeeOverride"`
+	EntryPaymentResponsibility *string  `json:"entryPaymentResponsibility"`
 }
 
 // Output structures (match frontend EntryCalculations)
@@ -112,8 +114,10 @@ func calcGST(amount, rate float64, gstType string, manualGst *float64) (base, gs
 	return amount, round2(gst), round2(total)
 }
 
+// getSection returns "expense" if section starts with "expense" (e.g. expense, expenses, Expenses 1), else "income"
 func getSection(s string) string {
-	if len(s) >= 7 && (s[0]|32) == 'e' && (s[1]|32) == 'x' && (s[2]|32) == 'p' {
+	lower := strings.ToLower(s)
+	if strings.HasPrefix(lower, "expense") {
 		return "expense"
 	}
 	return "income"
@@ -279,14 +283,18 @@ func RunEntryCalculation(
 		out.GstOnServiceFee = &gstOnSvc
 		out.TotalServiceFee = &totalSvc
 
-		// Additional Reductions / Reimbursements: expense-section fields when paid by clinic/owner.
-		// Include each expense's GST (manual, inclusive, or exclusive) in the breakdown so Additional Reductions shows base, GST, and total per expense.
-		var totalRed, totalReimb float64
+		// Additional Reductions: expense-section fields only (never income). Only the GST portion is shown and applied.
+		// When entryPaymentResponsibility is set in deductions, use it for all expense fields (so e.g. Lab Fee shows when entry is "Pay by clinic").
+		var totalRedGst, totalReimb float64
 		var redBreak, reimbBreak []fieldCalc
+		entryPayResp := ""
+		if deductions != nil && deductions.EntryPaymentResponsibility != nil {
+			entryPayResp = strings.ToLower(*deductions.EntryPaymentResponsibility)
+		}
 		for _, f := range fields {
 			sec := getSection(f.Section)
 			if sec != "expense" {
-				continue // only take expense-section fields (and their GST)
+				continue // only expenses, never income
 			}
 			var ft *fieldCalc
 			for i := range fieldTotals {
@@ -298,30 +306,29 @@ func RunEntryCalculation(
 			if ft == nil {
 				continue
 			}
-			payResp := f.PaymentResp
+			payResp := entryPayResp
+			if payResp == "" {
+				payResp = strings.ToLower(f.PaymentResp)
+			}
 			if payResp == "" {
 				payResp = "owner"
 			}
 			if payResp == "clinic" {
-				totalRed += ft.TotalAmount
+				totalRedGst += ft.GstAmount
 				redBreak = append(redBreak, *ft)
 			} else {
 				totalReimb += ft.TotalAmount
 				reimbBreak = append(reimbBreak, *ft)
 			}
 		}
-		totalRed = round2(totalRed)
+		totalRedGst = round2(totalRedGst)
 		totalReimb = round2(totalReimb)
-		out.TotalReductions = &totalRed
+		out.TotalReductions = &totalRedGst // GST on clinic-paid expenses only
 		out.TotalReimbursements = &totalReimb
 		out.ReductionBreakdown = redBreak
 		out.ReimbursementBreakdown = reimbBreak
 		sub := round2(netFee - serviceBase)
-		var totalRedGst float64
-		for i := range redBreak {
-			totalRedGst += redBreak[i].GstAmount
-		}
-		totalRedGst = round2(totalRedGst)
+		// Final Amount Remitted = Amount Remitted − Additional Reductions (GST on clinic-paid expenses)
 		rem := round2(netFee - totalSvc + totalReimb - totalRedGst)
 		out.SubtotalAfterDeductions = &sub
 		out.RemittedAmount = &rem

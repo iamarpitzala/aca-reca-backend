@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -40,20 +41,20 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 
 	now := time.Now()
 	form := &domain.CustomForm{
-		ID:                 uuid.New(),
-		ClinicID:           clinicID,
-		Name:               req.Name,
-		Description:        req.Description,
-		CalculationMethod:  req.CalculationMethod,
-		FormType:           req.FormType,
-		Status:             "draft",
-		Fields:             req.Fields,
+		ID:                           uuid.New(),
+		ClinicID:                     clinicID,
+		Name:                         req.Name,
+		Description:                  req.Description,
+		CalculationMethod:            req.CalculationMethod,
+		FormType:                     req.FormType,
+		Status:                       "draft",
+		Fields:                       req.Fields,
 		DefaultPaymentResponsibility: req.DefaultPaymentResponsibility,
 		ServiceFacilityFeePercent:    req.ServiceFacilityFeePercent,
-		Version:            1,
-		CreatedBy:          userID,
-		CreatedAt:          now,
-		UpdatedAt:          now,
+		Version:                      1,
+		CreatedBy:                    userID,
+		CreatedAt:                    now,
+		UpdatedAt:                    now,
 	}
 	if err := repository.CreateCustomForm(ctx, s.db, form); err != nil {
 		return nil, err
@@ -172,20 +173,20 @@ func (s *CustomFormService) Duplicate(ctx context.Context, id uuid.UUID, userID 
 	}
 	now := time.Now()
 	newForm := &domain.CustomForm{
-		ID:                          uuid.New(),
-		ClinicID:                    form.ClinicID,
-		Name:                        form.Name + " (Copy)",
-		Description:                 form.Description,
-		CalculationMethod:          form.CalculationMethod,
-		FormType:                    form.FormType,
-		Status:                      "draft",
-		Fields:                      form.Fields,
+		ID:                           uuid.New(),
+		ClinicID:                     form.ClinicID,
+		Name:                         form.Name + " (Copy)",
+		Description:                  form.Description,
+		CalculationMethod:            form.CalculationMethod,
+		FormType:                     form.FormType,
+		Status:                       "draft",
+		Fields:                       form.Fields,
 		DefaultPaymentResponsibility: form.DefaultPaymentResponsibility,
-		ServiceFacilityFeePercent:   form.ServiceFacilityFeePercent,
-		Version:                     1,
-		CreatedBy:                   userID,
-		CreatedAt:                   now,
-		UpdatedAt:                   now,
+		ServiceFacilityFeePercent:    form.ServiceFacilityFeePercent,
+		Version:                      1,
+		CreatedBy:                    userID,
+		CreatedAt:                    now,
+		UpdatedAt:                    now,
 	}
 	if err := repository.CreateCustomForm(ctx, s.db, newForm); err != nil {
 		return nil, err
@@ -195,21 +196,21 @@ func (s *CustomFormService) Duplicate(ctx context.Context, id uuid.UUID, userID 
 
 func customFormToResponse(f *domain.CustomForm) *domain.CustomFormResponse {
 	return &domain.CustomFormResponse{
-		ID:                          f.ID.String(),
-		ClinicID:                    f.ClinicID.String(),
-		Name:                        f.Name,
-		Description:                 f.Description,
-		CalculationMethod:          f.CalculationMethod,
-		FormType:                   f.FormType,
-		Status:                     f.Status,
-		Fields:                     f.Fields,
+		ID:                           f.ID.String(),
+		ClinicID:                     f.ClinicID.String(),
+		Name:                         f.Name,
+		Description:                  f.Description,
+		CalculationMethod:            f.CalculationMethod,
+		FormType:                     f.FormType,
+		Status:                       f.Status,
+		Fields:                       f.Fields,
 		DefaultPaymentResponsibility: f.DefaultPaymentResponsibility,
-		ServiceFacilityFeePercent:   f.ServiceFacilityFeePercent,
-		Version:                    f.Version,
-		CreatedBy:                  f.CreatedBy.String(),
-		CreatedAt:                  f.CreatedAt,
-		UpdatedAt:                  f.UpdatedAt,
-		PublishedAt:                f.PublishedAt,
+		ServiceFacilityFeePercent:    f.ServiceFacilityFeePercent,
+		Version:                      f.Version,
+		CreatedBy:                    f.CreatedBy.String(),
+		CreatedAt:                    f.CreatedAt,
+		UpdatedAt:                    f.UpdatedAt,
+		PublishedAt:                  f.PublishedAt,
 	}
 }
 
@@ -256,6 +257,10 @@ func (s *CustomFormService) CreateEntry(ctx context.Context, req *domain.CreateE
 		req.Values = []byte("[]")
 	}
 	deductions := req.Deductions
+	deductionsForCalc := mergeEntryPaymentResponsibilityIntoDeductions(deductions, req.PaymentResponsibility)
+	if len(deductionsForCalc) == 0 {
+		deductionsForCalc = nil
+	}
 	if len(deductions) == 0 {
 		deductions = nil
 	}
@@ -266,7 +271,7 @@ func (s *CustomFormService) CreateEntry(ctx context.Context, req *domain.CreateE
 		form.FormType,
 		form.ServiceFacilityFeePercent,
 		req.Values,
-		deductions,
+		deductionsForCalc,
 	)
 	if err != nil {
 		return nil, err
@@ -340,6 +345,10 @@ func (s *CustomFormService) UpdateEntry(ctx context.Context, id uuid.UUID, req *
 	}
 	entry.Values = req.Values
 	deductions := entry.Deductions
+	deductionsForCalc := mergeEntryPaymentResponsibilityIntoDeductions(deductions, entry.PaymentResponsibility)
+	if len(deductionsForCalc) == 0 {
+		deductionsForCalc = nil
+	}
 	if len(deductions) == 0 {
 		deductions = nil
 	}
@@ -348,7 +357,7 @@ func (s *CustomFormService) UpdateEntry(ctx context.Context, id uuid.UUID, req *
 		form.FormType,
 		form.ServiceFacilityFeePercent,
 		req.Values,
-		deductions,
+		deductionsForCalc,
 	)
 	if err != nil {
 		return nil, err
@@ -381,6 +390,23 @@ func (s *CustomFormService) PreviewCalculations(ctx context.Context, formID uuid
 		valuesJSON,
 		deductionsJSON,
 	)
+}
+
+// mergeEntryPaymentResponsibilityIntoDeductions merges the entry's payment responsibility into deductions JSON
+// so RunEntryCalculation uses it for Additional Reductions (e.g. Lab Fee GST when "Pay by clinic").
+func mergeEntryPaymentResponsibilityIntoDeductions(deductions json.RawMessage, paymentResponsibility *string) json.RawMessage {
+	var m map[string]interface{}
+	if len(deductions) > 0 {
+		_ = json.Unmarshal(deductions, &m)
+	}
+	if m == nil {
+		m = make(map[string]interface{})
+	}
+	if paymentResponsibility != nil && *paymentResponsibility != "" {
+		m["entryPaymentResponsibility"] = *paymentResponsibility
+	}
+	out, _ := json.Marshal(m)
+	return out
 }
 
 func customFormEntryToResponse(e *domain.CustomFormEntry) *domain.CustomFormEntryResponse {

@@ -61,13 +61,19 @@ func InitServer() {
 
 	// Configure CORS
 	corsConfig := cors.Config{
-		AllowOrigins: []string{"*"},
+		AllowOrigins: []string{
+			"https://preview--zenithive.lovable.app",
+			"https://zenithive.lovable.app",
+			"http://localhost:5173",
+		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{
-			"Origin", "Content-Type", "Authorization",
-			"Accept", "X-Requested-With",
+			"Origin",
+			"Content-Type",
+			"Authorization",
+			"Accept",
+			"X-Requested-With",
 		},
-		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}

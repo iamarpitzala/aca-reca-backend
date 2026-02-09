@@ -131,8 +131,17 @@ func (h *AOCHandler) GetAOCByAccountTaxID(c *gin.Context) {
 // @Failure 400 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
+// reservedPathSegments are path segments that must not be treated as UUIDs (avoid 400 when route is misrouted).
+var reservedPathSegments = map[string]bool{
+	"account-types": true, "account-type": true, "account-tax": true, "type": true, "tax": true, "code": true,
+}
+
 func (h *AOCHandler) GetAOCByID(c *gin.Context) {
 	id := c.Param("id")
+	if reservedPathSegments[id] {
+		c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
+		return
+	}
 	idUUID, err := uuid.Parse(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})

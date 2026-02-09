@@ -78,6 +78,14 @@ func InitServer() {
 		MaxAge:           12 * time.Hour,
 	}
 
+	e.Use(func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
 	e.Use(cors.New(corsConfig))
 
 	e.Use(gin.Recovery())

@@ -22,17 +22,26 @@ func CreateUser(ctx context.Context, db *sqlx.DB, user *domain.User) error {
 }
 
 func GetUserByEmail(ctx context.Context, db *sqlx.DB, email string) (*domain.User, error) {
-	query := `SELECT id, email, password, first_name, last_name, phone, created_at, updated_at FROM tbl_user WHERE email = $1 AND deleted_at IS NULL`
+	// Use case-insensitive lookup to match the LOWER(email) unique index
+	query := `SELECT id, email, password, first_name, last_name, phone, created_at, updated_at
+		FROM tbl_user
+		WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL`
 	var user domain.User
 	err := db.GetContext(ctx, &user, query, email)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// No user found – return nil user and no error so callers can
+			// distinguish "not found" from "database failure".
+			return nil, nil
+		}
 		return nil, errors.New("failed to get user by email")
 	}
 	return &user, nil
 }
 
 func EmailExists(ctx context.Context, db *sqlx.DB, email string) (bool, error) {
-	query := `SELECT COUNT(*) FROM tbl_user WHERE email = $1 AND deleted_at IS NULL`
+	// Keep email uniqueness consistent with the LOWER(email) index
+	query := `SELECT COUNT(*) FROM tbl_user WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL`
 	var count int
 	err := db.GetContext(ctx, &count, query, email)
 	if err != nil {

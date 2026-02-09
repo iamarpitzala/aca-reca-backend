@@ -3,8 +3,6 @@ package http
 import (
 	"database/sql"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -108,21 +106,17 @@ func (h *AOCHandler) GetAllAccountTax(c *gin.Context) {
 // @Failure 500 {object} domain.H
 func (h *AOCHandler) GetAOCByAccountTaxID(c *gin.Context) {
 	accountTaxId := c.Param("id")
-	accountTaxIdInt, err := strconv.Atoi(accountTaxId)
-	if err != nil {
+	accountTaxIdInt, ok := util.ToInt(accountTaxId)
+	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account tax id"})
 		return
 	}
 	response, err := h.aocService.GetAOCByAccountTaxID(c.Request.Context(), accountTaxIdInt)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
-			return
-		}
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	utils.JSONResponse(c, http.StatusOK, "aocs retrieved successfully", response, nil)
+	utils.JSONResponse(c, http.StatusOK, "aoc retrieved successfully", response, nil)
 }
 
 // GetAOCByID gets a aoc by id
@@ -196,52 +190,50 @@ func (h *AOCHandler) GetAOCByCode(c *gin.Context) {
 // @Failure 500 {object} domain.H
 func (h *AOCHandler) GetAOCByAccountTypeID(c *gin.Context) {
 	accountTypeId := c.Param("id")
-	accountTypeIdInt, err := strconv.Atoi(accountTypeId)
-	if err != nil {
+	accountTypeIdInt, ok := util.ToInt(accountTypeId)
+	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account type id"})
 		return
 	}
-	response, err := h.aocService.GetAOCByAccountTypeID(c.Request.Context(), accountTypeIdInt)
+	sortBy := c.DefaultQuery("sort", "code")
+	if sortBy != "code" && sortBy != "name" {
+		sortBy = "code"
+	}
+	sortOrder := c.DefaultQuery("order", "asc")
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "asc"
+	}
+	response, err := h.aocService.GetAOCByAccountTypeID(c.Request.Context(), accountTypeIdInt, sortBy, sortOrder)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	utils.JSONResponse(c, http.StatusOK, "aocs retrieved successfully", response, nil)
-}
-
-// GetAOCsByAccountTypeIDs returns accounts for the given account type IDs.
-// GET /api/v1/aoc/account-types?typeIds=1,2,3
-// @Summary Get accounts by type IDs
-// @Description Get accounts whose type is in the given comma-separated type IDs
-// @Tags AOC
-// @Param typeIds query string true "Comma-separated account type IDs (e.g. 1,2,3)"
-// @Success 200 {array} domain.AOCResponse
-// @Router /aoc/account-types [get]
-func (h *AOCHandler) GetAOCsByAccountTypeIDs(c *gin.Context) {
-	typeIdsParam := c.Query("typeIds")
-	if typeIdsParam == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "typeIds query parameter is required"})
-		return
-	}
-	parts := strings.Split(typeIdsParam, ",")
-	accountTypeIDs := make([]int, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		id, err := strconv.Atoi(p)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid type id: " + p})
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
 			return
 		}
-		accountTypeIDs = append(accountTypeIDs, id)
-	}
-	if len(accountTypeIDs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one valid type id is required"})
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	response, err := h.aocService.GetAOCsByAccountTypeIDs(c.Request.Context(), accountTypeIDs)
+	utils.JSONResponse(c, http.StatusOK, "aoc retrieved successfully", response, nil)
+}
+
+// GetAOCsByAccountType returns all accounts with optional sort. Query: sort=code|name, order=asc|desc
+// GET /api/v1/aoc/account-types
+// @Summary Get all accounts (optionally sorted)
+// @Description Get all accounts. Query params: sort (code|name, default code), order (asc|desc, default asc)
+// @Tags AOC
+// @Param sort query string false "Sort field: code or name"
+// @Param order query string false "Sort order: asc or desc"
+// @Success 200 {array} domain.AOCResponse
+// @Router /aoc/account-types [get]
+func (h *AOCHandler) GetAOCsByAccountType(c *gin.Context) {
+	sortBy := c.DefaultQuery("sort", "code")
+	if sortBy != "code" && sortBy != "name" {
+		sortBy = "code"
+	}
+	sortOrder := c.DefaultQuery("order", "asc")
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "asc"
+	}
+	response, err := h.aocService.GetAOCsByAccountType(c.Request.Context(), sortBy, sortOrder)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -285,28 +277,94 @@ func (h *AOCHandler) UpdateAOC(c *gin.Context) {
 }
 
 // DeleteAOC deletes a aoc
-// DELETE /api/v1/aoc/:id
+// DELETE /api/v1/aoc
 // @Summary Delete a aoc
 // @Description Delete a aoc
 // @Tags AOC
 // @Accept json
 // @Produce json
-// @Param id path string true "AOC ID"
+// @Param ids body domain.BulkDeleteAOCRequest true "AOC IDs"
 // @Success 200 {object} domain.AOCResponse
 // @Failure 400 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
 func (h *AOCHandler) DeleteAOC(c *gin.Context) {
-	id := c.Param("id")
-	idUUID, err := uuid.Parse(id)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	var req domain.BulkDeleteAOCRequest
+	if err := util.BindAndValidate(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: ids required"})
 		return
 	}
-	err = h.aocService.DeleteAOC(c.Request.Context(), idUUID)
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ids must not be empty"})
+		return
+	}
+	ids := make([]uuid.UUID, 0, len(req.IDs))
+	for _, s := range req.IDs {
+		id, err := uuid.Parse(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + s})
+			return
+		}
+		ids = append(ids, id)
+	}
+	err := h.aocService.DeleteAOC(c.Request.Context(), ids)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	utils.JSONResponse(c, http.StatusOK, "aoc deleted successfully", nil, nil)
+	utils.JSONResponse(c, http.StatusOK, "aoc deleted successfully", gin.H{"deleted": len(ids)}, nil)
+}
+
+// BulkUpdateTax updates account_tax_id for multiple accounts. PATCH /aoc/bulk-tax with body { ids, accountTaxId }.
+func (h *AOCHandler) BulkUpdateTax(c *gin.Context) {
+	var req domain.BulkUpdateTaxRequest
+	if err := util.BindAndValidate(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ids must not be empty"})
+		return
+	}
+	ids := make([]uuid.UUID, 0, len(req.IDs))
+	for _, s := range req.IDs {
+		id, err := uuid.Parse(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + s})
+			return
+		}
+		ids = append(ids, id)
+	}
+	if err := h.aocService.BulkUpdateTax(c.Request.Context(), ids, req.AccountTaxID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "tax updated successfully", gin.H{"updated": len(ids)}, nil)
+}
+
+// ArchiveAOC soft-deletes (archives) multiple accounts. PATCH /aoc/archive with body { ids }.
+func (h *AOCHandler) ArchiveAOC(c *gin.Context) {
+	var req domain.BulkArchiveAOCRequest
+	if err := util.BindAndValidate(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: ids required"})
+		return
+	}
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ids must not be empty"})
+		return
+	}
+	ids := make([]uuid.UUID, 0, len(req.IDs))
+	for _, s := range req.IDs {
+		id, err := uuid.Parse(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + s})
+			return
+		}
+		ids = append(ids, id)
+	}
+	if err := h.aocService.DeleteAOC(c.Request.Context(), ids); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "accounts archived successfully", gin.H{"archived": len(ids)}, nil)
 }

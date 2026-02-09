@@ -40,11 +40,27 @@ func UpdateAOC(ctx context.Context, db *sqlx.DB, aoc *domain.AOC) error {
 	return nil
 }
 
-func DeleteAOC(ctx context.Context, db *sqlx.DB, id uuid.UUID) error {
-	query := `UPDATE tbl_account SET deleted_at = $1 WHERE id = $2`
-	_, err := db.ExecContext(ctx, query, time.Now(), id)
-	if err != nil {
-		return err
+func DeleteAOC(ctx context.Context, db *sqlx.DB, ids []uuid.UUID) error {
+	now := time.Now()
+	for _, id := range ids {
+		query := `UPDATE tbl_account SET deleted_at = $1 WHERE id = $2`
+		_, err := db.ExecContext(ctx, query, now, id)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BulkUpdateAccountTax sets account_tax_id for the given account IDs.
+func BulkUpdateAccountTax(ctx context.Context, db *sqlx.DB, ids []uuid.UUID, accountTaxID int) error {
+	now := time.Now()
+	for _, id := range ids {
+		query := `UPDATE tbl_account SET account_tax_id = $1, updated_at = $2 WHERE id = $3 AND deleted_at IS NULL`
+		_, err := db.ExecContext(ctx, query, accountTaxID, now, id)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -66,14 +82,29 @@ func GetAOCByCode(ctx context.Context, db *sqlx.DB, code string) (*domain.AOC, e
 	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE code = $1 AND deleted_at IS NULL`
 	var aoc domain.AOC
 	err := db.GetContext(ctx, &aoc, query, code)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, err
+		}
 		return nil, errors.New("failed to get aoc by code")
 	}
 	return &aoc, nil
 }
 
 func GetAOCByAccountTypeID(ctx context.Context, db *sqlx.DB, accountTypeID int) ([]domain.AOC, error) {
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_type_id = $1 AND deleted_at IS NULL ORDER BY code`
+	return GetAOCByAccountTypeIDSorted(ctx, db, accountTypeID, "code", "asc")
+}
+
+func GetAOCByAccountTypeIDSorted(ctx context.Context, db *sqlx.DB, accountTypeID int, sortBy, sortOrder string) ([]domain.AOC, error) {
+	col := "code"
+	if sortBy == "name" {
+		col = "name"
+	}
+	dir := "ASC"
+	if sortOrder == "desc" {
+		dir = "DESC"
+	}
+	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_type_id = $1 AND deleted_at IS NULL ORDER BY ` + col + " " + dir
 	var aocs []domain.AOC
 	err := db.SelectContext(ctx, &aocs, query, accountTypeID)
 	if err != nil {
@@ -85,19 +116,24 @@ func GetAOCByAccountTypeID(ctx context.Context, db *sqlx.DB, accountTypeID int) 
 	return aocs, nil
 }
 
-// GetAOCsByAccountTypeIDs returns accounts whose account_type_id is in the given list.
-func GetAOCsByAccountTypeIDs(ctx context.Context, db *sqlx.DB, accountTypeIDs []int) ([]domain.AOC, error) {
-	if len(accountTypeIDs) == 0 {
-		return []domain.AOC{}, nil
+// GetAOCsByAccountType returns all accounts (no type filter).
+func GetAOCsByAccountType(ctx context.Context, db *sqlx.DB) ([]domain.AOC, error) {
+	return GetAOCsByAccountTypeSorted(ctx, db, "code", "asc")
+}
+
+// GetAOCsByAccountTypeSorted returns all accounts ordered by sortBy (code, name) and sortOrder (asc, desc).
+func GetAOCsByAccountTypeSorted(ctx context.Context, db *sqlx.DB, sortBy, sortOrder string) ([]domain.AOC, error) {
+	col := "code"
+	if sortBy == "name" {
+		col = "name"
 	}
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_type_id IN (?) AND deleted_at IS NULL ORDER BY code`
-	query, args, err := sqlx.In(query, accountTypeIDs)
-	if err != nil {
-		return nil, err
+	dir := "ASC"
+	if sortOrder == "desc" {
+		dir = "DESC"
 	}
-	query = db.Rebind(query)
+	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE deleted_at IS NULL ORDER BY ` + col + " " + dir
 	var aocs []domain.AOC
-	err = db.SelectContext(ctx, &aocs, query, args...)
+	err := db.SelectContext(ctx, &aocs, query)
 	if err != nil {
 		return nil, err
 	}

@@ -24,12 +24,12 @@ func NewAOSService(db *sqlx.DB) *AOSService {
 func (as *AOSService) CreateAOC(ctx context.Context, aoc *domain.AOCRequest) error {
 	aocRepo := aoc.ToRepo()
 
-	_, err := repository.GetAOCByCode(ctx, as.db, aocRepo.Code)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			return errors.New("aoc with this code already exists")
-		}
+	existing, err := repository.GetAOCByCode(ctx, as.db, aocRepo.Code)
+	if err != nil && err != sql.ErrNoRows {
 		return err
+	}
+	if existing != nil {
+		return errors.New("aoc with this code already exists")
 	}
 
 	accountType, err := repository.GetAccountTypeByID(ctx, as.db, aocRepo.AccountTypeID)
@@ -67,8 +67,8 @@ func (as *AOSService) GetAOCByCode(ctx context.Context, code string) (*domain.AO
 	return aoc.ToResponse(), nil
 }
 
-func (as *AOSService) GetAOCByAccountTypeID(ctx context.Context, accountTypeID int) ([]domain.AOCResponse, error) {
-	aocs, err := repository.GetAOCByAccountTypeID(ctx, as.db, accountTypeID)
+func (as *AOSService) GetAOCByAccountTypeID(ctx context.Context, accountTypeID int, sortBy, sortOrder string) ([]domain.AOCResponse, error) {
+	aocs, err := repository.GetAOCByAccountTypeIDSorted(ctx, as.db, accountTypeID, sortBy, sortOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -79,8 +79,8 @@ func (as *AOSService) GetAOCByAccountTypeID(ctx context.Context, accountTypeID i
 	return responses, nil
 }
 
-func (as *AOSService) GetAOCsByAccountTypeIDs(ctx context.Context, accountTypeIDs []int) ([]domain.AOCResponse, error) {
-	aocs, err := repository.GetAOCsByAccountTypeIDs(ctx, as.db, accountTypeIDs)
+func (as *AOSService) GetAOCsByAccountType(ctx context.Context, sortBy, sortOrder string) ([]domain.AOCResponse, error) {
+	aocs, err := repository.GetAOCsByAccountTypeSorted(ctx, as.db, sortBy, sortOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -128,8 +128,22 @@ func (as *AOSService) UpdateAOC(ctx context.Context, aoc *domain.AOC) error {
 	return repository.UpdateAOC(ctx, as.db, aocRepo)
 }
 
-func (as *AOSService) DeleteAOC(ctx context.Context, id uuid.UUID) error {
-	return repository.DeleteAOC(ctx, as.db, id)
+func (as *AOSService) DeleteAOC(ctx context.Context, ids []uuid.UUID) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return repository.DeleteAOC(ctx, as.db, ids)
+}
+
+func (as *AOSService) BulkUpdateTax(ctx context.Context, ids []uuid.UUID, accountTaxID int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	tax, err := repository.GetAccountTaxByID(ctx, as.db, accountTaxID)
+	if err != nil || tax == nil {
+		return errors.New("account tax not found")
+	}
+	return repository.BulkUpdateAccountTax(ctx, as.db, ids, accountTaxID)
 }
 
 func (as *AOSService) GetAOCType(ctx context.Context) ([]domain.AccountType, error) {

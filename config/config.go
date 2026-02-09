@@ -4,6 +4,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type RedisConfig struct {
@@ -48,9 +50,9 @@ type SessionConfig struct {
 }
 
 type OAuthConfig struct {
-	RedirectURL  string
-	FrontendURL  string // Where to redirect after OAuth success (tokens in hash)
-	Providers    map[string]OAuthProviderConfig
+	RedirectURL string
+	FrontendURL string // Where to redirect after OAuth success (tokens in hash)
+	Providers   map[string]OAuthProviderConfig
 }
 
 type OAuthProviderConfig struct {
@@ -118,7 +120,7 @@ func getEnv(key, defaultValue string) string {
 
 func getEnvAsInt(key string, defaultValue int) int {
 	valueStr := getEnv(key, "")
-	if value, err := strconv.Atoi(valueStr); err == nil {
+	if value, ok := util.ToInt(valueStr); ok {
 		return value
 	}
 	return defaultValue

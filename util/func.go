@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -9,7 +10,7 @@ import (
 )
 
 func BindAndValidate(c *gin.Context, rq interface{}) error {
-	if err := c.ShouldBind(rq); err != nil {
+	if err := c.ShouldBindJSON(rq); err != nil {
 		return err
 	}
 
@@ -145,4 +146,23 @@ func StructToMap(v interface{}) (map[string]interface{}, error) {
 	}
 
 	return m, nil
+}
+
+func ToInt(v interface{}) (int, bool) {
+	switch n := v.(type) {
+	case float64:
+		return int(n), true
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	case string:
+		i, err := strconv.Atoi(n)
+		if err != nil {
+			return 0, false
+		}
+		return i, true
+	default:
+		return 0, false
+	}
 }

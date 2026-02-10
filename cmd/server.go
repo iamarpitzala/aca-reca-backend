@@ -62,9 +62,10 @@ func InitServer() {
 	// Configure CORS
 	corsConfig := cors.Config{
 		AllowOrigins: []string{
-			"https://preview--zenithive.lovable.app",
-			"https://zenithive.lovable.app",
-			"http://localhost:5173",
+			// "https://preview--zenithive.lovable.app",
+			// "https://zenithive.lovable.app",
+			// "http://localhost:5173",
+			"*",
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{
@@ -78,13 +79,13 @@ func InitServer() {
 		MaxAge:           12 * time.Hour,
 	}
 
-	e.Use(func(c *gin.Context) {
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
+	// e.Use(func(c *gin.Context) {
+	// 	if c.Request.Method == "OPTIONS" {
+	// 		c.AbortWithStatus(204)
+	// 		return
+	// 	}
+	// 	c.Next()
+	// })
 
 	e.Use(cors.New(corsConfig))
 

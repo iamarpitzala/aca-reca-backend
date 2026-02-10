@@ -22,11 +22,14 @@ func CorsMiddleware() gin.HandlerFunc {
 	}
 
 	if env := os.Getenv("CORS_ORIGINS"); env != "" {
-		parsed := strings.Split(env, ",")
-		allowedOrigins = make([]string, 0, len(parsed))
-		for _, o := range parsed {
+		seen := make(map[string]bool)
+		for _, o := range allowedOrigins {
+			seen[normalizeOrigin(o)] = true
+		}
+		for _, o := range strings.Split(env, ",") {
 			o = normalizeOrigin(o)
-			if o != "" {
+			if o != "" && !seen[o] {
+				seen[o] = true
 				allowedOrigins = append(allowedOrigins, o)
 			}
 		}
@@ -45,7 +48,7 @@ func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		if isAllowed(origin) {
+		if origin != "" && isAllowed(origin) {
 			c.Header("Access-Control-Allow-Origin", origin)
 			c.Header("Access-Control-Allow-Credentials", "true")
 			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
@@ -53,9 +56,9 @@ func CorsMiddleware() gin.HandlerFunc {
 				"Access-Control-Allow-Headers",
 				"Authorization, Content-Type, Accept, Origin, X-Requested-With",
 			)
+			c.Header("Access-Control-Max-Age", "86400")
 		}
 
-		// Preflight request
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return

@@ -7,6 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// normalizeOrigin trims trailing slashes for consistent comparison.
+func normalizeOrigin(origin string) string {
+	return strings.TrimSuffix(strings.TrimSpace(origin), "/")
+}
+
 func CorsMiddleware() gin.HandlerFunc {
 	allowedOrigins := []string{
 		"https://zenithive.lovable.app",
@@ -17,12 +22,20 @@ func CorsMiddleware() gin.HandlerFunc {
 	}
 
 	if env := os.Getenv("CORS_ORIGINS"); env != "" {
-		allowedOrigins = strings.Split(env, ",")
+		parsed := strings.Split(env, ",")
+		allowedOrigins = make([]string, 0, len(parsed))
+		for _, o := range parsed {
+			o = normalizeOrigin(o)
+			if o != "" {
+				allowedOrigins = append(allowedOrigins, o)
+			}
+		}
 	}
 
 	isAllowed := func(origin string) bool {
+		origin = normalizeOrigin(origin)
 		for _, o := range allowedOrigins {
-			if origin == o {
+			if origin == normalizeOrigin(o) {
 				return true
 			}
 		}

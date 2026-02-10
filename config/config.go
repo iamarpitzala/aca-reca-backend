@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/iamarpitzala/aca-reca-backend/util"
@@ -25,8 +26,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port string
-	Env  string
+	Port        string
+	Env         string
+	CORSOrigins []string // Allowed origins for CORS (required when using credentials)
 }
 
 type DBConfig struct {
@@ -67,8 +69,9 @@ type OAuthProviderConfig struct {
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port: getEnv("SERVER_PORT", "8080"),
-			Env:  getEnv("ENV", "development"),
+			Port:        getEnv("SERVER_PORT", "8080"),
+			Env:         getEnv("ENV", "development"),
+			CORSOrigins: getCORSOrigins(),
 		},
 		DB: DBConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
@@ -116,6 +119,29 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// getCORSOrigins returns allowed CORS origins. Use CORS_ORIGINS (comma-separated) or defaults to FRONTEND_URL + localhost for dev.
+func getCORSOrigins() []string {
+	if v := os.Getenv("CORS_ORIGINS"); v != "" {
+		parts := strings.Split(v, ",")
+		out := make([]string, 0, len(parts))
+		for _, p := range parts {
+			if o := strings.TrimSpace(p); o != "" {
+				out = append(out, o)
+			}
+		}
+		if len(out) > 0 {
+			return out
+		}
+	}
+	// Default: FRONTEND_URL and local dev origin
+	frontend := getEnv("FRONTEND_URL", "http://localhost:5173")
+	origins := []string{frontend}
+	if frontend != "http://localhost:5173" {
+		origins = append(origins, "http://localhost:5173")
+	}
+	return origins
 }
 
 func getEnvAsInt(key string, defaultValue int) int {

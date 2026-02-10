@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
+	"github.com/iamarpitzala/aca-reca-backend/internal/middleware"
 	"github.com/iamarpitzala/aca-reca-backend/route"
 	"github.com/joho/godotenv"
 )
@@ -57,28 +58,7 @@ func InitServer() {
 	}
 
 	e := gin.New()
-
-	// // Configure CORS (must use explicit origins when AllowCredentials is true; "*" is invalid)
-	// corsConfig := cors.Config{
-	// 	AllowOrigins:     cfg.Server.CORSOrigins,
-	// 	AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
-	// 	AllowCredentials: true,
-	// 	MaxAge:           12 * time.Hour,
-	// }
-	// if len(corsConfig.AllowOrigins) == 0 {
-	// 	corsConfig.AllowOrigins = []string{"http://localhost:5173", "https://zenithive.lovable.app", "https://preview--zenithive.lovable.app", "https://zenithive.lovable.app/*"}
-	// }
-
-	// // e.Use(func(c *gin.Context) {
-	// // 	if c.Request.Method == "OPTIONS" {
-	// // 		c.AbortWithStatus(204)
-	// // 		return
-	// // 	}
-	// // 	c.Next()
-	// // })
-
-	// e.Use(cors.New(corsConfig))
+	e.Use(middleware.CorsMiddleware())
 
 	e.Use(gin.Recovery())
 	e.Use(gin.Logger())

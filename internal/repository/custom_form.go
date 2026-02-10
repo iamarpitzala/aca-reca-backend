@@ -15,10 +15,10 @@ import (
 func CreateCustomForm(ctx context.Context, db *sqlx.DB, form *domain.CustomForm) error {
 	query := `INSERT INTO tbl_custom_form (
 		id, clinic_id, name, description, calculation_method, form_type, status, fields,
-		default_payment_responsibility, service_facility_fee_percent, version, created_by, created_at, updated_at
+		default_payment_responsibility, service_facility_fee_percent, outwork_enabled, outwork_rate_percent, version, created_by, created_at, updated_at
 	) VALUES (
 		:id, :clinic_id, :name, :description, :calculation_method, :form_type, :status, :fields,
-		:default_payment_responsibility, :service_facility_fee_percent, :version, :created_by, :created_at, :updated_at
+		:default_payment_responsibility, :service_facility_fee_percent, :outwork_enabled, :outwork_rate_percent, :version, :created_by, :created_at, :updated_at
 	)`
 	_, err := db.NamedExecContext(ctx, query, form)
 	return err
@@ -26,7 +26,7 @@ func CreateCustomForm(ctx context.Context, db *sqlx.DB, form *domain.CustomForm)
 
 func GetCustomFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*domain.CustomForm, error) {
 	query := `SELECT id, clinic_id, name, description, calculation_method, form_type, status, fields,
-		default_payment_responsibility, service_facility_fee_percent, version, created_by, created_at, updated_at, published_at, deleted_at
+		default_payment_responsibility, service_facility_fee_percent, outwork_enabled, outwork_rate_percent, version, created_by, created_at, updated_at, published_at, deleted_at
 		FROM tbl_custom_form WHERE id = $1 AND deleted_at IS NULL`
 	var form domain.CustomForm
 	err := db.GetContext(ctx, &form, query, id)
@@ -41,7 +41,7 @@ func GetCustomFormByID(ctx context.Context, db *sqlx.DB, id uuid.UUID) (*domain.
 
 func GetCustomFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid.UUID) ([]domain.CustomForm, error) {
 	query := `SELECT id, clinic_id, name, description, calculation_method, form_type, status, fields,
-		default_payment_responsibility, service_facility_fee_percent, version, created_by, created_at, updated_at, published_at, deleted_at
+		default_payment_responsibility, service_facility_fee_percent, outwork_enabled, outwork_rate_percent, version, created_by, created_at, updated_at, published_at, deleted_at
 		FROM tbl_custom_form WHERE clinic_id = $1 AND deleted_at IS NULL ORDER BY updated_at DESC`
 	var rows []domain.CustomForm
 	if err := db.SelectContext(ctx, &rows, query, clinicID); err != nil {
@@ -52,7 +52,7 @@ func GetCustomFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid.UU
 
 func GetPublishedCustomFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicID uuid.UUID) ([]domain.CustomForm, error) {
 	query := `SELECT id, clinic_id, name, description, calculation_method, form_type, status, fields,
-		default_payment_responsibility, service_facility_fee_percent, version, created_by, created_at, updated_at, published_at, deleted_at
+		default_payment_responsibility, service_facility_fee_percent, outwork_enabled, outwork_rate_percent, version, created_by, created_at, updated_at, published_at, deleted_at
 		FROM tbl_custom_form WHERE clinic_id = $1 AND status = 'published' AND deleted_at IS NULL ORDER BY name`
 	var rows []domain.CustomForm
 	if err := db.SelectContext(ctx, &rows, query, clinicID); err != nil {
@@ -64,6 +64,7 @@ func GetPublishedCustomFormsByClinicID(ctx context.Context, db *sqlx.DB, clinicI
 func UpdateCustomForm(ctx context.Context, db *sqlx.DB, form *domain.CustomForm) error {
 	query := `UPDATE tbl_custom_form SET name = :name, description = :description, fields = :fields,
 		default_payment_responsibility = :default_payment_responsibility, service_facility_fee_percent = :service_facility_fee_percent,
+		outwork_enabled = :outwork_enabled, outwork_rate_percent = :outwork_rate_percent,
 		updated_at = :updated_at WHERE id = :id AND deleted_at IS NULL`
 	_, err := db.NamedExecContext(ctx, query, form)
 	return err

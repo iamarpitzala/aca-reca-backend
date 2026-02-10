@@ -39,6 +39,10 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 		req.Fields = []byte("[]")
 	}
 
+	outworkEnabled := false
+	if req.OutworkEnabled != nil {
+		outworkEnabled = *req.OutworkEnabled
+	}
 	now := time.Now()
 	form := &domain.CustomForm{
 		ID:                           uuid.New(),
@@ -51,6 +55,8 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 		Fields:                       req.Fields,
 		DefaultPaymentResponsibility: req.DefaultPaymentResponsibility,
 		ServiceFacilityFeePercent:    req.ServiceFacilityFeePercent,
+		OutworkEnabled:               outworkEnabled,
+		OutworkRatePercent:           req.OutworkRatePercent,
 		Version:                      1,
 		CreatedBy:                    userID,
 		CreatedAt:                    now,
@@ -120,6 +126,12 @@ func (s *CustomFormService) Update(ctx context.Context, id uuid.UUID, req *domai
 		if req.ServiceFacilityFeePercent != nil {
 			form.ServiceFacilityFeePercent = req.ServiceFacilityFeePercent
 		}
+		if req.OutworkEnabled != nil {
+			form.OutworkEnabled = *req.OutworkEnabled
+		}
+		if req.OutworkRatePercent != nil {
+			form.OutworkRatePercent = req.OutworkRatePercent
+		}
 	}
 	form.UpdatedAt = time.Now()
 	if err := repository.UpdateCustomForm(ctx, s.db, form); err != nil {
@@ -183,6 +195,8 @@ func (s *CustomFormService) Duplicate(ctx context.Context, id uuid.UUID, userID 
 		Fields:                       form.Fields,
 		DefaultPaymentResponsibility: form.DefaultPaymentResponsibility,
 		ServiceFacilityFeePercent:    form.ServiceFacilityFeePercent,
+		OutworkEnabled:               form.OutworkEnabled,
+		OutworkRatePercent:           form.OutworkRatePercent,
 		Version:                      1,
 		CreatedBy:                    userID,
 		CreatedAt:                    now,
@@ -206,6 +220,8 @@ func customFormToResponse(f *domain.CustomForm) *domain.CustomFormResponse {
 		Fields:                       f.Fields,
 		DefaultPaymentResponsibility: f.DefaultPaymentResponsibility,
 		ServiceFacilityFeePercent:    f.ServiceFacilityFeePercent,
+		OutworkEnabled:               f.OutworkEnabled,
+		OutworkRatePercent:           f.OutworkRatePercent,
 		Version:                      f.Version,
 		CreatedBy:                    f.CreatedBy.String(),
 		CreatedAt:                    f.CreatedAt,
@@ -270,6 +286,8 @@ func (s *CustomFormService) CreateEntry(ctx context.Context, req *domain.CreateE
 		form.Fields,
 		form.FormType,
 		form.ServiceFacilityFeePercent,
+		form.OutworkEnabled,
+		form.OutworkRatePercent,
 		req.Values,
 		deductionsForCalc,
 	)
@@ -356,6 +374,8 @@ func (s *CustomFormService) UpdateEntry(ctx context.Context, id uuid.UUID, req *
 		form.Fields,
 		form.FormType,
 		form.ServiceFacilityFeePercent,
+		form.OutworkEnabled,
+		form.OutworkRatePercent,
 		req.Values,
 		deductionsForCalc,
 	)
@@ -387,6 +407,8 @@ func (s *CustomFormService) PreviewCalculations(ctx context.Context, formID uuid
 		form.Fields,
 		form.FormType,
 		form.ServiceFacilityFeePercent,
+		form.OutworkEnabled,
+		form.OutworkRatePercent,
 		valuesJSON,
 		deductionsJSON,
 	)

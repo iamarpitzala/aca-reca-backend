@@ -72,6 +72,9 @@ type calculationsOutput struct {
 	ReimbursementBreakdown  []fieldCalc `json:"reimbursementBreakdown,omitempty"`
 	SubtotalAfterDeductions *float64    `json:"subtotalAfterDeductions,omitempty"`
 	RemittedAmount          *float64    `json:"remittedAmount,omitempty"`
+	OutworkChargeBase       *float64    `json:"outworkChargeBase,omitempty"`
+	OutworkChargeGst        *float64    `json:"outworkChargeGst,omitempty"`
+	OutworkChargeTotal      *float64    `json:"outworkChargeTotal,omitempty"`
 }
 
 func round2(n float64) float64 { return math.Round(n*100) / 100 }
@@ -126,12 +129,15 @@ func getSection(s string) string {
 const defaultServiceFeePct = 50.0
 
 // RunEntryCalculation computes field totals, NET FEE, and deductions from form definition and raw values.
-// formFieldsJSON and valuesJSON are the raw JSONB from DB; formType, formCalculationMethod, formServiceFeePct from form row.
+// formFieldsJSON and valuesJSON are the raw JSONB from DB; formType, formServiceFeePct from form row.
 // deductionsJSON can be nil; if present it may contain serviceFacilityFeePercent and serviceFeeOverride.
+// When formOutworkEnabled is true and formOutworkRatePercent > 0, expense GST is consolidated into a single outwork charge.
 func RunEntryCalculation(
 	formFieldsJSON []byte,
 	formType string,
 	formServiceFeePct *float64,
+	formOutworkEnabled bool,
+	formOutworkRatePercent *float64,
 	valuesJSON []byte,
 	deductionsJSON []byte,
 ) ([]byte, error) {
@@ -323,13 +329,35 @@ func RunEntryCalculation(
 		}
 		totalRedGst = round2(totalRedGst)
 		totalReimb = round2(totalReimb)
-		out.TotalReductions = &totalRedGst // GST on clinic-paid expenses only
 		out.TotalReimbursements = &totalReimb
 		out.ReductionBreakdown = redBreak
 		out.ReimbursementBreakdown = reimbBreak
+
+		// Outwork charge: consolidate clinic-paid expense base into single charge at form rate
+		outworkRate := 0.0
+		if formOutworkEnabled && formOutworkRatePercent != nil && *formOutworkRatePercent > 0 {
+			outworkRate = *formOutworkRatePercent
+		}
+		var effectiveReductions float64
+		if outworkRate > 0 {
+			var totalOutworkCosts float64
+			for _, r := range redBreak {
+				totalOutworkCosts += r.BaseAmount
+			}
+			outworkChargeBase := round2(totalOutworkCosts * (outworkRate / 100.0))
+			outworkChargeGst := round2(outworkChargeBase * 0.1)
+			outworkChargeTotal := round2(outworkChargeBase + outworkChargeGst)
+			out.OutworkChargeBase = &outworkChargeBase
+			out.OutworkChargeGst = &outworkChargeGst
+			out.OutworkChargeTotal = &outworkChargeTotal
+			effectiveReductions = outworkChargeTotal
+		} else {
+			effectiveReductions = totalRedGst
+		}
+		out.TotalReductions = &effectiveReductions
+
 		sub := round2(netFee - serviceBase)
-		// Final Amount Remitted = Amount Remitted − Additional Reductions (GST on clinic-paid expenses)
-		rem := round2(netFee - totalSvc + totalReimb - totalRedGst)
+		rem := round2(netFee - totalSvc + totalReimb - effectiveReductions)
 		out.SubtotalAfterDeductions = &sub
 		out.RemittedAmount = &rem
 	}

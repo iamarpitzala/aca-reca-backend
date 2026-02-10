@@ -66,6 +66,8 @@ type CustomForm struct {
 	Fields                     json.RawMessage `db:"fields"`
 	DefaultPaymentResponsibility *string        `db:"default_payment_responsibility"`
 	ServiceFacilityFeePercent   *float64        `db:"service_facility_fee_percent"`
+	OutworkEnabled              bool            `db:"outwork_enabled"`
+	OutworkRatePercent          *float64        `db:"outwork_rate_percent"`
 	Version                     int             `db:"version"`
 	CreatedBy                   uuid.UUID       `db:"created_by"`
 	CreatedAt                   time.Time       `db:"created_at"`
@@ -106,6 +108,8 @@ type CreateCustomFormRequest struct {
 	Fields                       json.RawMessage `json:"fields"`
 	DefaultPaymentResponsibility *string         `json:"defaultPaymentResponsibility,omitempty"`
 	ServiceFacilityFeePercent    *float64        `json:"serviceFacilityFeePercent,omitempty"`
+	OutworkEnabled               *bool           `json:"outworkEnabled,omitempty"`
+	OutworkRatePercent           *float64        `json:"outworkRatePercent,omitempty"`
 }
 
 type UpdateCustomFormRequest struct {
@@ -114,6 +118,8 @@ type UpdateCustomFormRequest struct {
 	Fields                       json.RawMessage `json:"fields,omitempty"`
 	DefaultPaymentResponsibility *string         `json:"defaultPaymentResponsibility,omitempty"`
 	ServiceFacilityFeePercent    *float64        `json:"serviceFacilityFeePercent,omitempty"`
+	OutworkEnabled               *bool           `json:"outworkEnabled,omitempty"`
+	OutworkRatePercent           *float64        `json:"outworkRatePercent,omitempty"`
 }
 
 type CustomFormResponse struct {
@@ -127,6 +133,8 @@ type CustomFormResponse struct {
 	Fields                     json.RawMessage `json:"fields"`
 	DefaultPaymentResponsibility *string        `json:"defaultPaymentResponsibility,omitempty"`
 	ServiceFacilityFeePercent   *float64        `json:"serviceFacilityFeePercent,omitempty"`
+	OutworkEnabled              bool           `json:"outworkEnabled"`
+	OutworkRatePercent          *float64        `json:"outworkRatePercent,omitempty"`
 	Version                    int             `json:"version"`
 	CreatedBy                  string          `json:"createdBy"`
 	CreatedAt                  time.Time       `json:"createdAt"`

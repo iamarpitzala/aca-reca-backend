@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"log"
-
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,7 +18,7 @@ import (
 )
 
 func InitServer() {
-	// Load environment variables
+	// Load environment variables only once
 	var envOnce sync.Once
 	envOnce.Do(func() {
 		envFile := ".env"
@@ -27,7 +26,8 @@ func InitServer() {
 		// Try loading the .env file
 		err := godotenv.Load(envFile)
 		if err != nil {
-			// If .env file is not found, don't log an error
+			// If .env file is not found, it's not a fatal error,
+			// but if it's another error, log fatally
 			if !os.IsNotExist(err) {
 				log.Fatalf("Error loading .env file from %s: %s", envFile, err)
 			} else {
@@ -41,7 +41,7 @@ func InitServer() {
 	// Load configuration
 	cfg := config.Load()
 
-	// Initialize database
+	// Initialize database connection
 	db, err := config.NewConnection(cfg.DB)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -57,42 +57,42 @@ func InitServer() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	e := gin.New()
-	e.Use(middleware.CorsMiddleware())
-
-	e.Use(gin.Recovery())
-	e.Use(gin.Logger())
-
+	// Set Gin mode before creating engine
 	if cfg.Server.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
 	}
 
+	e := gin.New()
+	e.Use(gin.Logger())
+	e.Use(gin.Recovery())
+	e.Use(middleware.CorsMiddleware())
+
+	// Register application routes
 	route.InitRouter(e)
 
+	// Determine port
 	port := cfg.Server.Port
-
 	if port == "" {
 		port = "8080"
 	}
 
-	//Start server
+	// Create HTTP server
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: e,
 	}
 
-	// // Graceful shutdown
+	// Start server in a goroutine for graceful shutdown
 	go func() {
+		log.Printf("ACA RECA service started on port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 	}()
 
-	log.Printf("ACA RECA service started on port %s", port)
-
-	// // Wait for interrupt signal
+	// Listen for system interrupt signals for graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

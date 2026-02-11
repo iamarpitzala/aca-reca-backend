@@ -17,6 +17,7 @@ func CorsMiddleware() gin.HandlerFunc {
 		"https://zenithive.lovable.app",
 		"https://preview--zenithive.lovable.app",
 		"http://localhost:5173",
+		"http://127.0.0.1:5173",
 		"https://lovable.dev/projects/d4f867cd-6d95-4580-8932-efc09c741d1e",
 		"https://acareca.netlify.app",
 	}
@@ -56,7 +57,8 @@ func CorsMiddleware() gin.HandlerFunc {
 				"Access-Control-Allow-Headers",
 				"Authorization, Content-Type, Accept, Origin, X-Requested-With",
 			)
-			c.Header("Access-Control-Max-Age", "86400")
+			// Cache preflight for 7 days so the browser skips OPTIONS for repeated requests.
+			c.Header("Access-Control-Max-Age", "604800")
 		}
 
 		if c.Request.Method == "OPTIONS" {

@@ -1,4 +1,4 @@
-package service
+package usecase
 
 import (
 	"context"
@@ -7,27 +7,39 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/internal/repository"
-	"github.com/jmoiron/sqlx"
 )
 
-type TransactionService struct {
-	db *sqlx.DB
+// TransactionPostingService handles posting form entries to the general ledger (journal entries).
+// Implements accounting best practice: source documents (entries) → posted transactions (double-entry).
+type TransactionPostingService struct {
+	entryRepo     port.CustomFormRepository
+	txRepo        port.TransactionRepository
+	clinicCOARepo port.ClinicCOARepository
+	aocRepo       port.AOCRepository
 }
 
-func NewTransactionService(db *sqlx.DB) *TransactionService {
-	return &TransactionService{db: db}
+func NewTransactionPostingService(
+	entryRepo port.CustomFormRepository,
+	txRepo port.TransactionRepository,
+	clinicCOARepo port.ClinicCOARepository,
+	aocRepo port.AOCRepository,
+) *TransactionPostingService {
+	return &TransactionPostingService{
+		entryRepo:     entryRepo,
+		txRepo:        txRepo,
+		clinicCOARepo: clinicCOARepo,
+		aocRepo:       aocRepo,
+	}
 }
 
-// formFieldForMapping parses form fields JSON for id and accountId
 type formFieldForMapping struct {
 	ID        string  `json:"id"`
 	Name      string  `json:"name"`
 	AccountID *string `json:"accountId"`
 }
 
-// fieldCalc from entry calculations
 type fieldCalc struct {
 	FieldID     string  `json:"fieldId"`
 	FieldName   string  `json:"fieldName"`
@@ -36,19 +48,18 @@ type fieldCalc struct {
 	TotalAmount float64 `json:"totalAmount"`
 }
 
-// calculationsPayload from entry.Calculations
 type calculationsPayload struct {
 	FieldTotals []fieldCalc `json:"fieldTotals"`
 }
 
-// GenerateFromEntry creates transaction rows from a custom form entry using form field -> COA mapping.
-// Deletes any existing transactions for the entry first (re-post).
-func (s *TransactionService) GenerateFromEntry(ctx context.Context, entryID uuid.UUID) ([]domain.TransactionResponse, error) {
-	entry, err := repository.GetCustomFormEntryByID(ctx, s.db, entryID)
+// PostEntryToLedger creates journal entries (transactions) from a custom form entry.
+// Deletes any existing posted transactions for the entry first (re-post).
+func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entryID uuid.UUID) ([]domain.TransactionResponse, error) {
+	entry, err := s.entryRepo.GetEntryByID(ctx, entryID)
 	if err != nil {
 		return nil, err
 	}
-	form, err := repository.GetCustomFormByID(ctx, s.db, entry.FormID)
+	form, err := s.entryRepo.GetByID(ctx, entry.FormID)
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +85,7 @@ func (s *TransactionService) GenerateFromEntry(ctx context.Context, entryID uuid
 		}
 	}
 
-	// Delete existing transactions for this entry (re-post)
-	if err := repository.DeleteTransactionsByEntryID(ctx, s.db, entryID); err != nil {
+	if err := s.txRepo.DeleteByEntryID(ctx, entryID); err != nil {
 		return nil, err
 	}
 
@@ -104,19 +114,19 @@ func (s *TransactionService) GenerateFromEntry(ctx context.Context, entryID uuid
 		if err != nil {
 			continue
 		}
-		assigned, err := repository.ClinicCOAAssigned(ctx, s.db, entry.ClinicID, coaID)
+		assigned, err := s.clinicCOARepo.Exists(ctx, entry.ClinicID, coaID)
 		if err != nil || !assigned {
 			continue
 		}
-		aoc, err := repository.GetAOCByID(ctx, s.db, coaID)
+		aoc, err := s.aocRepo.GetByID(ctx, coaID)
 		if err != nil || aoc == nil {
 			continue
 		}
-		tax, err := repository.GetAccountTaxByID(ctx, s.db, aoc.AccountTaxID)
+		tax, err := s.aocRepo.GetAccountTaxByID(ctx, aoc.AccountTaxID)
 		if err != nil || tax == nil {
 			continue
 		}
-		taxCategory := repository.TaxNameToCategory(tax.Name)
+		taxCategory := domain.TaxNameToCategory(tax.Name)
 
 		t := &domain.Transaction{
 			ID:              uuid.New(),
@@ -138,21 +148,21 @@ func (s *TransactionService) GenerateFromEntry(ctx context.Context, entryID uuid
 			CreatedAt:       now,
 			UpdatedAt:       now,
 		}
-		if err := repository.CreateTransaction(ctx, s.db, t); err != nil {
+		if err := s.txRepo.Create(ctx, t); err != nil {
 			return nil, err
 		}
-		out = append(out, *repository.TransactionToResponse(t))
+		out = append(out, *transactionToResponse(t))
 	}
 
 	return out, nil
 }
 
-// List returns transactions for a clinic with filters
-func (s *TransactionService) List(ctx context.Context, clinicID uuid.UUID, f *domain.ListTransactionsFilters) (*domain.ListTransactionsResponse, error) {
+// ListJournalEntries returns transactions for a clinic with filters.
+func (s *TransactionPostingService) ListJournalEntries(ctx context.Context, clinicID uuid.UUID, f *domain.ListTransactionsFilters) (*domain.ListTransactionsResponse, error) {
 	if f == nil {
 		f = &domain.ListTransactionsFilters{Page: 1, Limit: 50, SortField: "date", SortDirection: "desc"}
 	}
-	list, total, err := repository.GetTransactionsByClinicID(ctx, s.db, clinicID, f)
+	list, total, err := s.txRepo.ListByClinicID(ctx, clinicID, f)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +176,7 @@ func (s *TransactionService) List(ctx context.Context, clinicID uuid.UUID, f *do
 	}
 	resp := make([]domain.TransactionResponse, len(list))
 	for i := range list {
-		resp[i] = *repository.TransactionToResponse(&list[i])
+		resp[i] = *transactionToResponse(&list[i])
 	}
 	return &domain.ListTransactionsResponse{
 		Transactions: resp,
@@ -177,22 +187,22 @@ func (s *TransactionService) List(ctx context.Context, clinicID uuid.UUID, f *do
 	}, nil
 }
 
-// ListByEntryID returns transactions for an entry
-func (s *TransactionService) ListByEntryID(ctx context.Context, entryID uuid.UUID) ([]domain.TransactionResponse, error) {
-	list, err := repository.GetTransactionsByEntryID(ctx, s.db, entryID)
+// ListJournalEntriesByEntry returns transactions for a single entry.
+func (s *TransactionPostingService) ListJournalEntriesByEntry(ctx context.Context, entryID uuid.UUID) ([]domain.TransactionResponse, error) {
+	list, err := s.txRepo.ListByEntryID(ctx, entryID)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]domain.TransactionResponse, len(list))
 	for i := range list {
-		out[i] = *repository.TransactionToResponse(&list[i])
+		out[i] = *transactionToResponse(&list[i])
 	}
 	return out, nil
 }
 
-// GetFormFieldCOAMapping returns form fields with their COA mapping and clinic COA list
-func (s *TransactionService) GetFormFieldCOAMapping(ctx context.Context, formID uuid.UUID, clinicID uuid.UUID) (*domain.FormFieldCOAMappingResponse, error) {
-	form, err := repository.GetCustomFormByID(ctx, s.db, formID)
+// GetFormFieldCOAMapping returns form fields with their COA mapping and clinic COA list.
+func (s *TransactionPostingService) GetFormFieldCOAMapping(ctx context.Context, formID, clinicID uuid.UUID) (*domain.FormFieldCOAMappingResponse, error) {
+	form, err := s.entryRepo.GetByID(ctx, formID)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +223,7 @@ func (s *TransactionService) GetFormFieldCOAMapping(ctx context.Context, formID 
 			AccountID: f.AccountID,
 		})
 	}
-	coas, err := repository.ListClinicCOAs(ctx, s.db, clinicID)
+	coas, err := s.aocRepo.ListAOCsAssignedToClinic(ctx, clinicID)
 	if err != nil {
 		return nil, err
 	}
@@ -227,4 +237,27 @@ func (s *TransactionService) GetFormFieldCOAMapping(ctx context.Context, formID 
 		Fields:     items,
 		ClinicCOAs: aocResponses,
 	}, nil
+}
+
+func transactionToResponse(t *domain.Transaction) *domain.TransactionResponse {
+	dateStr := t.TransactionDate.Format("2006-01-02")
+	return &domain.TransactionResponse{
+		ID:            t.ID.String(),
+		ClinicID:      t.ClinicID.String(),
+		SourceEntryID: t.SourceEntryID.String(),
+		SourceFormID:  t.SourceFormID.String(),
+		FieldID:       t.FieldID,
+		AccountCode:   t.AccountCode,
+		AccountName:   t.AccountName,
+		TaxCategory:   t.TaxCategory,
+		Date:          dateStr,
+		Reference:     t.Reference,
+		Details:       t.Details,
+		GrossAmount:   t.GrossAmount,
+		GSTAmount:     t.GSTAmount,
+		NetAmount:     t.NetAmount,
+		Status:        t.Status,
+		CreatedAt:     t.CreatedAt,
+		UpdatedAt:     t.UpdatedAt,
+	}
 }

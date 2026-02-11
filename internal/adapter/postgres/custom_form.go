@@ -76,6 +76,18 @@ func (r *customFormRepo) Publish(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (r *customFormRepo) Unpublish(ctx context.Context, id uuid.UUID) error {
+	now := time.Now()
+	res, err := r.db.ExecContext(ctx, `UPDATE tbl_custom_form SET status = 'draft', published_at = NULL, updated_at = $1 WHERE id = $2 AND deleted_at IS NULL`, now, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errors.New("custom form not found")
+	}
+	return nil
+}
+
 func (r *customFormRepo) Archive(ctx context.Context, id uuid.UUID) error {
 	res, err := r.db.ExecContext(ctx, `UPDATE tbl_custom_form SET status = 'archived', updated_at = $1 WHERE id = $2 AND deleted_at IS NULL`, time.Now(), id)
 	if err != nil {
@@ -99,64 +111,157 @@ func (r *customFormRepo) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *customFormRepo) CreateEntry(ctx context.Context, entry *domain.CustomFormEntry) error {
-	q := `INSERT INTO tbl_custom_form_entry (id, form_id, form_name, form_type, clinic_id, quarter_id, values, calculations, entry_date, description, remarks, payment_responsibility, deductions, created_by, created_at, updated_at)
-		VALUES (:id, :form_id, :form_name, :form_type, :clinic_id, :quarter_id, :values, :calculations, :entry_date, :description, :remarks, :payment_responsibility, :deductions, :created_by, :created_at, :updated_at)`
-	_, err := r.db.NamedExecContext(ctx, q, entry)
-	return err
+	// Get form to get calculation method
+	form, err := r.GetByID(ctx, entry.FormID)
+	if err != nil {
+		return fmt.Errorf("failed to get form: %w", err)
+	}
+
+	// Use transaction to ensure data consistency
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := r.saveNormalizedEntry(ctx, tx, entry, form); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *customFormRepo) GetEntryByID(ctx context.Context, id uuid.UUID) (*domain.CustomFormEntry, error) {
-	q := `SELECT id, form_id, form_name, form_type, clinic_id, quarter_id, values, calculations, entry_date, description, remarks, payment_responsibility, deductions, created_by, created_at, updated_at, deleted_at FROM tbl_custom_form_entry WHERE id = $1 AND deleted_at IS NULL`
-	var entry domain.CustomFormEntry
-	if err := r.db.GetContext(ctx, &entry, q, id); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("entry not found")
-		}
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	normalized, err := r.loadNormalizedEntry(ctx, tx, id)
+	if err != nil {
 		return nil, err
 	}
-	return &entry, nil
+
+	// Convert normalized to JSONB (doesn't need form, uses header's calculation method)
+	entry, err := domain.ConvertNormalizedToJSONB(normalized)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert normalized entry: %w", err)
+	}
+
+	return entry, nil
 }
 
 func (r *customFormRepo) GetEntriesByFormID(ctx context.Context, formID uuid.UUID) ([]domain.CustomFormEntry, error) {
-	q := `SELECT id, form_id, form_name, form_type, clinic_id, quarter_id, values, calculations, entry_date, description, remarks, payment_responsibility, deductions, created_by, created_at, updated_at, deleted_at FROM tbl_custom_form_entry WHERE form_id = $1 AND deleted_at IS NULL ORDER BY entry_date DESC, created_at DESC`
-	var rows []domain.CustomFormEntry
-	if err := r.db.SelectContext(ctx, &rows, q, formID); err != nil {
-		return nil, fmt.Errorf("failed to get entries: %w", err)
+	// Get form
+	_, err := r.GetByID(ctx, formID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get form: %w", err)
 	}
-	return rows, nil
+
+	// Get entry headers
+	q := `SELECT id FROM tbl_entry_header WHERE form_id = $1 AND deleted_at IS NULL ORDER BY entry_date DESC, created_at DESC`
+	var entryIDs []uuid.UUID
+	if err := r.db.SelectContext(ctx, &entryIDs, q, formID); err != nil {
+		return nil, fmt.Errorf("failed to get entry IDs: %w", err)
+	}
+
+	// Load each entry
+	entries := make([]domain.CustomFormEntry, 0, len(entryIDs))
+	for _, entryID := range entryIDs {
+		entry, err := r.GetEntryByID(ctx, entryID)
+		if err != nil {
+			continue // Skip entries that fail to load
+		}
+		entries = append(entries, *entry)
+	}
+
+	return entries, nil
 }
 
 func (r *customFormRepo) GetEntriesByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.CustomFormEntry, error) {
-	q := `SELECT id, form_id, form_name, form_type, clinic_id, quarter_id, values, calculations, entry_date, description, remarks, payment_responsibility, deductions, created_by, created_at, updated_at, deleted_at FROM tbl_custom_form_entry WHERE clinic_id = $1 AND deleted_at IS NULL ORDER BY entry_date DESC, created_at DESC`
-	var rows []domain.CustomFormEntry
-	if err := r.db.SelectContext(ctx, &rows, q, clinicID); err != nil {
-		return nil, fmt.Errorf("failed to get entries: %w", err)
+	// Get entry headers
+	q := `SELECT id FROM tbl_entry_header WHERE clinic_id = $1 AND deleted_at IS NULL ORDER BY entry_date DESC, created_at DESC`
+	var entryIDs []uuid.UUID
+	if err := r.db.SelectContext(ctx, &entryIDs, q, clinicID); err != nil {
+		return nil, fmt.Errorf("failed to get entry IDs: %w", err)
 	}
-	return rows, nil
+
+	// Load each entry
+	entries := make([]domain.CustomFormEntry, 0, len(entryIDs))
+	for _, entryID := range entryIDs {
+		entry, err := r.GetEntryByID(ctx, entryID)
+		if err != nil {
+			continue // Skip entries that fail to load
+		}
+		entries = append(entries, *entry)
+	}
+
+	return entries, nil
 }
 
 func (r *customFormRepo) GetEntriesByQuarter(ctx context.Context, clinicID, quarterID uuid.UUID) ([]domain.CustomFormEntry, error) {
-	q := `SELECT id, form_id, form_name, form_type, clinic_id, quarter_id, values, calculations, entry_date, description, remarks, payment_responsibility, deductions, created_by, created_at, updated_at, deleted_at FROM tbl_custom_form_entry WHERE clinic_id = $1 AND quarter_id = $2 AND deleted_at IS NULL ORDER BY entry_date DESC`
-	var rows []domain.CustomFormEntry
-	if err := r.db.SelectContext(ctx, &rows, q, clinicID, quarterID); err != nil {
-		return nil, fmt.Errorf("failed to get entries: %w", err)
+	// Get entry headers
+	q := `SELECT id FROM tbl_entry_header WHERE clinic_id = $1 AND quarter_id = $2 AND deleted_at IS NULL ORDER BY entry_date DESC`
+	var entryIDs []uuid.UUID
+	if err := r.db.SelectContext(ctx, &entryIDs, q, clinicID, quarterID); err != nil {
+		return nil, fmt.Errorf("failed to get entry IDs: %w", err)
 	}
-	return rows, nil
+
+	// Load each entry
+	entries := make([]domain.CustomFormEntry, 0, len(entryIDs))
+	for _, entryID := range entryIDs {
+		entry, err := r.GetEntryByID(ctx, entryID)
+		if err != nil {
+			continue // Skip entries that fail to load
+		}
+		entries = append(entries, *entry)
+	}
+
+	return entries, nil
 }
 
 func (r *customFormRepo) UpdateEntry(ctx context.Context, entry *domain.CustomFormEntry) error {
-	q := `UPDATE tbl_custom_form_entry SET values = :values, calculations = :calculations, updated_at = :updated_at WHERE id = :id AND deleted_at IS NULL`
-	_, err := r.db.NamedExecContext(ctx, q, entry)
-	return err
+	// Get form
+	form, err := r.GetByID(ctx, entry.FormID)
+	if err != nil {
+		return fmt.Errorf("failed to get form: %w", err)
+	}
+
+	// Use transaction to ensure data consistency
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := r.updateNormalizedEntry(ctx, tx, entry, form); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *customFormRepo) DeleteEntry(ctx context.Context, id uuid.UUID) error {
-	res, err := r.db.ExecContext(ctx, `UPDATE tbl_custom_form_entry SET deleted_at = $1 WHERE id = $2`, time.Now(), id)
+	// Use transaction
+	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Check if entry exists
+	var exists bool
+	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS(SELECT 1 FROM tbl_entry_header WHERE id = $1 AND deleted_at IS NULL)`, id); err != nil {
 		return err
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
+	if !exists {
 		return errors.New("entry not found")
 	}
-	return nil
+
+	if err := r.deleteNormalizedEntry(ctx, tx, id); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

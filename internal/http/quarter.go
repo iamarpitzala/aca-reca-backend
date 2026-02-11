@@ -2,11 +2,12 @@ package http
 
 import (
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 )
 
 type QuarterHandler struct {
@@ -19,140 +20,107 @@ func NewQuarterHandler(QuarterUC *usecase.QuarterService) *QuarterHandler {
 	}
 }
 
-// Create creates a new financial quarter
-// @Summary Create a new financial quarter
-// @Description Create a new financial quarter with the given information
+// CalculateForClinic calculates quarters for a clinic based on financial settings
+// @Summary Calculate quarters for a clinic
+// @Description Get calculated quarters for a clinic based on its financial year settings (system-driven)
 // @Tags Quarter
 // @Accept json
 // @Produce json
-// @Param quarter body domain.Quarter true "Financial Quarter"
-// @Success 201 {object} domain.Quarter
-// @Failure 400 {object} map[string]string
-// @Router /quarter [post]
-func (h *QuarterHandler) Create(c *gin.Context) {
-	var quarter domain.Quarter
-	if err := c.ShouldBindJSON(&quarter); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	err := h.QuarterUC.CreateQuarter(c.Request.Context(), &quarter)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"message": "financial quarter created successfully", "quarter": quarter})
-}
-
-// Get retrieves a financial quarter by its ID
-// @Summary Get a financial quarter
-// @Description Retrieve a financial quarter by its ID
-// @Tags Quarter
-// @Accept json
-// @Produce json
-// @Param id path string true "Quarter ID"
-// @Success 200 {object} domain.Quarter
+// @Param id path string true "Clinic ID"
+// @Param yearsBack query int false "Years to look back" default(1)
+// @Param yearsForward query int false "Years to look forward" default(1)
+// @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /quarter/{id} [get]
-func (h *QuarterHandler) Get(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+// @Router /clinic/{id}/quarters [get]
+func (h *QuarterHandler) CalculateForClinic(c *gin.Context) {
+	clinicIDStr := c.Param("id")
+	clinicID, err := uuid.Parse(clinicIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid financial quarter ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
 
-	gt, err := h.QuarterUC.GetQuarterByID(c.Request.Context(), id)
+	// Parse query parameters with defaults
+	yearsBack := 1
+	if yearsBackStr := c.Query("yearsBack"); yearsBackStr != "" {
+		yearsBack, err = strconv.Atoi(yearsBackStr)
+		if err != nil || yearsBack < 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid yearsBack parameter"})
+			return
+		}
+	}
+
+	yearsForward := 1
+	if yearsForwardStr := c.Query("yearsForward"); yearsForwardStr != "" {
+		yearsForward, err = strconv.Atoi(yearsForwardStr)
+		if err != nil || yearsForward < 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid yearsForward parameter"})
+			return
+		}
+	}
+
+	quarters, err := h.QuarterUC.CalculateQuartersForClinic(
+		c.Request.Context(),
+		clinicID,
+		yearsBack,
+		yearsForward,
+	)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "financial quarter retrieved successfully", "quarter": gt})
+	c.JSON(http.StatusOK, gin.H{
+		"data": quarters,
+		"message": "quarters calculated successfully",
+	})
 }
 
-// Delete deletes a financial quarter by its ID
-// @Summary Delete a financial quarter
-// @Description Delete a financial quarter by its ID
+// GetQuarterForDate finds the quarter containing a specific date for a clinic
+// @Summary Get quarter for date
+// @Description Find which quarter contains a specific date for a clinic
 // @Tags Quarter
 // @Accept json
 // @Produce json
-// @Param id path string true "Quarter ID"
-// @Success 200 {object} map[string]string
+// @Param id path string true "Clinic ID"
+// @Param date query string true "Date (RFC3339 format, e.g., 2025-02-13T00:00:00Z)"
+// @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /quarter/{id} [delete]
-func (h *QuarterHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+// @Router /clinic/{id}/quarter/date [get]
+func (h *QuarterHandler) GetQuarterForDate(c *gin.Context) {
+	clinicIDStr := c.Param("id")
+	clinicID, err := uuid.Parse(clinicIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid financial quarter ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
 
-	err = h.QuarterUC.DeleteQuarter(c.Request.Context(), id)
+	dateStr := c.Query("date")
+	if dateStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "date parameter is required"})
+		return
+	}
+
+	date, err := time.Parse(time.RFC3339, dateStr)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
+		// Try parsing as date only
+		date, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format. Use RFC3339 (2006-01-02T15:04:05Z07:00) or date (2006-01-02)"})
+			return
+		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "financial quarter deleted successfully"})
-}
-
-// Update updates a financial quarter by its ID
-// @Summary Update a financial quarter
-// @Description Update a financial quarter's details by its ID
-// @Tags Quarter
-// @Accept json
-// @Produce json
-// @Param id path string true "Quarter ID"
-// @Param quarter body domain.Quarter true "Financial Quarter"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Router /quarter/{id} [put]
-func (h *QuarterHandler) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid financial quarter ID"})
-		return
-	}
-
-	var quarter domain.Quarter
-	if err := c.ShouldBindJSON(&quarter); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	quarter.ID = id
-
-	err = h.QuarterUC.UpdateQuarter(c.Request.Context(), &quarter)
+	quarter, err := h.QuarterUC.GetQuarterForDate(c.Request.Context(), clinicID, date)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "financial quarter updated successfully"})
-}
-
-// List lists all financial quarters
-// @Summary List financial quarters
-// @Description Get a list of all financial quarters
-// @Tags Quarter
-// @Accept json
-// @Produce json
-// @Success 200 {object} []domain.Quarter
-// @Failure 404 {object} map[string]string
-// @Router /quarter [get]
-func (h *QuarterHandler) List(c *gin.Context) {
-
-	list, err := h.QuarterUC.ListQuarter(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": list})
+	c.JSON(http.StatusOK, gin.H{
+		"data": quarter,
+		"message": "quarter found successfully",
+	})
 }

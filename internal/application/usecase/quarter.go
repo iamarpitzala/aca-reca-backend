@@ -8,50 +8,67 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/utils"
 )
 
 type QuarterService struct {
-	repo port.QuarterRepository
+	financialSettingsRepo port.ClinicFinancialSettingsRepository
 }
 
-func NewQuarterService(repo port.QuarterRepository) *QuarterService {
-	return &QuarterService{repo: repo}
+func NewQuarterService(financialSettingsRepo port.ClinicFinancialSettingsRepository) *QuarterService {
+	return &QuarterService{
+		financialSettingsRepo: financialSettingsRepo,
+	}
 }
 
-func (s *QuarterService) CreateQuarter(ctx context.Context, q *domain.Quarter) error {
-	q.ID = uuid.New()
-	now := time.Now()
-	q.CreatedAt = now
-	q.UpdatedAt = &now
-	q.DeletedAt = nil
-	return s.repo.Create(ctx, q)
-}
-
-func (s *QuarterService) GetQuarterByID(ctx context.Context, id uuid.UUID) (domain.Quarter, error) {
-	return s.repo.GetByID(ctx, id)
-}
-
-func (s *QuarterService) UpdateQuarter(ctx context.Context, q *domain.Quarter) error {
-	existing, err := s.repo.GetByID(ctx, q.ID)
+// CalculateQuartersForClinic calculates quarters for a clinic based on its financial settings
+// This is the new system-driven approach - quarters are calculated, not stored
+func (s *QuarterService) CalculateQuartersForClinic(
+	ctx context.Context,
+	clinicID uuid.UUID,
+	yearsBack int,
+	yearsForward int,
+) ([]utils.CalculatedQuarter, error) {
+	// Get financial settings for the clinic
+	settings, err := s.financialSettingsRepo.GetByClinicID(ctx, clinicID)
 	if err != nil {
-		return errors.New("quarter not found")
+		// If settings don't exist, use defaults (July-June, no lock date)
+		settings = &domain.ClinicFinancialSettings{
+			FinancialYearStart: domain.FinancialYearStartJuly,
+			LockDate:          nil,
+		}
 	}
-	if existing.DeletedAt != nil {
-		return errors.New("cannot update deleted quarter")
-	}
-	now := time.Now()
-	q.CreatedAt = existing.CreatedAt
-	q.UpdatedAt = &now
-	return s.repo.Update(ctx, q)
+
+	quarters := utils.GetQuartersForPeriod(
+		settings.FinancialYearStart,
+		settings.LockDate,
+		yearsBack,
+		yearsForward,
+	)
+
+	return quarters, nil
 }
 
-func (s *QuarterService) DeleteQuarter(ctx context.Context, id uuid.UUID) error {
-	if _, err := s.repo.GetByID(ctx, id); err != nil {
-		return errors.New("quarter not found")
+// GetQuarterForDate finds the quarter that contains a given date for a clinic
+func (s *QuarterService) GetQuarterForDate(
+	ctx context.Context,
+	clinicID uuid.UUID,
+	date time.Time,
+) (*utils.CalculatedQuarter, error) {
+	// Get financial settings for the clinic
+	settings, err := s.financialSettingsRepo.GetByClinicID(ctx, clinicID)
+	if err != nil {
+		// If settings don't exist, use defaults
+		settings = &domain.ClinicFinancialSettings{
+			FinancialYearStart: domain.FinancialYearStartJuly,
+			LockDate:          nil,
+		}
 	}
-	return s.repo.Delete(ctx, id)
-}
 
-func (s *QuarterService) ListQuarter(ctx context.Context) ([]domain.Quarter, error) {
-	return s.repo.List(ctx)
+	quarter := utils.GetQuarterForDate(date, settings.FinancialYearStart, settings.LockDate)
+	if quarter == nil {
+		return nil, errors.New("quarter not found for date")
+	}
+
+	return quarter, nil
 }

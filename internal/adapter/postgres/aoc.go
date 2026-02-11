@@ -194,3 +194,19 @@ func (r *aocRepo) GetAccountTaxByID(ctx context.Context, id int) (*domain.Accoun
 	}
 	return &at, nil
 }
+
+func (r *aocRepo) ListAOCsAssignedToClinic(ctx context.Context, clinicID uuid.UUID) ([]domain.AOC, error) {
+	query := `SELECT a.id, a.account_type_id, a.account_tax_id, a.code, a.name, a.description, a.created_at, a.updated_at, a.deleted_at
+		FROM tbl_account a
+		INNER JOIN tbl_clinic_coa cc ON cc.coa_id = a.id AND cc.clinic_id = $1 AND cc.deleted_at IS NULL
+		WHERE a.deleted_at IS NULL
+		ORDER BY a.code`
+	var list []domain.AOC
+	if err := r.db.SelectContext(ctx, &list, query, clinicID); err != nil {
+		return nil, errors.New("failed to list clinic COAs")
+	}
+	if list == nil {
+		list = []domain.AOC{}
+	}
+	return list, nil
+}

@@ -17,6 +17,7 @@ func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFor
 	g.GET("/:id", handler.GetByID)
 	g.PUT("/:id", handler.Update)
 	g.POST("/:id/publish", handler.Publish)
+	g.POST("/:id/unpublish", handler.Unpublish)
 	g.POST("/:id/archive", handler.Archive)
 	g.DELETE("/:id", handler.Delete)
 	g.POST("/:id/duplicate", handler.Duplicate)

@@ -2,17 +2,13 @@ package clinic
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/iamarpitzala/aca-reca-backend/config"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/middleware"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
-func RegisterClinicRoutes(e *gin.RouterGroup, clinicHandler *httpHandler.ClinicHandler) {
+func RegisterClinicRoutes(e *gin.RouterGroup, clinicHandler *httpHandler.ClinicHandler, tokenService *service.TokenService) {
 	clinic := e.Group("/clinic")
-	cfg := config.Load()
-
-	tokenService := service.NewTokenService(cfg.JWT)
 	clinic.Use(middleware.AuthMiddleware(tokenService))
 
 	clinic.POST("", clinicHandler.CreateClinic)

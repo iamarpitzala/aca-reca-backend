@@ -6,8 +6,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
 	_ "github.com/iamarpitzala/aca-reca-backend/docs" // swagger docs
+	"github.com/iamarpitzala/aca-reca-backend/internal/adapter/postgres"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
+	"github.com/iamarpitzala/aca-reca-backend/pkg/cloudinary"
 	"github.com/iamarpitzala/aca-reca-backend/route/aoc"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
@@ -16,6 +19,7 @@ import (
 	financial_form "github.com/iamarpitzala/aca-reca-backend/route/financial_form"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
 	"github.com/iamarpitzala/aca-reca-backend/route/quarter"
+	upload_route "github.com/iamarpitzala/aca-reca-backend/route/upload"
 	user_clinic "github.com/iamarpitzala/aca-reca-backend/route/user_clinic"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -27,44 +31,63 @@ func InitRouter(e *gin.Engine) {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
+	sqlxDB := db.DB
 
+	// Token service (implements port.TokenProvider; stays in service for JWT)
 	tokenService := service.NewTokenService(cfg.JWT)
-	oauthService := service.NewOAuthService(cfg.OAuth, db.DB)
-	authService := service.NewAuthService(db.DB, tokenService, oauthService)
-	clinicService := service.NewClinicService(db.DB)
-	userClinicService := service.NewUserClinicService(db.DB)
-	financialFormService := service.NewFinancialFormService(db.DB)
-	customFormService := service.NewCustomFormService(db.DB)
-	// financialCalculationService := service.NewFinancialCalculationService(db.DB)
-	expensesService := service.NewExpensesService(db.DB)
-	quarterService := service.NewQuarterService(db.DB)
-	aosService := service.NewAOSService(db.DB)
+	oauthService := service.NewOAuthService(cfg.OAuth, sqlxDB)
 
-	authHandler := httpHandler.NewAuthHandler(authService, oauthService, cfg.OAuth.FrontendURL)
-	userHandler := httpHandler.NewUserHandler(authService)
+	// Repositories (driven adapters)
+	clinicRepo := postgres.NewClinicRepository(sqlxDB)
+	userClinicRepo := postgres.NewUserClinicRepository(sqlxDB)
+	userRepo := postgres.NewUserRepository(sqlxDB)
+	sessionRepo := postgres.NewSessionRepository(sqlxDB)
+	quarterRepo := postgres.NewQuarterRepository(sqlxDB)
+	financialFormRepo := postgres.NewFinancialFormRepository(sqlxDB)
+	expenseRepo := postgres.NewExpenseRepository(sqlxDB)
+	aocRepo := postgres.NewAOCRepository(sqlxDB)
+
+	// Use cases (application layer)
+	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService)
+	clinicUC := usecase.NewClinicService(clinicRepo)
+	userClinicUC := usecase.NewUserClinicService(userClinicRepo, clinicRepo, userRepo)
+	quarterUC := usecase.NewQuarterService(quarterRepo)
+	financialFormUC := usecase.NewFinancialFormService(financialFormRepo, clinicRepo)
+	expensesUC := usecase.NewExpensesService(expenseRepo)
+	aocUC := usecase.NewAOCService(aocRepo)
+
+	// Custom form still uses legacy service (calculation + entry logic to be ported later)
+	customFormService := service.NewCustomFormService(sqlxDB)
+
+	// HTTP handlers (driving adapters)
+	authHandler := httpHandler.NewAuthHandler(authUC, oauthService, cfg.OAuth.FrontendURL)
+	userHandler := httpHandler.NewUserHandler(authUC)
 	payslipHandler := httpHandler.NewPayslipHandler()
-	clinicHandler := httpHandler.NewClinicHandler(clinicService, userClinicService)
-	userClinicHandler := httpHandler.NewUserClinicHandler(userClinicService)
-	financialFormHandler := httpHandler.NewFinancialFormHandler(financialFormService)
+	clinicHandler := httpHandler.NewClinicHandler(clinicUC, userClinicUC)
+	userClinicHandler := httpHandler.NewUserClinicHandler(userClinicUC)
+	financialFormHandler := httpHandler.NewFinancialFormHandler(financialFormUC)
 	customFormHandler := httpHandler.NewCustomFormHandler(customFormService)
-	// financialCalculationHandler := httpHandler.NewFinancialCalculationHandler(financialCalculationService)
-	expensesHandler := httpHandler.NewExpensesHandler(expensesService)
-	quarterHandler := httpHandler.NewQuarterHandler(quarterService)
-	aosHandler := httpHandler.NewAOCHandler(aosService)
+	expensesHandler := httpHandler.NewExpensesHandler(expensesUC)
+	quarterHandler := httpHandler.NewQuarterHandler(quarterUC)
+	aosHandler := httpHandler.NewAOCHandler(aocUC)
+
+	// Cloudinary upload (optional: nil if env not set)
+	cloudinarySvc, _ := cloudinary.NewService(cfg.Cloudinary)
+	uploadHandler := httpHandler.NewUploadHandler(cloudinarySvc)
+
 	// Swagger documentation route
 	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	v1 := e.Group("/api/v1")
 	auth.RegisterAuthRoutes(v1, authHandler)
-	auth.RegisterUserRoutes(v1, userHandler)
-	clinic.RegisterClinicRoutes(v1, clinicHandler)
+	auth.RegisterUserRoutes(v1, userHandler, tokenService)
+	clinic.RegisterClinicRoutes(v1, clinicHandler, tokenService)
 	payslip.RegisterPayslipRoutes(v1, payslipHandler)
-	user_clinic.RegisterUserClinicRoutes(v1, userClinicHandler)
-	financial_form.RegisterFinancialFormRoutes(v1, financialFormHandler)
-	custom_form.RegisterCustomFormRoutes(v1, customFormHandler)
-	// financial_calculation.RegisterFinancialCalculationRoutes(v1, financialCalculationHandler)
-	quarter.RegisterQuarterRoutes(v1, quarterHandler)
-	expense.RegisterExpensesRoutes(v1, expensesHandler)
-	aoc.RegisterAOCRoutes(v1, aosHandler)
-
+	user_clinic.RegisterUserClinicRoutes(v1, userClinicHandler, tokenService)
+	financial_form.RegisterFinancialFormRoutes(v1, financialFormHandler, tokenService)
+	custom_form.RegisterCustomFormRoutes(v1, customFormHandler, tokenService)
+	quarter.RegisterQuarterRoutes(v1, quarterHandler, tokenService)
+	expense.RegisterExpensesRoutes(v1, expensesHandler, tokenService)
+	aoc.RegisterAOCRoutes(v1, aosHandler, tokenService)
+	upload_route.RegisterUploadRoutes(v1, uploadHandler, tokenService)
 }

@@ -6,19 +6,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	"github.com/iamarpitzala/aca-reca-backend/util"
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type AOCHandler struct {
-	aocService *service.AOSService
+	aocUC *usecase.AOCService
 }
 
-func NewAOCHandler(aocService *service.AOSService) *AOCHandler {
+func NewAOCHandler(aocUC *usecase.AOCService) *AOCHandler {
 	return &AOCHandler{
-		aocService: aocService,
+		aocUC: aocUC,
 	}
 }
 
@@ -40,7 +40,7 @@ func (h *AOCHandler) CreateAOC(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	err := h.aocService.CreateAOC(c.Request.Context(), &aoc)
+	err := h.aocUC.CreateAOC(c.Request.Context(), &aoc)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -56,7 +56,7 @@ func (h *AOCHandler) CreateAOC(c *gin.Context) {
 // @Success 200 {array} domain.AOCResponse
 // @Router /aoc [get]
 func (h *AOCHandler) GetAllAOCs(c *gin.Context) {
-	response, err := h.aocService.GetAllAOCs(c.Request.Context())
+	response, err := h.aocUC.GetAllAOCs(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -65,7 +65,7 @@ func (h *AOCHandler) GetAllAOCs(c *gin.Context) {
 }
 
 func (h *AOCHandler) GetAllAOCType(c *gin.Context) {
-	response, err := h.aocService.GetAOCType(c.Request.Context())
+	response, err := h.aocUC.GetAOCType(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -84,7 +84,7 @@ func (h *AOCHandler) GetAllAOCType(c *gin.Context) {
 // @Failure 500 {object} domain.H
 // @Router /aoc/tax [get]
 func (h *AOCHandler) GetAllAccountTax(c *gin.Context) {
-	response, err := h.aocService.GetAccountTax(c.Request.Context())
+	response, err := h.aocUC.GetAccountTax(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -111,7 +111,7 @@ func (h *AOCHandler) GetAOCByAccountTaxID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account tax id"})
 		return
 	}
-	response, err := h.aocService.GetAOCByAccountTaxID(c.Request.Context(), accountTaxIdInt)
+	response, err := h.aocUC.GetAOCByAccountTaxID(c.Request.Context(), accountTaxIdInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -147,7 +147,7 @@ func (h *AOCHandler) GetAOCByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-	response, err := h.aocService.GetAOCByID(c.Request.Context(), idUUID)
+	response, err := h.aocUC.GetAOCByID(c.Request.Context(), idUUID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
@@ -173,7 +173,7 @@ func (h *AOCHandler) GetAOCByID(c *gin.Context) {
 // @Failure 500 {object} domain.H
 func (h *AOCHandler) GetAOCByCode(c *gin.Context) {
 	code := c.Param("code")
-	response, err := h.aocService.GetAOCByCode(c.Request.Context(), code)
+	response, err := h.aocUC.GetAOCByCode(c.Request.Context(), code)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
@@ -212,7 +212,7 @@ func (h *AOCHandler) GetAOCByAccountTypeID(c *gin.Context) {
 	if sortOrder != "asc" && sortOrder != "desc" {
 		sortOrder = "asc"
 	}
-	response, err := h.aocService.GetAOCByAccountTypeID(c.Request.Context(), accountTypeIdInt, sortBy, sortOrder)
+	response, err := h.aocUC.GetAOCByAccountTypeID(c.Request.Context(), accountTypeIdInt, sortBy, sortOrder)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
@@ -242,7 +242,7 @@ func (h *AOCHandler) GetAOCsByAccountType(c *gin.Context) {
 	if sortOrder != "asc" && sortOrder != "desc" {
 		sortOrder = "asc"
 	}
-	response, err := h.aocService.GetAOCsByAccountType(c.Request.Context(), sortBy, sortOrder)
+	response, err := h.aocUC.GetAOCsByAccountType(c.Request.Context(), sortBy, sortOrder)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -277,7 +277,7 @@ func (h *AOCHandler) UpdateAOC(c *gin.Context) {
 	}
 	aocRepo := aoc.ToRepo()
 	aocRepo.ID = idUUID
-	err = h.aocService.UpdateAOC(c.Request.Context(), aocRepo)
+	err = h.aocUC.UpdateAOC(c.Request.Context(), aocRepo)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -316,7 +316,7 @@ func (h *AOCHandler) DeleteAOC(c *gin.Context) {
 		}
 		ids = append(ids, id)
 	}
-	err := h.aocService.DeleteAOC(c.Request.Context(), ids)
+	err := h.aocUC.DeleteAOC(c.Request.Context(), ids)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -344,7 +344,7 @@ func (h *AOCHandler) BulkUpdateTax(c *gin.Context) {
 		}
 		ids = append(ids, id)
 	}
-	if err := h.aocService.BulkUpdateTax(c.Request.Context(), ids, req.AccountTaxID); err != nil {
+	if err := h.aocUC.BulkUpdateTax(c.Request.Context(), ids, req.AccountTaxID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -371,7 +371,7 @@ func (h *AOCHandler) ArchiveAOC(c *gin.Context) {
 		}
 		ids = append(ids, id)
 	}
-	if err := h.aocService.DeleteAOC(c.Request.Context(), ids); err != nil {
+	if err := h.aocUC.DeleteAOC(c.Request.Context(), ids); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

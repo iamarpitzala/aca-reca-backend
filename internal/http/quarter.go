@@ -5,17 +5,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
 type QuarterHandler struct {
-	QuarterService *service.QuarterService
+	QuarterUC *usecase.QuarterService
 }
 
-func NewQuarterHandler(QuarterService *service.QuarterService) *QuarterHandler {
+func NewQuarterHandler(QuarterUC *usecase.QuarterService) *QuarterHandler {
 	return &QuarterHandler{
-		QuarterService: QuarterService,
+		QuarterUC: QuarterUC,
 	}
 }
 
@@ -36,7 +36,7 @@ func (h *QuarterHandler) Create(c *gin.Context) {
 		return
 	}
 
-	err := h.QuarterService.CreateQuarter(c.Request.Context(), &quarter)
+	err := h.QuarterUC.CreateQuarter(c.Request.Context(), &quarter)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -64,7 +64,7 @@ func (h *QuarterHandler) Get(c *gin.Context) {
 		return
 	}
 
-	gt, err := h.QuarterService.GetQuaterByID(c.Request.Context(), id)
+	gt, err := h.QuarterUC.GetQuarterByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -92,7 +92,7 @@ func (h *QuarterHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	err = h.QuarterService.DeleteQuarter(c.Request.Context(), id)
+	err = h.QuarterUC.DeleteQuarter(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -128,7 +128,7 @@ func (h *QuarterHandler) Update(c *gin.Context) {
 	}
 	quarter.ID = id
 
-	err = h.QuarterService.UpdateQuarter(c.Request.Context(), &quarter)
+	err = h.QuarterUC.UpdateQuarter(c.Request.Context(), &quarter)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -148,7 +148,7 @@ func (h *QuarterHandler) Update(c *gin.Context) {
 // @Router /quarter [get]
 func (h *QuarterHandler) List(c *gin.Context) {
 
-	list, err := h.QuarterService.ListQuarter(c.Request.Context())
+	list, err := h.QuarterUC.ListQuarter(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return

@@ -2,16 +2,13 @@ package custom_form
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/iamarpitzala/aca-reca-backend/config"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/middleware"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
-func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFormHandler) {
+func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFormHandler, tokenService *service.TokenService) {
 	g := e.Group("/custom-form")
-	cfg := config.Load()
-	tokenService := service.NewTokenService(cfg.JWT)
 	g.Use(middleware.AuthMiddleware(tokenService))
 
 	g.POST("", handler.Create)

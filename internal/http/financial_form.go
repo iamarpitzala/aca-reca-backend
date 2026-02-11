@@ -5,18 +5,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type FinancialFormHandler struct {
-	financialFormService *service.FinancialFormService
+	financialFormUC *usecase.FinancialFormService
 }
 
-func NewFinancialFormHandler(financialFormService *service.FinancialFormService) *FinancialFormHandler {
+func NewFinancialFormHandler(financialFormUC *usecase.FinancialFormService) *FinancialFormHandler {
 	return &FinancialFormHandler{
-		financialFormService: financialFormService,
+		financialFormUC: financialFormUC,
 	}
 }
 
@@ -39,7 +39,7 @@ func (h *FinancialFormHandler) CreateFinancialForm(c *gin.Context) {
 		return
 	}
 
-	err := h.financialFormService.CreateFinancialForm(c.Request.Context(), &form)
+	err := h.financialFormUC.CreateFinancialForm(c.Request.Context(), &form)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -69,7 +69,7 @@ func (h *FinancialFormHandler) GetFinancialForm(c *gin.Context) {
 		return
 	}
 
-	form, err := h.financialFormService.GetFinancialFormByID(c.Request.Context(), id)
+	form, err := h.financialFormUC.GetFinancialFormByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -98,7 +98,7 @@ func (h *FinancialFormHandler) GetFinancialFormsByClinic(c *gin.Context) {
 		return
 	}
 
-	forms, err := h.financialFormService.GetFinancialFormsByClinicID(c.Request.Context(), clinicID)
+	forms, err := h.financialFormUC.GetFinancialFormsByClinicID(c.Request.Context(), clinicID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -136,7 +136,7 @@ func (h *FinancialFormHandler) UpdateFinancialForm(c *gin.Context) {
 	}
 
 	form.ID = id
-	err = h.financialFormService.UpdateFinancialForm(c.Request.Context(), &form)
+	err = h.financialFormUC.UpdateFinancialForm(c.Request.Context(), &form)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -166,7 +166,7 @@ func (h *FinancialFormHandler) DeleteFinancialForm(c *gin.Context) {
 		return
 	}
 
-	err = h.financialFormService.DeleteFinancialForm(c.Request.Context(), id)
+	err = h.financialFormUC.DeleteFinancialForm(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return

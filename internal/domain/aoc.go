@@ -1,37 +1,18 @@
 package domain
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type AOCRequest struct {
+	ID            *string `json:"id" validate:"omitempty,required"`
 	AccountTypeID int     `json:"accountTypeId" validate:"required"`
 	AccountTaxID  int     `json:"accountTaxId" validate:"required"`
 	Code          string  `json:"code" validate:"required"`
 	Name          string  `json:"name" validate:"required"`
 	Description   *string `json:"description" validate:"omitempty,max=255"`
-}
-
-func toInt(v interface{}) (int, bool) {
-	switch n := v.(type) {
-	case float64:
-		return int(n), true
-	case int:
-		return n, true
-	case int64:
-		return int(n), true
-	case string:
-		i, err := strconv.Atoi(n)
-		if err != nil {
-			return 0, false
-		}
-		return i, true
-	default:
-		return 0, false
-	}
 }
 
 func (a *AOCRequest) ToRepo() *AOC {

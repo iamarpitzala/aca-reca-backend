@@ -6,17 +6,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
 type ExpensesHandler struct {
-	expensesService *service.ExpensesService
+	expensesUC *usecase.ExpensesService
 }
 
-func NewExpensesHandler(expensesService *service.ExpensesService) *ExpensesHandler {
+func NewExpensesHandler(expensesUC *usecase.ExpensesService) *ExpensesHandler {
 	return &ExpensesHandler{
-		expensesService: expensesService,
+		expensesUC: expensesUC,
 	}
 }
 
@@ -56,7 +56,7 @@ func (h *ExpensesHandler) CreateExpenseType(c *gin.Context) {
 	expenseType.CreatedBy = userIDUUID
 	expenseType.CreatedAt = time.Now()
 
-	err := h.expensesService.CreateExpenseType(c.Request.Context(), &expenseType)
+	err := h.expensesUC.CreateExpenseType(c.Request.Context(), &expenseType)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -100,7 +100,7 @@ func (h *ExpensesHandler) CreateExpenseCategory(c *gin.Context) {
 	expenseCategory.CreatedBy = userIDUUID
 	expenseCategory.CreatedAt = time.Now()
 
-	err := h.expensesService.CreateExpenseCategory(c.Request.Context(), &expenseCategory)
+	err := h.expensesUC.CreateExpenseCategory(c.Request.Context(), &expenseCategory)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -144,7 +144,7 @@ func (h *ExpensesHandler) CreateExpenseCategoryType(c *gin.Context) {
 	expenseCategoryType.CreatedBy = userIDUUID
 	expenseCategoryType.CreatedAt = time.Now()
 
-	err := h.expensesService.CreateExpenseCategoryType(c.Request.Context(), &expenseCategoryType)
+	err := h.expensesUC.CreateExpenseCategoryType(c.Request.Context(), &expenseCategoryType)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -189,7 +189,7 @@ func (h *ExpensesHandler) CreateExpenseEntry(c *gin.Context) {
 	expenseEntry.CreatedAt = time.Now()
 	expenseEntry.DeletedAt = nil
 
-	err := h.expensesService.CreateExpenseEntry(c.Request.Context(), &expenseEntry)
+	err := h.expensesUC.CreateExpenseEntry(c.Request.Context(), &expenseEntry)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -201,7 +201,7 @@ func (h *ExpensesHandler) CreateExpenseEntry(c *gin.Context) {
 // GET /api/v1/expense/type/clinic/:clinicId
 func (h *ExpensesHandler) GetExpenseTypesByClinicID(c *gin.Context) {
 	clinicID := c.Param("clinicId")
-	types, err := h.expensesService.GetExpenseTypesByClinicID(c.Request.Context(), uuid.MustParse(clinicID))
+	types, err := h.expensesUC.GetExpenseTypesByClinicID(c.Request.Context(), uuid.MustParse(clinicID))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -224,7 +224,7 @@ func (h *ExpensesHandler) GetExpenseTypesByClinicID(c *gin.Context) {
 // @Router /expenses/type/{id} [get]
 func (h *ExpensesHandler) GetExpenseTypeByID(c *gin.Context) {
 	id := c.Param("id")
-	expenseType, err := h.expensesService.GetExpenseTypeByID(c.Request.Context(), uuid.MustParse(id))
+	expenseType, err := h.expensesUC.GetExpenseTypeByID(c.Request.Context(), uuid.MustParse(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -247,7 +247,7 @@ func (h *ExpensesHandler) GetExpenseTypeByID(c *gin.Context) {
 // @Router /expenses/category/{id} [get]
 func (h *ExpensesHandler) GetExpenseCategoryByID(c *gin.Context) {
 	id := c.Param("id")
-	expenseCategory, err := h.expensesService.GetExpenseCategoryByID(c.Request.Context(), uuid.MustParse(id))
+	expenseCategory, err := h.expensesUC.GetExpenseCategoryByID(c.Request.Context(), uuid.MustParse(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -270,7 +270,7 @@ func (h *ExpensesHandler) GetExpenseCategoryByID(c *gin.Context) {
 // @Router /expenses/category-type/{id} [get]
 func (h *ExpensesHandler) GetExpenseCategoryTypeByID(c *gin.Context) {
 	id := c.Param("id")
-	expenseCategoryType, err := h.expensesService.GetExpenseCategoryTypeByID(c.Request.Context(), uuid.MustParse(id))
+	expenseCategoryType, err := h.expensesUC.GetExpenseCategoryTypeByID(c.Request.Context(), uuid.MustParse(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -293,7 +293,7 @@ func (h *ExpensesHandler) GetExpenseCategoryTypeByID(c *gin.Context) {
 // @Router /expenses/entry/{id} [get]
 func (h *ExpensesHandler) GetExpenseEntryByID(c *gin.Context) {
 	id := c.Param("id")
-	expenseEntry, err := h.expensesService.GetExpenseEntryByID(c.Request.Context(), uuid.MustParse(id))
+	expenseEntry, err := h.expensesUC.GetExpenseEntryByID(c.Request.Context(), uuid.MustParse(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -305,7 +305,7 @@ func (h *ExpensesHandler) GetExpenseEntryByID(c *gin.Context) {
 // GET /api/v1/expense/entry/clinic/:clinicId
 func (h *ExpensesHandler) GetExpenseEntriesByClinicID(c *gin.Context) {
 	clinicID := c.Param("clinicId")
-	entries, err := h.expensesService.GetExpenseEntriesByClinicID(c.Request.Context(), uuid.MustParse(clinicID))
+	entries, err := h.expensesUC.GetExpenseEntriesByClinicID(c.Request.Context(), uuid.MustParse(clinicID))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -327,7 +327,7 @@ func (h *ExpensesHandler) GetExpenseEntriesByClinicID(c *gin.Context) {
 // @Router /expense/category/clinic/{clinicId} [get]
 func (h *ExpensesHandler) GetExpenseCategoriesByClinicID(c *gin.Context) {
 	clinicID := c.Param("clinicId")
-	categories, err := h.expensesService.GetExpenseCategoriesByClinicID(c.Request.Context(), uuid.MustParse(clinicID))
+	categories, err := h.expensesUC.GetExpenseCategoriesByClinicID(c.Request.Context(), uuid.MustParse(clinicID))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -353,7 +353,7 @@ func (h *ExpensesHandler) UpdateExpenseCategory(c *gin.Context) {
 	id := c.Param("id")
 	idUUID := uuid.MustParse(id)
 
-	existing, err := h.expensesService.GetExpenseCategoryByID(c.Request.Context(), idUUID)
+	existing, err := h.expensesUC.GetExpenseCategoryByID(c.Request.Context(), idUUID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -375,7 +375,7 @@ func (h *ExpensesHandler) UpdateExpenseCategory(c *gin.Context) {
 		existing.Description = *req.Description
 	}
 
-	err = h.expensesService.UpdateExpenseCategory(c.Request.Context(), existing)
+	err = h.expensesUC.UpdateExpenseCategory(c.Request.Context(), existing)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -410,7 +410,7 @@ func (h *ExpensesHandler) DeleteExpenseCategory(c *gin.Context) {
 		return
 	}
 
-	err := h.expensesService.DeleteExpenseCategory(c.Request.Context(), uuid.MustParse(id), userIDUUID)
+	err := h.expensesUC.DeleteExpenseCategory(c.Request.Context(), uuid.MustParse(id), userIDUUID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return

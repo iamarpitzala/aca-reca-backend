@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
@@ -20,14 +21,14 @@ func contains(s, substr string) bool {
 }
 
 type AuthHandler struct {
-	authService  *service.AuthService
+	authUC      *usecase.AuthService
 	oauthService *service.OAuthService
 	frontendURL  string
 }
 
-func NewAuthHandler(authService *service.AuthService, oauthService *service.OAuthService, frontendURL string) *AuthHandler {
+func NewAuthHandler(authUC *usecase.AuthService, oauthService *service.OAuthService, frontendURL string) *AuthHandler {
 	return &AuthHandler{
-		authService:  authService,
+		authUC:       authUC,
 		oauthService: oauthService,
 		frontendURL:  frontendURL,
 	}
@@ -52,7 +53,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	response, err := h.authService.Register(c.Request.Context(), &req)
+	response, err := h.authUC.Register(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -81,7 +82,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	response, err := h.authService.Login(c.Request.Context(), &req)
+	response, err := h.authUC.Login(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -112,7 +113,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	tokenPair, err := h.authService.RefreshToken(c.Request.Context(), req.RefreshToken)
+	tokenPair, err := h.authUC.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -141,7 +142,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.Logout(c.Request.Context(), sessionUUID); err != nil {
+	if err := h.authUC.Logout(c.Request.Context(), sessionUUID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -271,7 +272,7 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 		}
 
 		// Generate tokens and create session
-		response, err := h.authService.OAuthLogin(c.Request.Context(), newUser.ID)
+		response, err := h.authUC.OAuthLogin(c.Request.Context(), newUser.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "details": err.Error()})
 			return
@@ -291,7 +292,7 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	}
 
 	// Generate tokens and create session
-	response, err := h.authService.OAuthLogin(c.Request.Context(), existingUser.ID)
+	response, err := h.authUC.OAuthLogin(c.Request.Context(), existingUser.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "details": err.Error()})
 		return

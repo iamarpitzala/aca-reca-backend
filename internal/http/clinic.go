@@ -1,23 +1,24 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
 type ClinicHandler struct {
-	clinicService     *service.ClinicService
-	userClinicService *service.UserClinicService
+	clinicUC     *usecase.ClinicService
+	userClinicUC *usecase.UserClinicService
 }
 
-func NewClinicHandler(clinicService *service.ClinicService, userClinicService *service.UserClinicService) *ClinicHandler {
+func NewClinicHandler(clinicUC *usecase.ClinicService, userClinicUC *usecase.UserClinicService) *ClinicHandler {
 	return &ClinicHandler{
-		clinicService:     clinicService,
-		userClinicService: userClinicService,
+		clinicUC:     clinicUC,
+		userClinicUC: userClinicUC,
 	}
 }
 
@@ -44,13 +45,17 @@ func (h *ClinicHandler) CreateClinic(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	err := h.clinicService.CreateClinic(c.Request.Context(), &clinic)
+	err := h.clinicUC.CreateClinic(c.Request.Context(), &clinic)
 	if err != nil {
+		if errors.Is(err, usecase.ErrDuplicateABN) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	// Auto-associate the creating user as owner so they can access the clinic
-	_, err = h.userClinicService.AssociateUserWithClinic(c.Request.Context(), userID, clinic.ID, "owner")
+	_, err = h.userClinicUC.AssociateUserWithClinic(c.Request.Context(), userID, clinic.ID, "owner")
 	if err != nil {
 		// Log but don't fail - clinic was created
 		c.JSON(http.StatusCreated, gin.H{"message": "clinic created successfully", "clinic_id": clinic.ID, "clinic": clinic})
@@ -75,7 +80,7 @@ func (h *ClinicHandler) checkClinicAccess(c *gin.Context, clinicID uuid.UUID) bo
 	if !ok {
 		return false
 	}
-	hasAccess, err := h.userClinicService.UserHasAccessToClinic(c.Request.Context(), userID, clinicID)
+	hasAccess, err := h.userClinicUC.UserHasAccessToClinic(c.Request.Context(), userID, clinicID)
 	return err == nil && hasAccess
 }
 
@@ -104,7 +109,7 @@ func (h *ClinicHandler) GetClinic(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
 		return
 	}
-	clinic, err := h.clinicService.GetClinicByID(c.Request.Context(), idUUID)
+	clinic, err := h.clinicUC.GetClinicByID(c.Request.Context(), idUUID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -143,7 +148,7 @@ func (h *ClinicHandler) UpdateClinic(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	clinic, err := h.clinicService.UpdateClinicPartial(c.Request.Context(), idUUID, &req)
+	clinic, err := h.clinicUC.UpdateClinicPartial(c.Request.Context(), idUUID, &req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -176,7 +181,7 @@ func (h *ClinicHandler) DeleteClinic(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
 		return
 	}
-	err = h.clinicService.DeleteClinic(c.Request.Context(), idUUID)
+	err = h.clinicUC.DeleteClinic(c.Request.Context(), idUUID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -201,7 +206,7 @@ func (h *ClinicHandler) GetAllClinics(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
-	userClinics, err := h.userClinicService.GetUserClinics(c.Request.Context(), userID)
+	userClinics, err := h.userClinicUC.GetUserClinics(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -229,7 +234,7 @@ func (h *ClinicHandler) GetAllClinics(c *gin.Context) {
 // @Router /clinic/abn/{abnNumber} [get]
 func (h *ClinicHandler) GetClinicByABNNumber(c *gin.Context) {
 	abnNumber := c.Param("abnNumber")
-	clinic, err := h.clinicService.GetClinicByABNNumber(c.Request.Context(), abnNumber)
+	clinic, err := h.clinicUC.GetClinicByABNNumber(c.Request.Context(), abnNumber)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return

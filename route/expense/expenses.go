@@ -2,17 +2,13 @@ package expense
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/iamarpitzala/aca-reca-backend/config"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/middleware"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
-func RegisterExpensesRoutes(e *gin.RouterGroup, expensesHandler *httpHandler.ExpensesHandler) {
+func RegisterExpensesRoutes(e *gin.RouterGroup, expensesHandler *httpHandler.ExpensesHandler, tokenService *service.TokenService) {
 	expense := e.Group("/expense")
-	cfg := config.Load()
-
-	tokenService := service.NewTokenService(cfg.JWT)
 	expense.Use(middleware.AuthMiddleware(tokenService))
 
 	expense.POST("/type", expensesHandler.CreateExpenseType)

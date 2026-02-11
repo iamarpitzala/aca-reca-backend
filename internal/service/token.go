@@ -102,6 +102,11 @@ func (ts *TokenService) ValidateToken(tokenString string) (*domain.TokenClaims, 
 	return claims, nil
 }
 
+// RefreshTokenTTL returns the refresh token TTL for session creation (implements port.TokenProvider).
+func (ts *TokenService) RefreshTokenTTL() time.Duration {
+	return ts.refreshTokenTTL
+}
+
 func (ts *TokenService) ExtractTokenFromHeader(authHeader string) (string, error) {
 	if authHeader == "" {
 		return "", errors.New("authorization header missing")

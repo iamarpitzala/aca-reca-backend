@@ -5,18 +5,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type UserHandler struct {
-	authService *service.AuthService
+	authUC *usecase.AuthService
 }
 
-func NewUserHandler(authService *service.AuthService) *UserHandler {
+func NewUserHandler(authUC *usecase.AuthService) *UserHandler {
 	return &UserHandler{
-		authService: authService,
+		authUC: authUC,
 	}
 }
 
@@ -43,7 +43,7 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.GetUserByID(c.Request.Context(), userUUID)
+	user, err := h.authUC.GetUserByID(c.Request.Context(), userUUID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -72,7 +72,7 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.GetUserByID(c.Request.Context(), userUUID)
+	user, err := h.authUC.GetUserByID(c.Request.Context(), userUUID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -109,7 +109,7 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.UpdateUser(c.Request.Context(), userUUID, req.FirstName, req.LastName, req.Phone)
+	user, err := h.authUC.UpdateUser(c.Request.Context(), userUUID, req.FirstName, req.LastName, req.Phone)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -138,7 +138,7 @@ func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 		return
 	}
 
-	sessions, err := h.authService.GetUserSessions(c.Request.Context(), userUUID)
+	sessions, err := h.authUC.GetUserSessions(c.Request.Context(), userUUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -176,7 +176,7 @@ func (h *UserHandler) RevokeSession(c *gin.Context) {
 	}
 
 	// Verify session belongs to user
-	sessions, err := h.authService.GetUserSessions(c.Request.Context(), userUUID)
+	sessions, err := h.authUC.GetUserSessions(c.Request.Context(), userUUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -195,7 +195,7 @@ func (h *UserHandler) RevokeSession(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.RevokeSession(c.Request.Context(), sessionID); err != nil {
+	if err := h.authUC.RevokeSession(c.Request.Context(), sessionID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -5,16 +5,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/iamarpitzala/aca-reca-backend/internal/service"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 )
 
 type UserClinicHandler struct {
-	userClinicService *service.UserClinicService
+	userClinicUC *usecase.UserClinicService
 }
 
-func NewUserClinicHandler(userClinicService *service.UserClinicService) *UserClinicHandler {
+func NewUserClinicHandler(userClinicUC *usecase.UserClinicService) *UserClinicHandler {
 	return &UserClinicHandler{
-		userClinicService: userClinicService,
+		userClinicUC: userClinicUC,
 	}
 }
 
@@ -42,7 +42,7 @@ func (h *UserClinicHandler) AssociateUserWithClinic(c *gin.Context) {
 		return
 	}
 
-	userClinic, err := h.userClinicService.AssociateUserWithClinic(c.Request.Context(), req.UserID, req.ClinicID, req.Role)
+	userClinic, err := h.userClinicUC.AssociateUserWithClinic(c.Request.Context(), req.UserID, req.ClinicID, req.Role)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -84,7 +84,7 @@ func (h *UserClinicHandler) GetUserClinics(c *gin.Context) {
 		return
 	}
 
-	userClinics, err := h.userClinicService.GetUserClinics(c.Request.Context(), userID)
+	userClinics, err := h.userClinicUC.GetUserClinics(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -113,7 +113,7 @@ func (h *UserClinicHandler) GetClinicUsers(c *gin.Context) {
 		return
 	}
 
-	clinicUsers, err := h.userClinicService.GetClinicUsers(c.Request.Context(), clinicID)
+	clinicUsers, err := h.userClinicUC.GetClinicUsers(c.Request.Context(), clinicID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -143,7 +143,7 @@ func (h *UserClinicHandler) RemoveUserFromClinic(c *gin.Context) {
 		return
 	}
 
-	err = h.userClinicService.RemoveUserFromClinic(c.Request.Context(), id)
+	err = h.userClinicUC.RemoveUserFromClinic(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return

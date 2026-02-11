@@ -12,29 +12,29 @@ import (
 type CustomFieldType string
 
 const (
-	FieldTypeText     CustomFieldType = "text"
-	FieldTypeNumber   CustomFieldType = "number"
-	FieldTypeDate     CustomFieldType = "date"
-	FieldTypeDropdown CustomFieldType = "dropdown"
-	FieldTypeCheckbox CustomFieldType = "checkbox"
-	FieldTypeTextarea CustomFieldType = "textarea"
-	FieldTypeCurrency CustomFieldType = "currency"
+	FieldTypeText   CustomFieldType = "text"
+	FieldTypeNumber CustomFieldType = "number"
+	// FieldTypeDate     CustomFieldType = "date"
+	// FieldTypeDropdown CustomFieldType = "dropdown"
+	// FieldTypeCheckbox CustomFieldType = "checkbox"
+	// FieldTypeTextarea CustomFieldType = "textarea"
+	// FieldTypeCurrency CustomFieldType = "currency"
 )
 
 type FormStatus string
 
 const (
-	FormStatusDraft    FormStatus = "draft"
+	FormStatusDraft     FormStatus = "draft"
 	FormStatusPublished FormStatus = "published"
-	FormStatusArchived FormStatus = "archived"
+	FormStatusArchived  FormStatus = "archived"
 )
 
 type FormType string
 
 const (
-	FormTypeIncome   FormType = "income"
-	FormTypeExpense  FormType = "expense"
-	FormTypeBoth     FormType = "both"
+	FormTypeIncome  FormType = "income"
+	FormTypeExpense FormType = "expense"
+	FormTypeBoth    FormType = "both"
 )
 
 type CalculationMethod string
@@ -56,24 +56,24 @@ const (
 
 // CustomForm DB model
 type CustomForm struct {
-	ID                          uuid.UUID       `db:"id"`
-	ClinicID                    uuid.UUID       `db:"clinic_id"`
-	Name                        string          `db:"name"`
-	Description                 string          `db:"description"`
-	CalculationMethod          string          `db:"calculation_method"`
-	FormType                   string          `db:"form_type"`
-	Status                     string          `db:"status"`
-	Fields                     json.RawMessage `db:"fields"`
-	DefaultPaymentResponsibility *string        `db:"default_payment_responsibility"`
-	ServiceFacilityFeePercent   *float64        `db:"service_facility_fee_percent"`
-	OutworkEnabled              bool            `db:"outwork_enabled"`
-	OutworkRatePercent          *float64        `db:"outwork_rate_percent"`
-	Version                     int             `db:"version"`
-	CreatedBy                   uuid.UUID       `db:"created_by"`
-	CreatedAt                   time.Time       `db:"created_at"`
-	UpdatedAt                   time.Time       `db:"updated_at"`
-	PublishedAt                 *time.Time      `db:"published_at"`
-	DeletedAt                   *time.Time      `db:"deleted_at"`
+	ID                           uuid.UUID       `db:"id"`
+	ClinicID                     uuid.UUID       `db:"clinic_id"`
+	Name                         string          `db:"name"`
+	Description                  string          `db:"description"`
+	CalculationMethod            string          `db:"calculation_method"`
+	FormType                     string          `db:"form_type"`
+	Status                       string          `db:"status"`
+	Fields                       json.RawMessage `db:"fields"`
+	DefaultPaymentResponsibility *string         `db:"default_payment_responsibility"`
+	ServiceFacilityFeePercent    *float64        `db:"service_facility_fee_percent"`
+	OutworkEnabled               bool            `db:"outwork_enabled"`
+	OutworkRatePercent           *float64        `db:"outwork_rate_percent"`
+	Version                      int             `db:"version"`
+	CreatedBy                    uuid.UUID       `db:"created_by"`
+	CreatedAt                    time.Time       `db:"created_at"`
+	UpdatedAt                    time.Time       `db:"updated_at"`
+	PublishedAt                  *time.Time      `db:"published_at"`
+	DeletedAt                    *time.Time      `db:"deleted_at"`
 }
 
 // CustomFormEntry DB model
@@ -103,7 +103,7 @@ type CreateCustomFormRequest struct {
 	ClinicID                     string          `json:"clinicId"`
 	Name                         string          `json:"name"`
 	Description                  string          `json:"description"`
-	CalculationMethod           string          `json:"calculationMethod"`
+	CalculationMethod            string          `json:"calculationMethod"`
 	FormType                     string          `json:"formType"`
 	Fields                       json.RawMessage `json:"fields"`
 	DefaultPaymentResponsibility *string         `json:"defaultPaymentResponsibility,omitempty"`
@@ -123,23 +123,23 @@ type UpdateCustomFormRequest struct {
 }
 
 type CustomFormResponse struct {
-	ID                          string          `json:"id"`
-	ClinicID                    string          `json:"clinicId"`
-	Name                        string          `json:"name"`
-	Description                 string          `json:"description"`
-	CalculationMethod          string          `json:"calculationMethod"`
-	FormType                   string          `json:"formType"`
-	Status                     string          `json:"status"`
-	Fields                     json.RawMessage `json:"fields"`
-	DefaultPaymentResponsibility *string        `json:"defaultPaymentResponsibility,omitempty"`
-	ServiceFacilityFeePercent   *float64        `json:"serviceFacilityFeePercent,omitempty"`
-	OutworkEnabled              bool           `json:"outworkEnabled"`
-	OutworkRatePercent          *float64        `json:"outworkRatePercent,omitempty"`
-	Version                    int             `json:"version"`
-	CreatedBy                  string          `json:"createdBy"`
-	CreatedAt                  time.Time       `json:"createdAt"`
-	UpdatedAt                  time.Time       `json:"updatedAt"`
-	PublishedAt                *time.Time      `json:"publishedAt,omitempty"`
+	ID                           string          `json:"id"`
+	ClinicID                     string          `json:"clinicId"`
+	Name                         string          `json:"name"`
+	Description                  string          `json:"description"`
+	CalculationMethod            string          `json:"calculationMethod"`
+	FormType                     string          `json:"formType"`
+	Status                       string          `json:"status"`
+	Fields                       json.RawMessage `json:"fields"`
+	DefaultPaymentResponsibility *string         `json:"defaultPaymentResponsibility,omitempty"`
+	ServiceFacilityFeePercent    *float64        `json:"serviceFacilityFeePercent,omitempty"`
+	OutworkEnabled               bool            `json:"outworkEnabled"`
+	OutworkRatePercent           *float64        `json:"outworkRatePercent,omitempty"`
+	Version                      int             `json:"version"`
+	CreatedBy                    string          `json:"createdBy"`
+	CreatedAt                    time.Time       `json:"createdAt"`
+	UpdatedAt                    time.Time       `json:"updatedAt"`
+	PublishedAt                  *time.Time      `json:"publishedAt,omitempty"`
 }
 
 type CreateEntryRequest struct {
@@ -153,7 +153,7 @@ type CreateEntryRequest struct {
 	PaymentResponsibility *string         `json:"paymentResponsibility,omitempty"`
 	Deductions            json.RawMessage `json:"deductions,omitempty"`
 	// Pre-calculated totals (frontend sends after running calculateEntryTotals / applyDeductionsToCalculations)
-	Calculations          json.RawMessage `json:"calculations,omitempty"`
+	Calculations json.RawMessage `json:"calculations,omitempty"`
 }
 
 type UpdateEntryRequest struct {

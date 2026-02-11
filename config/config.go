@@ -19,10 +19,18 @@ type RedisConfig struct {
 
 // Config struct
 type Config struct {
-	Server ServerConfig
-	DB     DBConfig
-	JWT    JWTConfig
-	OAuth  OAuthConfig
+	Server     ServerConfig
+	DB         DBConfig
+	JWT        JWTConfig
+	OAuth      OAuthConfig
+	Cloudinary CloudinaryConfig
+}
+
+// CloudinaryConfig holds credentials for Cloudinary image/document uploads.
+type CloudinaryConfig struct {
+	CloudName string
+	APIKey    string
+	APISecret string
 }
 
 type ServerConfig struct {
@@ -110,6 +118,11 @@ func Load() *Config {
 					Scopes:       []string{"openid", "profile", "email"},
 				},
 			},
+		},
+		Cloudinary: CloudinaryConfig{
+			CloudName: getEnv("CLOUDINARY_CLOUD_NAME", ""),
+			APIKey:    getEnv("CLOUDINARY_API_KEY", ""),
+			APISecret: getEnv("CLOUDINARY_API_SECRET", ""),
 		},
 	}
 }

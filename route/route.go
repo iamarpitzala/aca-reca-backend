@@ -10,6 +10,7 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
+	"github.com/iamarpitzala/aca-reca-backend/pkg/cloudinary"
 	"github.com/iamarpitzala/aca-reca-backend/route/aoc"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
@@ -18,6 +19,7 @@ import (
 	financial_form "github.com/iamarpitzala/aca-reca-backend/route/financial_form"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
 	"github.com/iamarpitzala/aca-reca-backend/route/quarter"
+	upload_route "github.com/iamarpitzala/aca-reca-backend/route/upload"
 	user_clinic "github.com/iamarpitzala/aca-reca-backend/route/user_clinic"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -69,6 +71,10 @@ func InitRouter(e *gin.Engine) {
 	quarterHandler := httpHandler.NewQuarterHandler(quarterUC)
 	aosHandler := httpHandler.NewAOCHandler(aocUC)
 
+	// Cloudinary upload (optional: nil if env not set)
+	cloudinarySvc, _ := cloudinary.NewService(cfg.Cloudinary)
+	uploadHandler := httpHandler.NewUploadHandler(cloudinarySvc)
+
 	// Swagger documentation route
 	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -83,4 +89,5 @@ func InitRouter(e *gin.Engine) {
 	quarter.RegisterQuarterRoutes(v1, quarterHandler, tokenService)
 	expense.RegisterExpensesRoutes(v1, expensesHandler, tokenService)
 	aoc.RegisterAOCRoutes(v1, aosHandler, tokenService)
+	upload_route.RegisterUploadRoutes(v1, uploadHandler, tokenService)
 }

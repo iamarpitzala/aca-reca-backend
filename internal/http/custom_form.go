@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -12,11 +13,12 @@ import (
 )
 
 type CustomFormHandler struct {
-	svc *service.CustomFormService
+	svc            *service.CustomFormService
+	transactionSvc *service.TransactionService
 }
 
-func NewCustomFormHandler(svc *service.CustomFormService) *CustomFormHandler {
-	return &CustomFormHandler{svc: svc}
+func NewCustomFormHandler(svc *service.CustomFormService, transactionSvc *service.TransactionService) *CustomFormHandler {
+	return &CustomFormHandler{svc: svc, transactionSvc: transactionSvc}
 }
 
 func (h *CustomFormHandler) getUserID(c *gin.Context) (uuid.UUID, bool) {
@@ -291,4 +293,88 @@ func (h *CustomFormHandler) PreviewCalculations(c *gin.Context) {
 		return
 	}
 	utils.JSONResponse(c, http.StatusOK, "calculations", out, nil)
+}
+
+// Transaction handlers (form field entries -> COA mapping)
+
+func (h *CustomFormHandler) GenerateEntryTransactions(c *gin.Context) {
+	entryID, err := uuid.Parse(c.Param("entryId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		return
+	}
+	list, err := h.transactionSvc.GenerateFromEntry(c.Request.Context(), entryID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusCreated, "transactions generated", list, nil)
+}
+
+func (h *CustomFormHandler) GetEntryTransactions(c *gin.Context) {
+	entryID, err := uuid.Parse(c.Param("entryId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		return
+	}
+	list, err := h.transactionSvc.ListByEntryID(c.Request.Context(), entryID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "transactions", list, nil)
+}
+
+func (h *CustomFormHandler) GetClinicTransactions(c *gin.Context) {
+	clinicID, err := uuid.Parse(c.Param("clinicId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		return
+	}
+	f := &domain.ListTransactionsFilters{
+		Search:        c.Query("search"),
+		TaxCategory:   c.Query("taxCategory"),
+		Status:        c.Query("status"),
+		DateFrom:      c.Query("dateFrom"),
+		DateTo:        c.Query("dateTo"),
+		SortField:     c.DefaultQuery("sortField", "date"),
+		SortDirection: c.DefaultQuery("sortDirection", "desc"),
+		Page:          1,
+		Limit:         50,
+	}
+	if p := c.Query("page"); p != "" {
+		if v, err := strconv.Atoi(p); err == nil && v > 0 {
+			f.Page = v
+		}
+	}
+	if l := c.Query("limit"); l != "" {
+		if v, err := strconv.Atoi(l); err == nil && v > 0 && v <= 100 {
+			f.Limit = v
+		}
+	}
+	resp, err := h.transactionSvc.List(c.Request.Context(), clinicID, f)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "transactions", resp, nil)
+}
+
+func (h *CustomFormHandler) GetFormFieldCOAMapping(c *gin.Context) {
+	formID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid form ID"})
+		return
+	}
+	clinicID, err := uuid.Parse(c.Param("clinicId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		return
+	}
+	resp, err := h.transactionSvc.GetFormFieldCOAMapping(c.Request.Context(), formID, clinicID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "form field COA mapping", resp, nil)
 }

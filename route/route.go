@@ -60,6 +60,7 @@ func InitRouter(e *gin.Engine) {
 
 	// Custom form still uses legacy service (calculation + entry logic to be ported later)
 	customFormService := service.NewCustomFormService(sqlxDB)
+	transactionService := service.NewTransactionService(sqlxDB)
 
 	// HTTP handlers (driving adapters)
 	authHandler := httpHandler.NewAuthHandler(authUC, oauthService, cfg.OAuth.FrontendURL)
@@ -68,7 +69,7 @@ func InitRouter(e *gin.Engine) {
 	clinicHandler := httpHandler.NewClinicHandler(clinicUC, userClinicUC, clinicCOAUC)
 	userClinicHandler := httpHandler.NewUserClinicHandler(userClinicUC)
 	financialFormHandler := httpHandler.NewFinancialFormHandler(financialFormUC)
-	customFormHandler := httpHandler.NewCustomFormHandler(customFormService)
+	customFormHandler := httpHandler.NewCustomFormHandler(customFormService, transactionService)
 	expensesHandler := httpHandler.NewExpensesHandler(expensesUC)
 	quarterHandler := httpHandler.NewQuarterHandler(quarterUC)
 	aosHandler := httpHandler.NewAOCHandler(aocUC)

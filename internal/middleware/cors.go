@@ -22,6 +22,7 @@ func CorsMiddleware() gin.HandlerFunc {
 		"https://acareca.netlify.app",
 		"https://lovableproject.com",
 		"https://d4f867cd-6d95-4580-8932-efc09c741d1e.lovableproject.com",
+		"https://id-preview--d4f867cd-6d95-4580-8932-efc09c741d1e.lovable.app",
 	}
 
 	if env := os.Getenv("CORS_ORIGINS"); env != "" {

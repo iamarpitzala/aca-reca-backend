@@ -22,6 +22,24 @@ const (
 	TaxCategoryBASExcluded     = "bas_excluded"
 )
 
+// TaxNameToCategory maps tbl_account_tax.name to frontend tax category.
+func TaxNameToCategory(name string) string {
+	switch name {
+	case "GST on Income":
+		return TaxCategoryGSTOnIncome
+	case "GST Free Income":
+		return TaxCategoryGSTFreeIncome
+	case "GST on Expenses":
+		return TaxCategoryGSTOnExpenses
+	case "GST Free Expenses":
+		return TaxCategoryGSTFreeExpenses
+	case "BAS Excluded":
+		return TaxCategoryBASExcluded
+	default:
+		return TaxCategoryBASExcluded
+	}
+}
+
 // Transaction DB model
 type Transaction struct {
 	ID             uuid.UUID  `db:"id"`

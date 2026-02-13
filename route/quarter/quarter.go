@@ -8,12 +8,10 @@ import (
 )
 
 func RegisterQuarterRoutes(e *gin.RouterGroup, quarterHandler *httpHandler.QuarterHandler, tokenService *service.TokenService) {
-	quarter := e.Group("/quarter")
-	quarter.Use(middleware.AuthMiddleware(tokenService))
+	// System-driven endpoints (calculate quarters from financial settings)
+	clinicQuarter := e.Group("/clinic/:id")
+	clinicQuarter.Use(middleware.AuthMiddleware(tokenService))
 
-	quarter.POST("/", quarterHandler.Create)
-	quarter.GET("/:id", quarterHandler.Get)
-	quarter.PUT("/:id", quarterHandler.Update)
-	quarter.DELETE("/:id", quarterHandler.Delete)
-	quarter.GET("/", quarterHandler.List)
+	clinicQuarter.GET("/quarters", quarterHandler.CalculateForClinic)
+	clinicQuarter.GET("/quarter/date", quarterHandler.GetQuarterForDate)
 }

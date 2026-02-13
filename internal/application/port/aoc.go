@@ -23,4 +23,6 @@ type AOCRepository interface {
 	GetAccountTypeByID(ctx context.Context, id int) (*domain.AccountType, error)
 	GetAllAccountTax(ctx context.Context) ([]domain.AccountTax, error)
 	GetAccountTaxByID(ctx context.Context, id int) (*domain.AccountTax, error)
+	// ListAOCsAssignedToClinic returns chart-of-accounts entries assigned to the clinic (for form-field mapping).
+	ListAOCsAssignedToClinic(ctx context.Context, clinicID uuid.UUID) ([]domain.AOC, error)
 }

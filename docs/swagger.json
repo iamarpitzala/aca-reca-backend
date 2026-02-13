@@ -22,6 +22,24 @@
     "basePath": "/api/v1",
     "paths": {
         "/aoc": {
+            "get": {
+                "description": "Get all chart of accounts entries",
+                "tags": [
+                    "AOC"
+                ],
+                "summary": "Get all AOCs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.AOCResponse"
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Create a new aoc with the given information",
                 "consumes": [
@@ -62,6 +80,40 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/domain.H"
+                        }
+                    }
+                }
+            }
+        },
+        "/aoc/account-types": {
+            "get": {
+                "description": "Get all accounts. Query params: sort (code|name, default code), order (asc|desc, default asc)",
+                "tags": [
+                    "AOC"
+                ],
+                "summary": "Get all accounts (optionally sorted)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Sort field: code or name",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order: asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.AOCResponse"
+                            }
                         }
                     }
                 }
@@ -1219,251 +1271,6 @@
                 }
             }
         },
-        "/financial-form": {
-            "post": {
-                "description": "Create a new financial form with configuration",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "FinancialForm"
-                ],
-                "summary": "Create a new financial form",
-                "parameters": [
-                    {
-                        "description": "Financial form information",
-                        "name": "form",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/domain.FinancialFormRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    }
-                }
-            }
-        },
-        "/financial-form/clinic/{clinicId}": {
-            "get": {
-                "description": "Get all financial forms for a clinic",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "FinancialForm"
-                ],
-                "summary": "Get clinic's financial forms",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Clinic ID",
-                        "name": "clinicId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    }
-                }
-            }
-        },
-        "/financial-form/{id}": {
-            "get": {
-                "description": "Retrieve a financial form by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "FinancialForm"
-                ],
-                "summary": "Get financial form by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Financial Form ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update a financial form by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "FinancialForm"
-                ],
-                "summary": "Update financial form",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Financial Form ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Financial form information",
-                        "name": "form",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/domain.FinancialForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Delete a financial form by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "FinancialForm"
-                ],
-                "summary": "Delete financial form",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Financial Form ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.H"
-                        }
-                    }
-                }
-            }
-        },
         "/payslip/export/expenses": {
             "post": {
                 "description": "Export Excel Expenses",
@@ -1824,6 +1631,130 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/upload/document": {
+            "post": {
+                "description": "Upload a single document to Cloudinary (max 20 MB). Allowed: PDF, DOC, DOCX.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Upload"
+                ],
+                "summary": "Upload a document",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Document file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "url, public_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/upload/image": {
+            "post": {
+                "description": "Upload a single image file to Cloudinary (max 10 MB). Allowed: JPEG, PNG, GIF, WebP.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Upload"
+                ],
+                "summary": "Upload an image",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "url, public_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2260,6 +2191,7 @@
                 "accountTaxId",
                 "accountTypeId",
                 "code",
+                "id",
                 "name"
             ],
             "properties": {
@@ -2275,6 +2207,9 @@
                 "description": {
                     "type": "string",
                     "maxLength": 255
+                },
+                "id": {
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"
@@ -2359,10 +2294,24 @@
                 }
             }
         },
+        "domain.BulkDeleteAOCRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "domain.Clinic": {
             "type": "object",
             "properties": {
-                "abnNumber": {
+                "abnnumber": {
                     "type": "string"
                 },
                 "address": {
@@ -2389,8 +2338,14 @@
                 "id": {
                     "type": "string"
                 },
+                "isActive": {
+                    "type": "boolean"
+                },
                 "logoURL": {
                     "type": "string"
+                },
+                "methodType": {
+                    "$ref": "#/definitions/domain.MethodType"
                 },
                 "name": {
                     "type": "string"
@@ -2405,7 +2360,7 @@
                     "type": "string"
                 },
                 "shareType": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.ShareType"
                 },
                 "state": {
                     "type": "string"
@@ -2415,6 +2370,9 @@
                 },
                 "website": {
                     "type": "string"
+                },
+                "withHoldingTax": {
+                    "type": "boolean"
                 }
             }
         },
@@ -2634,77 +2592,6 @@
                 }
             }
         },
-        "domain.FinancialForm": {
-            "type": "object",
-            "properties": {
-                "calculationMethod": {
-                    "description": "net | gross",
-                    "type": "string"
-                },
-                "clinicID": {
-                    "type": "string"
-                },
-                "configuration": {
-                    "description": "JSONB",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isActive": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "quarterID": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "domain.FinancialFormRequest": {
-            "type": "object",
-            "properties": {
-                "calculationMethod": {
-                    "description": "net | gross",
-                    "type": "string"
-                },
-                "clinicId": {
-                    "type": "string"
-                },
-                "configuration": {
-                    "description": "JSONB",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isActive": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "quarterId": {
-                    "type": "string"
-                }
-            }
-        },
         "domain.H": {
             "type": "object",
             "additionalProperties": true
@@ -2723,6 +2610,17 @@
                     "type": "string"
                 }
             }
+        },
+        "domain.MethodType": {
+            "type": "string",
+            "enum": [
+                "NET",
+                "GROSS"
+            ],
+            "x-enum-varnames": [
+                "MethodTypeNet",
+                "MethodTypeGross"
+            ]
         },
         "domain.Quarter": {
             "type": "object",
@@ -2804,6 +2702,17 @@
                 }
             }
         },
+        "domain.ShareType": {
+            "type": "string",
+            "enum": [
+                "PERCENTAGE",
+                "FIXED"
+            ],
+            "x-enum-varnames": [
+                "ShareTypePercentage",
+                "ShareTypeFixed"
+            ]
+        },
         "domain.UpdateUserRequest": {
             "type": "object",
             "properties": {
@@ -2843,6 +2752,10 @@
                     "type": "boolean"
                 },
                 "lastName": {
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Never return password in JSON",
                     "type": "string"
                 },
                 "phone": {

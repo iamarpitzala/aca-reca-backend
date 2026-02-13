@@ -11,12 +11,15 @@ definitions:
       description:
         maxLength: 255
         type: string
+      id:
+        type: string
       name:
         type: string
     required:
     - accountTaxId
     - accountTypeId
     - code
+    - id
     - name
     type: object
   domain.AOCResponse:
@@ -70,9 +73,18 @@ definitions:
       user:
         $ref: '#/definitions/domain.User'
     type: object
+  domain.BulkDeleteAOCRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        type: array
+    required:
+    - ids
+    type: object
   domain.Clinic:
     properties:
-      abnNumber:
+      abnnumber:
         type: string
       address:
         type: string
@@ -90,8 +102,12 @@ definitions:
         type: string
       id:
         type: string
+      isActive:
+        type: boolean
       logoURL:
         type: string
+      methodType:
+        $ref: '#/definitions/domain.MethodType'
       name:
         type: string
       ownerShare:
@@ -101,13 +117,15 @@ definitions:
       postcode:
         type: string
       shareType:
-        type: string
+        $ref: '#/definitions/domain.ShareType'
       state:
         type: string
       updatedAt:
         type: string
       website:
         type: string
+      withHoldingTax:
+        type: boolean
     type: object
   domain.ExpenseCategory:
     properties:
@@ -251,54 +269,6 @@ definitions:
       q:
         type: string
     type: object
-  domain.FinancialForm:
-    properties:
-      calculationMethod:
-        description: net | gross
-        type: string
-      clinicID:
-        type: string
-      configuration:
-        description: JSONB
-        items:
-          type: integer
-        type: array
-      createdAt:
-        type: string
-      deletedAt:
-        type: string
-      id:
-        type: string
-      isActive:
-        type: boolean
-      name:
-        type: string
-      quarterID:
-        type: string
-      updatedAt:
-        type: string
-    type: object
-  domain.FinancialFormRequest:
-    properties:
-      calculationMethod:
-        description: net | gross
-        type: string
-      clinicId:
-        type: string
-      configuration:
-        description: JSONB
-        items:
-          type: integer
-        type: array
-      id:
-        type: string
-      isActive:
-        type: boolean
-      name:
-        type: string
-      quarterId:
-        type: string
-    type: object
   domain.H:
     additionalProperties: true
     type: object
@@ -312,6 +282,14 @@ definitions:
     - email
     - password
     type: object
+  domain.MethodType:
+    enum:
+    - NET
+    - GROSS
+    type: string
+    x-enum-varnames:
+    - MethodTypeNet
+    - MethodTypeGross
   domain.Quarter:
     properties:
       createdAt:
@@ -365,6 +343,14 @@ definitions:
       userId:
         type: string
     type: object
+  domain.ShareType:
+    enum:
+    - PERCENTAGE
+    - FIXED
+    type: string
+    x-enum-varnames:
+    - ShareTypePercentage
+    - ShareTypeFixed
   domain.UpdateUserRequest:
     properties:
       firstName:
@@ -392,6 +378,9 @@ definitions:
         type: boolean
       lastName:
         type: string
+      password:
+        description: Never return password in JSON
+        type: string
       phone:
         type: string
       updatedAt:
@@ -411,6 +400,18 @@ info:
   version: "1.0"
 paths:
   /aoc:
+    get:
+      description: Get all chart of accounts entries
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.AOCResponse'
+            type: array
+      summary: Get all AOCs
+      tags:
+      - AOC
     post:
       consumes:
       - application/json
@@ -438,6 +439,29 @@ paths:
           schema:
             $ref: '#/definitions/domain.H'
       summary: Create a new aoc
+      tags:
+      - AOC
+  /aoc/account-types:
+    get:
+      description: 'Get all accounts. Query params: sort (code|name, default code),
+        order (asc|desc, default asc)'
+      parameters:
+      - description: 'Sort field: code or name'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort order: asc or desc'
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.AOCResponse'
+            type: array
+      summary: Get all accounts (optionally sorted)
       tags:
       - AOC
   /aoc/tax:
@@ -1201,168 +1225,6 @@ paths:
       summary: Retrieve a expense type by ID
       tags:
       - Expenses
-  /financial-form:
-    post:
-      consumes:
-      - application/json
-      description: Create a new financial form with configuration
-      parameters:
-      - description: Financial form information
-        in: body
-        name: form
-        required: true
-        schema:
-          $ref: '#/definitions/domain.FinancialFormRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/domain.H'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/domain.H'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/domain.H'
-      summary: Create a new financial form
-      tags:
-      - FinancialForm
-  /financial-form/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete a financial form by ID
-      parameters:
-      - description: Financial Form ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.H'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/domain.H'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/domain.H'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/domain.H'
-      summary: Delete financial form
-      tags:
-      - FinancialForm
-    get:
-      consumes:
-      - application/json
-      description: Retrieve a financial form by ID
-      parameters:
-      - description: Financial Form ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.H'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/domain.H'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/domain.H'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/domain.H'
-      summary: Get financial form by ID
-      tags:
-      - FinancialForm
-    put:
-      consumes:
-      - application/json
-      description: Update a financial form by ID
-      parameters:
-      - description: Financial Form ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Financial form information
-        in: body
-        name: form
-        required: true
-        schema:
-          $ref: '#/definitions/domain.FinancialForm'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.H'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/domain.H'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/domain.H'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/domain.H'
-      summary: Update financial form
-      tags:
-      - FinancialForm
-  /financial-form/clinic/{clinicId}:
-    get:
-      consumes:
-      - application/json
-      description: Get all financial forms for a clinic
-      parameters:
-      - description: Clinic ID
-        in: path
-        name: clinicId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.H'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/domain.H'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/domain.H'
-      summary: Get clinic's financial forms
-      tags:
-      - FinancialForm
   /payslip/export/expenses:
     post:
       consumes:
@@ -1607,6 +1469,90 @@ paths:
       summary: Update a financial quarter
       tags:
       - Quarter
+  /upload/document:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Upload a single document to Cloudinary (max 20 MB). Allowed: PDF,
+        DOC, DOCX.'
+      parameters:
+      - description: Document file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: url, public_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "413":
+          description: Request Entity Too Large
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Upload a document
+      tags:
+      - Upload
+  /upload/image:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Upload a single image file to Cloudinary (max 10 MB). Allowed:
+        JPEG, PNG, GIF, WebP.'
+      parameters:
+      - description: Image file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: url, public_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "413":
+          description: Request Entity Too Large
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Upload an image
+      tags:
+      - Upload
   /user-clinic:
     post:
       consumes:

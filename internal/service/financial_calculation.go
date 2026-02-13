@@ -33,19 +33,28 @@ import (
 // 	IncludeInTotal bool      `json:"includeInTotal"`
 // }
 
-func CommonCalculation(customForm *domain.CustomForm, clinic *domain.Clinic, commonEntry domain.CommonEntry) *interface{} {
-	var field interface{}
+type CalculateGross struct {
+	Fields []domain.CommonEntry `json:"commonEntry"`
+}
+
+func CommonCalculation(
+	customForm *domain.CustomForm,
+	clinic *domain.Clinic,
+	commonEntry domain.CommonEntry,
+) *domain.CalculationResultNet {
+
 	switch customForm.CalculationMethod {
-	case "gross":
-	//	field = CalculationGross(customForm, clinic)
+	// case "gross":
+	// 	return CalculationGross(customForm, clinic, commonEntry)
 	case "net":
-		field = CalculationNet(customForm, clinic, commonEntry)
+		return CalculationNet(customForm, clinic, commonEntry)
+	default:
+		return nil
 	}
-	return &field
 }
 
 // func CalculationGross(customForm domain.CustomForm, clinic *domain.Clinic) {
-
+// 	return nil
 // }
 
 func CalculationNet(customForm *domain.CustomForm, clinic *domain.Clinic, commonEntry domain.CommonEntry) *domain.CalculationResultNet {
@@ -54,30 +63,30 @@ func CalculationNet(customForm *domain.CustomForm, clinic *domain.Clinic, common
 	if customForm.Fields == nil {
 		return nil
 	}
-	expen := 0.0
+	expenses := 0.0
 	income := 0.0
 	Calculation.CommissionComponent = 0.0
-	Calculation.SpuerComponent = 0.0
+	Calculation.SuperComponent = 0.0
 
 	for _, value := range commonEntry.Incomes {
 		income += value
 	}
 	for _, value := range commonEntry.Expenses {
-		expen += value
+		expenses += value
 	}
-	Calculation.NetAmount = income - expen
+	Calculation.NetAmount = income - expenses
 	Calculation.GSTCommission = float64(clinic.OwnerShare)
 
 	Calculation.CommissionForDentist = Calculation.NetAmount * (Calculation.GSTCommission / 100)
 
 	if clinic.WithHoldingTax {
 		Calculation.CommissionComponent = Calculation.CommissionForDentist / 1.12
-		Calculation.SpuerComponent = Calculation.CommissionComponent * 0.12
-		Calculation.GSTCommission = Calculation.CommissionComponent * 0.1
-		Calculation.TotalPayableToDentist = Calculation.CommissionComponent + Calculation.GSTCommission
+		Calculation.SuperComponent = Calculation.CommissionComponent * 0.12
+		Calculation.GSTOnCommission = Calculation.CommissionComponent * 0.1
+		Calculation.TotalPaybleToDentist = Calculation.CommissionComponent + Calculation.GSTCommission
 	} else {
-		Calculation.GSTCommission = Calculation.CommissionForDentist * 0.1
-		Calculation.TotalPayableToDentist = Calculation.CommissionForDentist + Calculation.GSTCommission
+		Calculation.GSTOnCommission = Calculation.CommissionForDentist * 0.1
+		Calculation.TotalPaybleToDentist = Calculation.CommissionForDentist + Calculation.GSTCommission
 	}
 
 	return &Calculation

@@ -2,7 +2,6 @@ package entry
 
 import (
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
-	"github.com/iamarpitzala/aca-reca-backend/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
@@ -10,6 +9,6 @@ import (
 
 func RegisterEntryRoute(e *gin.RouterGroup, entry *httpHandler.EntryHandler, tokenService *service.TokenService) {
 	entr := e.Group("/entry")
-	entr.Use(middleware.AuthMiddleware(tokenService))
+	//entr.Use(middleware.AuthMiddleware(tokenService))
 	entr.POST("/", entry.AddEntry)
 }

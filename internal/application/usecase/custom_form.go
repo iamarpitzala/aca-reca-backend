@@ -36,10 +36,10 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 	if len(req.Fields) == 0 {
 		req.Fields = []byte("[]")
 	}
-	outworkEnabled := false
-	if req.OutworkEnabled != nil {
-		outworkEnabled = *req.OutworkEnabled
-	}
+	// outworkEnabled := false
+	// if req.OutworkEnabled != nil {
+	// 	outworkEnabled = *req.OutworkEnabled
+	// }
 	now := time.Now()
 	form := &domain.CustomForm{
 		ID:                           uuid.New(),
@@ -52,12 +52,12 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 		Fields:                       req.Fields,
 		DefaultPaymentResponsibility: req.DefaultPaymentResponsibility,
 		ServiceFacilityFeePercent:    req.ServiceFacilityFeePercent,
-		OutworkEnabled:               outworkEnabled,
-		OutworkRatePercent:           req.OutworkRatePercent,
-		Version:                      1,
-		CreatedBy:                    userID,
-		CreatedAt:                    now,
-		UpdatedAt:                    now,
+		// OutworkEnabled:               outworkEnabled,
+		// OutworkRatePercent:           req.OutworkRatePercent,
+		Version:   1,
+		CreatedBy: userID,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 	if err := s.repo.Create(ctx, form); err != nil {
 		return nil, err
@@ -156,12 +156,12 @@ func customFormToResponse(form *domain.CustomForm) *domain.CustomFormResponse {
 		Fields:                       form.Fields,
 		DefaultPaymentResponsibility: form.DefaultPaymentResponsibility,
 		ServiceFacilityFeePercent:    form.ServiceFacilityFeePercent,
-		OutworkEnabled:               form.OutworkEnabled,
-		OutworkRatePercent:           form.OutworkRatePercent,
-		Version:                      form.Version,
-		PublishedAt:                  form.PublishedAt,
-		CreatedBy:                    form.CreatedBy.String(),
-		CreatedAt:                    form.CreatedAt,
-		UpdatedAt:                    form.UpdatedAt,
+		// OutworkEnabled:               form.OutworkEnabled,
+		// OutworkRatePercent:           form.OutworkRatePercent,
+		Version:     form.Version,
+		PublishedAt: form.PublishedAt,
+		CreatedBy:   form.CreatedBy.String(),
+		CreatedAt:   form.CreatedAt,
+		UpdatedAt:   form.UpdatedAt,
 	}
 }

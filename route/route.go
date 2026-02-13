@@ -49,6 +49,7 @@ func InitRouter(e *gin.Engine) {
 	expenseRepo := postgres.NewExpenseRepository(sqlxDB)
 	aocRepo := postgres.NewAOCRepository(sqlxDB)
 	entryRepo := postgres.NewEntryRepo(sqlxDB)
+	customFormRepo := postgres.NewCustomFormRepository(sqlxDB)
 
 	// Use cases (application layer)
 	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService)
@@ -59,7 +60,7 @@ func InitRouter(e *gin.Engine) {
 	financialFormUC := usecase.NewFinancialFormService(financialFormRepo, clinicRepo)
 	expensesUC := usecase.NewExpensesService(expenseRepo)
 	aocUC := usecase.NewAOCService(aocRepo)
-	entryUC := usecase.NewEntryService(entryRepo)
+	entryUC := usecase.NewEntryService(entryRepo, clinicRepo, customFormRepo)
 
 	// Custom form still uses legacy service (calculation + entry logic to be ported later)
 	customFormService := service.NewCustomFormService(sqlxDB)

@@ -332,13 +332,13 @@ func ConvertJSONBToNormalized(entry *CustomFormEntry, form *CustomForm) (*Normal
 		}
 	}
 
-	// Parse summary
+	// Parse summary - always create summary even if calculations are empty
+	summary := &EntrySummary{
+		EntryID:   entry.ID,
+		CreatedAt: entry.CreatedAt,
+		UpdatedAt: entry.UpdatedAt,
+	}
 	if calc != nil {
-		summary := &EntrySummary{
-			EntryID:   entry.ID,
-			CreatedAt: entry.CreatedAt,
-			UpdatedAt: entry.UpdatedAt,
-		}
 		if val, ok := calc["totalBaseAmount"].(float64); ok {
 			summary.TotalBaseAmount = val
 		}
@@ -371,8 +371,8 @@ func ConvertJSONBToNormalized(entry *CustomFormEntry, form *CustomForm) (*Normal
 				summary.BasExpensesG11 = val
 			}
 		}
-		normalized.Summary = summary
 	}
+	normalized.Summary = summary
 
 	// Parse deductions
 	if len(entry.Deductions) > 0 {
@@ -409,25 +409,42 @@ func ConvertJSONBToNormalized(entry *CustomFormEntry, form *CustomForm) (*Normal
 	}
 
 	// Parse net method details
-	if calc != nil && form.CalculationMethod == "net" {
-		if commission, ok := calc["commission"].(float64); ok {
-			nd := &EntryNetDetails{
-				EntryID:    entry.ID,
-				Commission: commission,
-				CreatedAt:  entry.CreatedAt,
-				UpdatedAt:  entry.UpdatedAt,
+	if form.CalculationMethod == "net" {
+		nd := &EntryNetDetails{
+			EntryID:    entry.ID,
+			Commission: 0,
+			CreatedAt:  entry.CreatedAt,
+			UpdatedAt:  entry.UpdatedAt,
+		}
+		
+		// Set commission percent from deductions (required field)
+		if normalized.Deductions != nil && normalized.Deductions.CommissionPercent != nil {
+			nd.CommissionPercent = *normalized.Deductions.CommissionPercent
+		} else {
+			// Default to 0 if not provided
+			nd.CommissionPercent = 0
+		}
+		
+		// Set super holding enabled from deductions
+		if normalized.Deductions != nil && normalized.Deductions.SuperHoldingEnabled != nil {
+			nd.SuperHoldingEnabled = *normalized.Deductions.SuperHoldingEnabled
+		}
+		
+		// Set super component percent from deductions
+		if normalized.Deductions != nil && normalized.Deductions.SuperComponentPercent != nil {
+			nd.SuperComponentPercent = normalized.Deductions.SuperComponentPercent
+		}
+		
+		// Populate calculated values from calculations JSONB if available
+		if calc != nil {
+			if commission, ok := calc["commission"].(float64); ok {
+				nd.Commission = commission
 			}
 			if val, ok := calc["gstOnCommission"].(float64); ok {
 				nd.GstOnCommission = val
 			}
 			if val, ok := calc["totalPaymentReceived"].(float64); ok {
 				nd.TotalPaymentReceived = val
-			}
-			if normalized.Deductions != nil && normalized.Deductions.CommissionPercent != nil {
-				nd.CommissionPercent = *normalized.Deductions.CommissionPercent
-			}
-			if normalized.Deductions != nil && normalized.Deductions.SuperHoldingEnabled != nil {
-				nd.SuperHoldingEnabled = *normalized.Deductions.SuperHoldingEnabled
 			}
 			if val, ok := calc["commissionComponent"].(float64); ok {
 				nd.CommissionComponent = &val
@@ -438,11 +455,28 @@ func ConvertJSONBToNormalized(entry *CustomFormEntry, form *CustomForm) (*Normal
 			if val, ok := calc["totalForReconciliation"].(float64); ok {
 				nd.TotalForReconciliation = &val
 			}
-			if normalized.Deductions != nil && normalized.Deductions.SuperComponentPercent != nil {
-				nd.SuperComponentPercent = normalized.Deductions.SuperComponentPercent
-			}
-			normalized.NetDetails = nd
 		}
+		
+		// If super holding is enabled but super-related fields are not set, calculate them from commission
+		// This handles cases where calculations JSONB might be missing these fields
+		if nd.SuperHoldingEnabled && nd.CommissionComponent == nil {
+			// Calculate commission component and super component from commission
+			superPercent := 12.0
+			if nd.SuperComponentPercent != nil {
+				superPercent = *nd.SuperComponentPercent
+			}
+			superMultiplier := 1.0 + (superPercent / 100.0)
+			commissionComponent := nd.Commission / superMultiplier
+			nd.CommissionComponent = &commissionComponent
+			
+			superComponent := commissionComponent * (superPercent / 100.0)
+			nd.SuperComponent = &superComponent
+			
+			totalForReconciliation := superComponent + commissionComponent
+			nd.TotalForReconciliation = &totalForReconciliation
+		}
+		
+		normalized.NetDetails = nd
 	}
 
 	// Parse gross method details

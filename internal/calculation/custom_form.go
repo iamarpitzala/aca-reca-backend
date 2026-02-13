@@ -37,9 +37,9 @@ type deductionsInput struct {
 	ServiceFeeOverride         *float64 `json:"serviceFeeOverride"`
 	EntryPaymentResponsibility *string  `json:"entryPaymentResponsibility"`
 	// Commission calculations (for independent contractors)
-	CommissionPercent          *float64 `json:"commissionPercent"`
-	SuperHoldingEnabled       *bool    `json:"superHoldingEnabled"`
-	SuperComponentPercent      *float64 `json:"superComponentPercent"`
+	CommissionPercent     *float64 `json:"commissionPercent"`
+	SuperHoldingEnabled   *bool    `json:"superHoldingEnabled"`
+	SuperComponentPercent *float64 `json:"superComponentPercent"`
 }
 
 // Output structures (match frontend EntryCalculations)
@@ -80,12 +80,12 @@ type calculationsOutput struct {
 	OutworkChargeGst        *float64    `json:"outworkChargeGst,omitempty"`
 	OutworkChargeTotal      *float64    `json:"outworkChargeTotal,omitempty"`
 	// Commission calculations (for independent contractors)
-	Commission              *float64    `json:"commission,omitempty"`
-	GstOnCommission         *float64    `json:"gstOnCommission,omitempty"`
-	CommissionComponent     *float64    `json:"commissionComponent,omitempty"`
-	SuperComponent          *float64    `json:"superComponent,omitempty"`
-	TotalForReconciliation  *float64    `json:"totalForReconciliation,omitempty"`
-	TotalPaymentReceived    *float64    `json:"totalPaymentReceived,omitempty"`
+	Commission             *float64 `json:"commission,omitempty"`
+	GstOnCommission        *float64 `json:"gstOnCommission,omitempty"`
+	CommissionComponent    *float64 `json:"commissionComponent,omitempty"`
+	SuperComponent         *float64 `json:"superComponent,omitempty"`
+	TotalForReconciliation *float64 `json:"totalForReconciliation,omitempty"`
+	TotalPaymentReceived   *float64 `json:"totalPaymentReceived,omitempty"`
 }
 
 func round2(n float64) float64 { return math.Round(n*100) / 100 }
@@ -146,6 +146,7 @@ const defaultServiceFeePct = 50.0
 func RunEntryCalculation(
 	formFieldsJSON []byte,
 	formType string,
+	formCalculationMethod string,
 	formServiceFeePct *float64,
 	formOutworkEnabled bool,
 	formOutworkRatePercent *float64,
@@ -283,19 +284,36 @@ func RunEntryCalculation(
 	hasIncome := formType == "income" || formType == "both"
 	isNetMethod := false
 	isGrossMethod := false
-	
+
+	// First check form's calculation method (case-insensitive)
+	calcMethodLower := strings.ToLower(formCalculationMethod)
+	switch calcMethodLower {
+	case "net":
+		isNetMethod = true
+	case "gross":
+		isGrossMethod = true
+	}
+
+	// Then check deductions to override or confirm
 	if deductions != nil {
 		if deductions.CommissionPercent != nil && *deductions.CommissionPercent > 0 {
 			isNetMethod = true
+			isGrossMethod = false // Net method takes precedence
 		}
 		if deductions.ServiceFacilityFeePercent != nil && *deductions.ServiceFacilityFeePercent > 0 {
-			isGrossMethod = true
+			if !isNetMethod { // Only set gross if not already net method
+				isGrossMethod = true
+			}
 		}
 	}
-	
-	// If no explicit method in deductions, check form defaults
+
+	// If no explicit method in deductions or form, check form defaults
+	// Default to gross method if service fee percent is set, otherwise default to gross for income forms
 	if !isNetMethod && !isGrossMethod {
 		if formServiceFeePct != nil && *formServiceFeePct > 0 {
+			isGrossMethod = true
+		} else if hasIncome {
+			// Default to gross method for income forms if no explicit method is set
 			isGrossMethod = true
 		}
 	}
@@ -402,20 +420,29 @@ func RunEntryCalculation(
 	// Super Component = commissionComponent * superComponentPercent/100 (when super holding enabled)
 	// Total for Reconciliation = superComponent + commissionComponent (when super holding enabled)
 	// Total Payment Received = Commission + GST on Commission
-	if hasIncome && isNetMethod && !isGrossMethod && deductions != nil && deductions.CommissionPercent != nil && *deductions.CommissionPercent > 0 {
+	// Calculate commission if form is net method, even if CommissionPercent is 0 (will result in 0 commission)
+	if hasIncome && isNetMethod && !isGrossMethod {
+		commissionPercent := 0.0
+		if deductions != nil && deductions.CommissionPercent != nil {
+			commissionPercent = *deductions.CommissionPercent
+		}
 		netFee := out.TotalBaseAmount
 		if out.NetFee != nil {
 			netFee = *out.NetFee
 		}
-		commissionPercent := *deductions.CommissionPercent
 		commission := round2(netFee * (commissionPercent / 100.0))
 		out.Commission = &commission
 
 		// Check if super holding is enabled
-		superHoldingEnabled := deductions.SuperHoldingEnabled != nil && *deductions.SuperHoldingEnabled
+		superHoldingEnabled := false
 		superComponentPercent := 12.0 // default 12%
-		if deductions.SuperComponentPercent != nil && *deductions.SuperComponentPercent > 0 {
-			superComponentPercent = *deductions.SuperComponentPercent
+		if deductions != nil {
+			if deductions.SuperHoldingEnabled != nil {
+				superHoldingEnabled = *deductions.SuperHoldingEnabled
+			}
+			if deductions.SuperComponentPercent != nil && *deductions.SuperComponentPercent > 0 {
+				superComponentPercent = *deductions.SuperComponentPercent
+			}
 		}
 
 		var commissionForGst float64

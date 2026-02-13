@@ -132,6 +132,7 @@ func (r *customFormRepo) CreateEntry(ctx context.Context, entry *domain.CustomFo
 }
 
 func (r *customFormRepo) GetEntryByID(ctx context.Context, id uuid.UUID) (*domain.CustomFormEntry, error) {
+	// Use transaction for read operations to ensure consistency
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -149,6 +150,8 @@ func (r *customFormRepo) GetEntryByID(ctx context.Context, id uuid.UUID) (*domai
 		return nil, fmt.Errorf("failed to convert normalized entry: %w", err)
 	}
 
+	// For read operations, we don't need to commit, but we should explicitly handle the transaction
+	// The defer rollback is fine for read-only transactions
 	return entry, nil
 }
 

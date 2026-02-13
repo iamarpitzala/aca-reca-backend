@@ -15,6 +15,7 @@ func NewEntryCalculationEngine() port.EntryCalculationEngine {
 func (e *EngineAdapter) RunEntryCalculation(
 	formFieldsJSON []byte,
 	formType string,
+	formCalculationMethod string,
 	serviceFacilityFeePercent *float64,
 	outworkEnabled bool,
 	outworkRatePercent *float64,
@@ -23,6 +24,7 @@ func (e *EngineAdapter) RunEntryCalculation(
 	return calculation.RunEntryCalculation(
 		formFieldsJSON,
 		formType,
+		formCalculationMethod,
 		serviceFacilityFeePercent,
 		outworkEnabled,
 		outworkRatePercent,

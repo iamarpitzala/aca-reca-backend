@@ -15,8 +15,8 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/route/aoc"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	bas_snapshot "github.com/iamarpitzala/aca-reca-backend/route/bas_snapshot"
-	clinic_financial_settings "github.com/iamarpitzala/aca-reca-backend/route/clinic_financial_settings"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
+	clinic_financial_settings "github.com/iamarpitzala/aca-reca-backend/route/clinic_financial_settings"
 	custom_form "github.com/iamarpitzala/aca-reca-backend/route/custom_form"
 	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
@@ -49,8 +49,8 @@ func InitRouter(e *gin.Engine) {
 	aocRepo := postgres.NewAOCRepository(sqlxDB)
 	customFormRepo := postgres.NewCustomFormRepository(sqlxDB)
 	transactionRepo := postgres.NewTransactionRepository(sqlxDB)
-		clinicFinancialSettingsRepo := postgres.NewClinicFinancialSettingsRepository(sqlxDB)
-		basSnapshotRepo := postgres.NewBASSnapshotRepository(sqlxDB)
+	clinicFinancialSettingsRepo := postgres.NewClinicFinancialSettingsRepository(sqlxDB)
+	basSnapshotRepo := postgres.NewBASSnapshotRepository(sqlxDB)
 
 	// Calculation engine (decoupled for accounting accuracy)
 	calcEngine := calculation.NewEntryCalculationEngine()
@@ -63,10 +63,10 @@ func InitRouter(e *gin.Engine) {
 	quarterUC := usecase.NewQuarterService(clinicFinancialSettingsRepo)
 	expensesUC := usecase.NewExpensesService(expenseRepo)
 	aocUC := usecase.NewAOCService(aocRepo)
-		customFormUC := usecase.NewCustomFormService(customFormRepo, clinicRepo, calcEngine)
-		transactionPostingUC := usecase.NewTransactionPostingService(customFormRepo, transactionRepo, clinicCOARepo, aocRepo)
-		clinicFinancialSettingsUC := usecase.NewClinicFinancialSettingsService(clinicFinancialSettingsRepo, clinicRepo)
-		basSnapshotUC := usecase.NewBASSnapshotService(basSnapshotRepo, clinicRepo)
+	customFormUC := usecase.NewCustomFormService(customFormRepo, clinicRepo, calcEngine)
+	transactionPostingUC := usecase.NewTransactionPostingService(customFormRepo, transactionRepo, clinicCOARepo, aocRepo)
+	clinicFinancialSettingsUC := usecase.NewClinicFinancialSettingsService(clinicFinancialSettingsRepo, clinicRepo)
+	basSnapshotUC := usecase.NewBASSnapshotService(basSnapshotRepo, clinicRepo)
 
 	// HTTP handlers (driving adapters)
 	authHandler := httpHandler.NewAuthHandler(authUC, oauthService, cfg.OAuth.FrontendURL)
@@ -78,8 +78,8 @@ func InitRouter(e *gin.Engine) {
 	expensesHandler := httpHandler.NewExpensesHandler(expensesUC)
 	quarterHandler := httpHandler.NewQuarterHandler(quarterUC)
 	aosHandler := httpHandler.NewAOCHandler(aocUC)
-		clinicFinancialSettingsHandler := httpHandler.NewClinicFinancialSettingsHandler(clinicFinancialSettingsUC)
-		basSnapshotHandler := httpHandler.NewBASSnapshotHandler(basSnapshotUC)
+	clinicFinancialSettingsHandler := httpHandler.NewClinicFinancialSettingsHandler(clinicFinancialSettingsUC)
+	basSnapshotHandler := httpHandler.NewBASSnapshotHandler(basSnapshotUC)
 
 	// Cloudinary upload (optional: nil if env not set)
 	cloudinarySvc, _ := cloudinary.NewService(cfg.Cloudinary)
@@ -99,6 +99,6 @@ func InitRouter(e *gin.Engine) {
 	expense.RegisterExpensesRoutes(v1, expensesHandler, tokenService)
 	aoc.RegisterAOCRoutes(v1, aosHandler, tokenService)
 	upload_route.RegisterUploadRoutes(v1, uploadHandler, tokenService)
-		clinic_financial_settings.RegisterClinicFinancialSettingsRoutes(v1, clinicFinancialSettingsHandler, tokenService)
-		bas_snapshot.RegisterBASSnapshotRoutes(v1, basSnapshotHandler, tokenService)
+	clinic_financial_settings.RegisterClinicFinancialSettingsRoutes(v1, clinicFinancialSettingsHandler, tokenService)
+	bas_snapshot.RegisterBASSnapshotRoutes(v1, basSnapshotHandler, tokenService)
 }

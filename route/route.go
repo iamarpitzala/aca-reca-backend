@@ -15,6 +15,7 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
 	custom_form "github.com/iamarpitzala/aca-reca-backend/route/custom_form"
+	"github.com/iamarpitzala/aca-reca-backend/route/entry"
 	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
 	financial_form "github.com/iamarpitzala/aca-reca-backend/route/financial_form"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payship"
@@ -47,6 +48,7 @@ func InitRouter(e *gin.Engine) {
 	financialFormRepo := postgres.NewFinancialFormRepository(sqlxDB)
 	expenseRepo := postgres.NewExpenseRepository(sqlxDB)
 	aocRepo := postgres.NewAOCRepository(sqlxDB)
+	entryRepo := postgres.NewEntryRepo(sqlxDB)
 
 	// Use cases (application layer)
 	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService)
@@ -57,6 +59,7 @@ func InitRouter(e *gin.Engine) {
 	financialFormUC := usecase.NewFinancialFormService(financialFormRepo, clinicRepo)
 	expensesUC := usecase.NewExpensesService(expenseRepo)
 	aocUC := usecase.NewAOCService(aocRepo)
+	entryUC := usecase.NewEntryService(entryRepo)
 
 	// Custom form still uses legacy service (calculation + entry logic to be ported later)
 	customFormService := service.NewCustomFormService(sqlxDB)
@@ -73,6 +76,7 @@ func InitRouter(e *gin.Engine) {
 	expensesHandler := httpHandler.NewExpensesHandler(expensesUC)
 	quarterHandler := httpHandler.NewQuarterHandler(quarterUC)
 	aosHandler := httpHandler.NewAOCHandler(aocUC)
+	entryHandler := httpHandler.NewEntryHandler(entryUC)
 
 	// Cloudinary upload (optional: nil if env not set)
 	cloudinarySvc, _ := cloudinary.NewService(cfg.Cloudinary)
@@ -93,4 +97,5 @@ func InitRouter(e *gin.Engine) {
 	expense.RegisterExpensesRoutes(v1, expensesHandler, tokenService)
 	aoc.RegisterAOCRoutes(v1, aosHandler, tokenService)
 	upload_route.RegisterUploadRoutes(v1, uploadHandler, tokenService)
+	entry.RegisterEntryRoute(v1, entryHandler, tokenService)
 }

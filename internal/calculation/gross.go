@@ -495,3 +495,71 @@ func buildGrossBASMapping(
 		ExpensesG11:  round2(expenseAggregates.TotalNetExpenses),
 	}
 }
+
+// FieldTotal holds field total with section for reductions mapping.
+type FieldTotal struct {
+	FieldID     string
+	Section     string
+	BaseAmount  float64
+	GstAmount   float64
+	TotalAmount float64
+}
+
+// GrossCalculationInput holds pre-computed values for structured gross calculation.
+type GrossCalculationInput struct {
+	IncomeExclGST             float64
+	NetAmount                 float64
+	ServiceFacilityFeePercent float64
+	OutworkEnabled            bool
+	GSTRate                   float64
+	FieldTotals               []FieldTotal
+}
+
+// GrossCalculationStructuredOutput holds output from RunGrossCalculationStructured.
+type GrossCalculationStructuredOutput struct {
+	ServiceFacilityFeePercent float64
+	ServiceFeeBase            float64
+	GstOnServiceFee           float64
+	TotalServiceFee           float64
+	NetAmount                 float64
+}
+
+// RunGrossCalculationStructured computes service fee details from pre-computed income, net amount, and field totals.
+func RunGrossCalculationStructured(input GrossCalculationInput) GrossCalculationStructuredOutput {
+	serviceFeePct := &input.ServiceFacilityFeePercent
+	if input.ServiceFacilityFeePercent == 0 {
+		serviceFeePct = nil // use default 60% in CalculateServiceFee
+	}
+
+	var totalNetExpenses, totalExpensesGST float64
+	for _, ft := range input.FieldTotals {
+		if strings.ToUpper(ft.Section) == util.FormTypeExpense {
+			totalNetExpenses += ft.BaseAmount
+			totalExpensesGST += ft.GstAmount
+		}
+	}
+
+	serviceFeeCalc := CalculateServiceFee(
+		input.IncomeExclGST,
+		input.NetAmount,
+		totalNetExpenses,
+		totalExpensesGST,
+		input.OutworkEnabled,
+		serviceFeePct,
+	)
+
+	out := GrossCalculationStructuredOutput{
+		ServiceFacilityFeePercent: input.ServiceFacilityFeePercent,
+		NetAmount:                 input.NetAmount,
+	}
+	if input.OutworkEnabled {
+		out.ServiceFeeBase = round2(serviceFeeCalc.ServiceAndFacilityFee)
+		out.GstOnServiceFee = round2(serviceFeeCalc.GSTOnServiceFee)
+		out.TotalServiceFee = round2(serviceFeeCalc.TotalServiceAndFacilityIncGST)
+	} else {
+		out.ServiceFeeBase = round2(serviceFeeCalc.ServiceAndFacilityFee)
+		out.GstOnServiceFee = round2(serviceFeeCalc.GSTOnServiceFee)
+		out.TotalServiceFee = round2(serviceFeeCalc.TotalServiceAndFacilityFee)
+	}
+	return out
+}

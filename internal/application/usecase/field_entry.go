@@ -15,17 +15,17 @@ import (
 )
 
 type FieldEntryService struct {
-	repo                    port.FieldEntryRepository
-	formRepo                port.CustomFormRepository
-	fieldRepo               port.CustomFormFieldRepository
-	clinicRepo              port.ClinicRepository
-	calcRepo                port.CustomFormCalculationRepository
-	netDetailsRepo          port.EntryNetDetailsRepository
-	grossDetailsRepo        port.EntryGrossDetailsRepository
-	grossReductionRepo       port.EntryGrossReductionRepository
-	grossReimbursementRepo   port.EntryGrossReimbursementRepository
-	financialSettingsRepo   port.ClinicFinancialSettingsRepository
-	calcEngine              port.EntryCalculationEngine
+	repo                   port.FieldEntryRepository
+	formRepo               port.CustomFormRepository
+	fieldRepo              port.CustomFormFieldRepository
+	clinicRepo             port.ClinicRepository
+	calcRepo               port.CustomFormCalculationRepository
+	netDetailsRepo         port.EntryNetDetailsRepository
+	grossDetailsRepo       port.EntryGrossDetailsRepository
+	grossReductionRepo     port.EntryGrossReductionRepository
+	grossReimbursementRepo port.EntryGrossReimbursementRepository
+	financialSettingsRepo  port.ClinicFinancialSettingsRepository
+	calcEngine             port.EntryCalculationEngine
 }
 
 func NewFieldEntryService(
@@ -42,17 +42,17 @@ func NewFieldEntryService(
 	calcEngine port.EntryCalculationEngine,
 ) *FieldEntryService {
 	return &FieldEntryService{
-		repo:                    repo,
-		formRepo:                formRepo,
-		fieldRepo:               fieldRepo,
-		clinicRepo:              clinicRepo,
-		calcRepo:                calcRepo,
-		netDetailsRepo:          netDetailsRepo,
-		grossDetailsRepo:        grossDetailsRepo,
-		grossReductionRepo:       grossReductionRepo,
-		grossReimbursementRepo:   grossReimbursementRepo,
-		financialSettingsRepo:   financialSettingsRepo,
-		calcEngine:              calcEngine,
+		repo:                   repo,
+		formRepo:               formRepo,
+		fieldRepo:              fieldRepo,
+		clinicRepo:             clinicRepo,
+		calcRepo:               calcRepo,
+		netDetailsRepo:         netDetailsRepo,
+		grossDetailsRepo:       grossDetailsRepo,
+		grossReductionRepo:     grossReductionRepo,
+		grossReimbursementRepo: grossReimbursementRepo,
+		financialSettingsRepo:  financialSettingsRepo,
+		calcEngine:             calcEngine,
 	}
 }
 
@@ -398,22 +398,22 @@ func (s *FieldEntryService) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 	}
 
 	return &domain.EntryResponse{
-		ID:                   entry.ID.String(),
-		FormID:               entry.FormID.String(),
-		FormName:             form.Name,
-		FormType:             form.FormType,
-		ClinicID:             form.ClinicID.String(),
-		QuarterID:            nil,
-		Values:               fieldValueResponses,
-		Calculations:         calculationsJSON,
-		EntryDate:            entryDate,
-		Description:          "",
-		Remarks:              "",
+		ID:                    entry.ID.String(),
+		FormID:                entry.FormID.String(),
+		FormName:              form.Name,
+		FormType:              form.FormType,
+		ClinicID:              form.ClinicID.String(),
+		QuarterID:             nil,
+		Values:                fieldValueResponses,
+		Calculations:          calculationsJSON,
+		EntryDate:             entryDate,
+		Description:           "",
+		Remarks:               "",
 		PaymentResponsibility: nil,
-		Deductions:           nil,
-		CreatedBy:            entry.CreatedBy.String(),
-		CreatedAt:            entry.CreatedAt,
-		UpdatedAt:            entry.UpdatedAt,
+		Deductions:            nil,
+		CreatedBy:             entry.CreatedBy.String(),
+		CreatedAt:             entry.CreatedAt,
+		UpdatedAt:             entry.UpdatedAt,
 	}, nil
 }
 
@@ -639,7 +639,7 @@ func (s *FieldEntryService) GetByClinicID(ctx context.Context, clinicID uuid.UUI
 		}
 
 		entryID := firstEntry.ID.String()
-		
+
 		// Calculate totals
 		calculationsJSON, _ := s.calculateEntryTotals(ctx, form, firstEntry.FormVersionID, fieldValueResponses, nil, nil)
 		if len(calculationsJSON) == 0 {
@@ -768,7 +768,7 @@ func (s *FieldEntryService) GetClinicIDFromForm(ctx context.Context, formID uuid
 
 // getGSTSettings fetches GST settings from clinic financial settings
 func (s *FieldEntryService) getGSTSettings(ctx context.Context, clinicID uuid.UUID) (gstRate float64, gstType string) {
-	gstRate = 10.0 // Default GST rate
+	gstRate = 10.0        // Default GST rate
 	gstType = "exclusive" // Default GST type
 
 	financialSettings, err := s.financialSettingsRepo.GetByClinicID(ctx, clinicID)
@@ -798,11 +798,11 @@ func (s *FieldEntryService) calculateEntryTotals(ctx context.Context, form *doma
 
 	// Convert CustomFormField to calcField format
 	type calcField struct {
-		ID             string  `json:"id"`
-		Name           string  `json:"name"`
-		Type           string  `json:"type"`
-		Section        string  `json:"section"`
-		IncludeInTotal bool    `json:"includeInTotal"`
+		ID             string `json:"id"`
+		Name           string `json:"name"`
+		Type           string `json:"type"`
+		Section        string `json:"section"`
+		IncludeInTotal bool   `json:"includeInTotal"`
 		GstConfig      *struct {
 			Enabled bool    `json:"enabled"`
 			Rate    float64 `json:"rate"`
@@ -815,7 +815,7 @@ func (s *FieldEntryService) calculateEntryTotals(ctx context.Context, form *doma
 		FieldID         string      `json:"fieldId"`
 		FieldName       string      `json:"fieldName"`
 		Value           interface{} `json:"value"`
-		ManualGstAmount *float64   `json:"manualGstAmount"`
+		ManualGstAmount *float64    `json:"manualGstAmount"`
 	}
 
 	calcFields := make([]calcField, 0, len(fields))
@@ -968,30 +968,30 @@ func (s *FieldEntryService) calculateAndStoreNetDetails(
 
 	// Step 4: Run NET calculation
 	netInput := calculation.NetCalculationInput{
-		TotalPaymentReceived: totalPaymentReceived,
-		CommissionPercent:    commissionPercent,
-		SuperHoldingEnabled:  superHoldingEnabled,
+		TotalPaymentReceived:  totalPaymentReceived,
+		CommissionPercent:     commissionPercent,
+		SuperHoldingEnabled:   superHoldingEnabled,
 		SuperComponentPercent: superComponentPercent,
-		GSTRate:              gstRate,
-		GSTType:              gstType,
+		GSTRate:               gstRate,
+		GSTType:               gstType,
 	}
 	netOutput := calculation.RunNetCalculation(netInput)
 
 	// Step 5: Create and store net details
 	netDetails := &domain.EntryNetDetails{
-		ID:                      uuid.New(),
-		EntryID:                 entryID,
-		CommissionPercent:       netOutput.CommissionPercent,
-		Commission:              netOutput.Commission,
+		ID:                     uuid.New(),
+		EntryID:                entryID,
+		CommissionPercent:      netOutput.CommissionPercent,
+		Commission:             netOutput.Commission,
 		GSTOnCommission:        netOutput.GSTOnCommission,
-		TotalPaymentReceived:     netOutput.TotalPaymentReceived,
-		SuperHoldingEnabled:      netOutput.SuperHoldingEnabled,
-		SuperComponentPercent:    netOutput.SuperComponentPercent,
-		CommissionComponent:      netOutput.CommissionComponent,
-		SuperComponent:           netOutput.SuperComponent,
-		TotalForReconciliation:   netOutput.TotalForReconciliation,
-		CreatedAt:                now,
-		UpdatedAt:                now,
+		TotalPaymentReceived:   netOutput.TotalPaymentReceived,
+		SuperHoldingEnabled:    netOutput.SuperHoldingEnabled,
+		SuperComponentPercent:  netOutput.SuperComponentPercent,
+		CommissionComponent:    netOutput.CommissionComponent,
+		SuperComponent:         netOutput.SuperComponent,
+		TotalForReconciliation: netOutput.TotalForReconciliation,
+		CreatedAt:              now,
+		UpdatedAt:              now,
 	}
 
 	return s.netDetailsRepo.Create(ctx, netDetails)
@@ -1083,8 +1083,8 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(
 		NetAmount:                 netAmountResult.NetAmount,
 		ServiceFacilityFeePercent: serviceFacilityFeePercent,
 		OutworkEnabled:            outworkEnabled,
-		GSTRate:                  gstRate,
-		FieldTotals:              fieldTotals,
+		GSTRate:                   gstRate,
+		FieldTotals:               fieldTotals,
 	}
 	grossOutput := calculation.RunGrossCalculationStructured(grossInput)
 

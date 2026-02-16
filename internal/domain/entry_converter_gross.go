@@ -7,8 +7,8 @@ import (
 )
 
 // parseGrossDetailsFromCalc builds EntryGrossDetails when form uses GROSS and calc has serviceFeeBase.
-func parseGrossDetailsFromCalc(entry *CustomFormEntry, form *CustomForm, calc map[string]interface{}, deductions *EntryDeductions) *EntryGrossDetails {
-	if entry == nil || form == nil || calc == nil || form.CalculationMethod != string(CalcMethodGross) {
+func parseGrossDetailsFromCalc(entry *FieldEntry, calc map[string]interface{}, deductions *EntryDeductions) *EntryGrossDetails {
+	if entry == nil || calc == nil {
 		return nil
 	}
 	if _, hasServiceFeeBase := calc["serviceFeeBase"]; !hasServiceFeeBase {
@@ -26,8 +26,6 @@ func parseGrossDetailsFromCalc(entry *CustomFormEntry, form *CustomForm, calc ma
 	}
 	if deductions != nil && deductions.ServiceFacilityFeePercent != nil {
 		gd.ServiceFacilityFeePercent = *deductions.ServiceFacilityFeePercent
-	} else if form.ServiceFacilityFeePercent != nil && *form.ServiceFacilityFeePercent > 0 {
-		gd.ServiceFacilityFeePercent = *form.ServiceFacilityFeePercent
 	} else {
 		gd.ServiceFacilityFeePercent = 50
 	}
@@ -35,7 +33,7 @@ func parseGrossDetailsFromCalc(entry *CustomFormEntry, form *CustomForm, calc ma
 }
 
 // parseGrossReductionsSummaryFromCalc builds EntryGrossReductionsSummary when any summary amount is present.
-func parseGrossReductionsSummaryFromCalc(entry *CustomFormEntry, calc map[string]interface{}) *EntryGrossReductionsSummary {
+func parseGrossReductionsSummaryFromCalc(entry *FieldEntry, calc map[string]interface{}) *EntryGrossReductionsSummary {
 	if entry == nil || calc == nil {
 		return nil
 	}
@@ -44,23 +42,23 @@ func parseGrossReductionsSummaryFromCalc(entry *CustomFormEntry, calc map[string
 	totalAdditionalReduction := getFloat64(calc, "totalAdditionalReduction")
 	if totalReductions != 0 || getFloat64(calc, "totalReductionBase") != 0 || totalReimbursements != 0 || totalAdditionalReduction != 0 {
 		return &EntryGrossReductionsSummary{
-			EntryID:                       entry.ID,
-			TotalReductions:               totalReductions,
-			TotalReductionBase:            getFloat64(calc, "totalReductionBase"),
-			TotalExpenseGst:               getFloat64(calc, "totalExpenseGst"),
-			TotalReimbursements:           totalReimbursements,
-			TotalAdditionalReduction:      totalAdditionalReduction,
-			TotalAdditionalReductionBase:  getFloat64(calc, "totalAdditionalReductionBase"),
-			TotalAdditionalReductionGst:   getFloat64(calc, "totalAdditionalReductionGst"),
-			CreatedAt:                     entry.CreatedAt,
-			UpdatedAt:                     entry.UpdatedAt,
+			EntryID:                      entry.ID,
+			TotalReductions:              totalReductions,
+			TotalReductionBase:           getFloat64(calc, "totalReductionBase"),
+			TotalExpenseGst:              getFloat64(calc, "totalExpenseGst"),
+			TotalReimbursements:          totalReimbursements,
+			TotalAdditionalReduction:     totalAdditionalReduction,
+			TotalAdditionalReductionBase: getFloat64(calc, "totalAdditionalReductionBase"),
+			TotalAdditionalReductionGst:  getFloat64(calc, "totalAdditionalReductionGst"),
+			CreatedAt:                    entry.CreatedAt,
+			UpdatedAt:                    entry.UpdatedAt,
 		}
 	}
 	return nil
 }
 
 // parseGrossOutworkFromCalc builds EntryGrossOutwork when outwork is enabled or any charge is non-zero.
-func parseGrossOutworkFromCalc(entry *CustomFormEntry, calc map[string]interface{}) *EntryGrossOutwork {
+func parseGrossOutworkFromCalc(entry *FieldEntry, calc map[string]interface{}) *EntryGrossOutwork {
 	if entry == nil || calc == nil {
 		return nil
 	}

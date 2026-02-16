@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -16,20 +15,23 @@ import (
 // TransactionPostingService handles posting form entries to the general ledger (journal entries).
 // Implements accounting best practice: source documents (entries) → posted transactions (double-entry).
 type TransactionPostingService struct {
-	entryRepo     port.CustomFormRepository
+	entryRepo     port.FieldEntryRepository
+	formRepo      port.CustomFormRepository
 	txRepo        port.TransactionRepository
 	clinicCOARepo port.ClinicCOARepository
 	aocRepo       port.AOCRepository
 }
 
 func NewTransactionPostingService(
-	entryRepo port.CustomFormRepository,
+	entryRepo port.FieldEntryRepository,
+	formRepo port.CustomFormRepository,
 	txRepo port.TransactionRepository,
 	clinicCOARepo port.ClinicCOARepository,
 	aocRepo port.AOCRepository,
 ) *TransactionPostingService {
 	return &TransactionPostingService{
 		entryRepo:     entryRepo,
+		formRepo:      formRepo,
 		txRepo:        txRepo,
 		clinicCOARepo: clinicCOARepo,
 		aocRepo:       aocRepo,
@@ -37,9 +39,9 @@ func NewTransactionPostingService(
 }
 
 type formFieldForMapping struct {
-	ID                  string  `json:"id"`
-	Name                string  `json:"name"`
-	AccountID           *string `json:"accountId"`
+	ID                   string  `json:"id"`
+	Name                 string  `json:"name"`
+	AccountID            *string `json:"accountId"`
 	AmountInterpretation string  `json:"amountInterpretation"` // "gross" | "net" | "tax_only" - what the field value represents
 }
 
@@ -58,35 +60,25 @@ type calculationsPayload struct {
 // PostEntryToLedger creates journal entries (transactions) from a custom form entry.
 // Deletes any existing posted transactions for the entry first (re-post).
 func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entryID uuid.UUID) ([]domain.TransactionResponse, error) {
-	entry, err := s.entryRepo.GetEntryByID(ctx, entryID)
+	entry, err := s.entryRepo.GetByID(ctx, entryID)
 	if err != nil {
 		return nil, err
 	}
-	form, err := s.entryRepo.GetByID(ctx, entry.FormID)
+	form, err := s.formRepo.GetByID(ctx, entry.FormID)
 	if err != nil {
 		return nil, err
 	}
-	if entry.ClinicID != form.ClinicID {
+	if form.ClinicID != form.ClinicID {
 		return nil, errors.New("entry and form clinic mismatch")
 	}
 
 	var fields []formFieldForMapping
-	if len(form.Fields) > 0 {
-		if err := json.Unmarshal(form.Fields, &fields); err != nil {
-			return nil, errors.New("invalid form fields")
-		}
-	}
 	fieldByID := make(map[string]*formFieldForMapping)
 	for i := range fields {
 		fieldByID[fields[i].ID] = &fields[i]
 	}
 
 	var calc calculationsPayload
-	if len(entry.Calculations) > 0 {
-		if err := json.Unmarshal(entry.Calculations, &calc); err != nil {
-			return nil, errors.New("invalid entry calculations")
-		}
-	}
 
 	if err := s.txRepo.DeleteByEntryID(ctx, entryID); err != nil {
 		return nil, err
@@ -96,7 +88,7 @@ func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entry
 	if len(ref) > 12 {
 		ref = "#" + ref[len(ref)-8:]
 	}
-	date := entry.EntryDate
+	date := entry.CreatedAt
 	now := time.Now()
 	var out []domain.TransactionResponse
 
@@ -117,7 +109,7 @@ func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entry
 		if err != nil {
 			continue
 		}
-		assigned, err := s.clinicCOARepo.Exists(ctx, entry.ClinicID, coaID)
+		assigned, err := s.clinicCOARepo.Exists(ctx, form.ClinicID, coaID)
 		if err != nil || !assigned {
 			continue
 		}
@@ -154,7 +146,7 @@ func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entry
 
 		t := &domain.Transaction{
 			ID:              uuid.New(),
-			ClinicID:        entry.ClinicID,
+			ClinicID:        form.ClinicID,
 			SourceEntryID:   entryID,
 			SourceFormID:    entry.FormID,
 			FieldID:         &ft.FieldID,
@@ -164,7 +156,7 @@ func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entry
 			TaxCategory:     taxCategory,
 			TransactionDate: date,
 			Reference:       ref,
-			Details:         form.Name + " - " + ft.FieldName,
+			Details:         form.Name + " - " + field.Name,
 			GrossAmount:     grossAmt,
 			GSTAmount:       gstAmt,
 			NetAmount:       netAmt,
@@ -226,7 +218,7 @@ func (s *TransactionPostingService) ListJournalEntriesByEntry(ctx context.Contex
 
 // GetFormFieldCOAMapping returns form fields with their COA mapping and clinic COA list.
 func (s *TransactionPostingService) GetFormFieldCOAMapping(ctx context.Context, formID, clinicID uuid.UUID) (*domain.FormFieldCOAMappingResponse, error) {
-	form, err := s.entryRepo.GetByID(ctx, formID)
+	form, err := s.formRepo.GetByID(ctx, formID)
 	if err != nil {
 		return nil, err
 	}
@@ -234,11 +226,6 @@ func (s *TransactionPostingService) GetFormFieldCOAMapping(ctx context.Context, 
 		return nil, errors.New("form does not belong to clinic")
 	}
 	var fields []formFieldForMapping
-	if len(form.Fields) > 0 {
-		if err := json.Unmarshal(form.Fields, &fields); err != nil {
-			return nil, errors.New("invalid form fields")
-		}
-	}
 	items := make([]domain.FormFieldCOAMappingItem, 0, len(fields))
 	for _, f := range fields {
 		interp := strings.ToLower(strings.TrimSpace(f.AmountInterpretation))

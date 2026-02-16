@@ -28,8 +28,8 @@
 // # Persistence (normalized path)
 //
 // Create/update entry runs RunEntryCalculation, then ConvertJSONBToNormalized maps the result
-// to NormalizedEntry; the adapter writes to tbl_entry_header, tbl_entry_field_value,
-// tbl_entry_field_calculation, tbl_entry_summary, gross/net tables, and tbl_entry_deductions.
+// to NormalizedEntry; the adapter persists to normalized entry tables (metadata, field values,
+// field calculations, summary, gross/net tables, and deductions).
 // Recalculation from DB: POST /custom-form/entries/:entryId/recalculate loads stored values
 // and deductions, runs RunEntryCalculation again, and UpdateEntry rewrites normalized child tables.
 package calculation

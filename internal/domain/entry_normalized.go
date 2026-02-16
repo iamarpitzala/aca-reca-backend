@@ -8,26 +8,6 @@ import (
 
 // Normalized entry table models
 
-// EntryHeader represents tbl_entry_header
-type EntryHeader struct {
-	ID                    uuid.UUID  `db:"id"`
-	FormID                uuid.UUID  `db:"form_id"`
-	FormName              string     `db:"form_name"`
-	FormType              string     `db:"form_type"`
-	CalculationMethod     string     `db:"calculation_method"`
-	ClinicID              uuid.UUID  `db:"clinic_id"`
-	QuarterID             *uuid.UUID `db:"quarter_id"`
-	EntryDate             time.Time  `db:"entry_date"`
-	Description           string     `db:"description"`
-	Remarks               string     `db:"remarks"`
-	PaymentResponsibility *string    `db:"payment_responsibility"`
-	CreatedBy             uuid.UUID  `db:"created_by"`
-	CreatedAt             time.Time  `db:"created_at"`
-	UpdatedAt             time.Time  `db:"updated_at"`
-	DeletedAt             *time.Time `db:"deleted_at"`
-	OriginalEntryID       *uuid.UUID `db:"original_entry_id"`
-}
-
 // EntryFieldValue represents tbl_entry_field_value
 type EntryFieldValue struct {
 	ID              uuid.UUID `db:"id"`
@@ -57,24 +37,6 @@ type EntryFieldCalculation struct {
 	PaymentResponsibility *string   `db:"payment_responsibility"`
 	DisplayOrder          int       `db:"display_order"`
 	CreatedAt             time.Time `db:"created_at"`
-}
-
-// EntrySummary represents tbl_entry_summary
-type EntrySummary struct {
-	ID              uuid.UUID `db:"id"`
-	EntryID         uuid.UUID `db:"entry_id"`
-	TotalBaseAmount float64   `db:"total_base_amount"`
-	TotalGstAmount  float64   `db:"total_gst_amount"`
-	TotalAmount     float64   `db:"total_amount"`
-	NetPayable      float64   `db:"net_payable"`
-	NetReceivable   float64   `db:"net_receivable"`
-	NetFee          *float64  `db:"net_fee"`
-	BasGstOnSales1A float64   `db:"bas_gst_on_sales_1a"`
-	BasGstCredit1B  float64   `db:"bas_gst_credit_1b"`
-	BasTotalSalesG1 float64   `db:"bas_total_sales_g1"`
-	BasExpensesG11  float64   `db:"bas_expenses_g11"`
-	CreatedAt       time.Time `db:"created_at"`
-	UpdatedAt       time.Time `db:"updated_at"`
 }
 
 // EntryNetDetails represents tbl_entry_net_details
@@ -195,10 +157,9 @@ type EntryDeductions struct {
 
 // NormalizedEntry represents a complete normalized entry with all related data
 type NormalizedEntry struct {
-	Header                    *EntryHeader
+	Header                    *FieldEntry
 	FieldValues               []EntryFieldValue
 	FieldCalculations         []EntryFieldCalculation
-	Summary                   *EntrySummary
 	NetDetails                *EntryNetDetails
 	GrossDetails              *EntryGrossDetails
 	GrossReductions           []EntryGrossReduction

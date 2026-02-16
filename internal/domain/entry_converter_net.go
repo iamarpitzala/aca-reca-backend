@@ -1,8 +1,8 @@
 package domain
 
 // parseNetDetailsFromCalc builds EntryNetDetails when form uses NET calculation method.
-func parseNetDetailsFromCalc(entry *CustomFormEntry, form *CustomForm, calc map[string]interface{}, deductions *EntryDeductions) *EntryNetDetails {
-	if form == nil || form.CalculationMethod != string(CalcMethodNet) {
+func parseNetDetailsFromCalc(entry *FieldEntry, calc map[string]interface{}, deductions *EntryDeductions) *EntryNetDetails {
+	if entry == nil || calc == nil {
 		return nil
 	}
 	nd := &EntryNetDetails{
@@ -33,7 +33,7 @@ func parseNetDetailsFromCalc(entry *CustomFormEntry, form *CustomForm, calc map[
 		if nd.SuperComponentPercent != nil {
 			superPercent = *nd.SuperComponentPercent
 		}
-		superMultiplier := 1.0 + (superPercent/100.0)
+		superMultiplier := 1.0 + (superPercent / 100.0)
 		commissionComponent := nd.Commission / superMultiplier
 		nd.CommissionComponent = &commissionComponent
 		superComponent := commissionComponent * (superPercent / 100.0)

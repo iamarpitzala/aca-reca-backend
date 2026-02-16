@@ -1,35 +1,13 @@
-// Package calculation implements entry totals and deductions for custom form entries.
+// Package calculation implements entry totals for custom form entries.
 //
-// # Calculation methods: NET vs GROSS
-//
-// The form's calculation method (NET or GROSS) determines how deductions are applied:
-//
-//   - NET: commission-based (e.g. independent contractors). RunEntryCalculation produces
-//     commission, gstOnCommission, totalPaymentReceived; persisted in tbl_entry_net_details.
-//
-//   - GROSS: service/facility fee based on a percentage of net fee. RunEntryCalculation produces
-//     serviceFeeBase, gstOnServiceFee, totalServiceFee, subtotalAfterDeductions, remittedAmount,
-//     reductionBreakdown (expense GST paid by clinic), reimbursementBreakdown (expense paid by owner),
-//     additionalReductionBreakdown (reduction-section fields), and optional outwork charges.
-//     These are persisted in tbl_entry_gross_details, tbl_entry_gross_reduction,
-//     tbl_entry_gross_reimbursement, tbl_entry_gross_additional_reduction,
-//     tbl_entry_gross_reductions_summary, and tbl_entry_gross_outwork.
-//
-// # When gross method runs
-//
-// Gross calculations run when:
-//   - Form calculation method is GROSS and form type has income (INCOME or BOTH), and
-//   - Net method is not forced (e.g. by commission in deductions).
-//
-// Deductions can override: serviceFacilityFeePercent, serviceFeeOverride, entryPaymentResponsibility.
-// Outwork is applied when form has outwork enabled and a rate; expense GST is then consolidated
-// into a single outwork charge.
+// RunEntryCalculation computes field totals (base, GST, total) from form definition and raw values.
+// It calculates totals for all fields, handles GST inclusive/exclusive, and builds BAS mapping.
 //
 // # Persistence (normalized path)
 //
 // Create/update entry runs RunEntryCalculation, then ConvertJSONBToNormalized maps the result
 // to NormalizedEntry; the adapter persists to normalized entry tables (metadata, field values,
-// field calculations, summary, gross/net tables, and deductions).
+// field calculations, summary, and deductions).
 // Recalculation from DB: POST /custom-form/entries/:entryId/recalculate loads stored values
 // and deductions, runs RunEntryCalculation again, and UpdateEntry rewrites normalized child tables.
 package calculation

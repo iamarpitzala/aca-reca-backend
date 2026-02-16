@@ -124,34 +124,34 @@ type CustomFormPublish struct {
 // Request/Response DTOs
 
 type CreateCustomFormRequest struct {
-	ClinicID                     string                      `json:"clinicId"`
-	Name                         string                      `json:"name"`
-	Description                  string                      `json:"description"`
-	CalculationMethod            string                      `json:"calculationMethod"`
-	FormType                     string                      `json:"formType"`
-	DefaultPaymentResponsibility *string                     `json:"defaultPaymentResponsibility,omitempty"`
-	Fields                       []CustomFormFieldInput      `json:"fields,omitempty"`
-	ServiceFacilityFeePercent     *float64                    `json:"serviceFacilityFeePercent,omitempty"`
-	OutworkEnabled               *bool                       `json:"outworkEnabled,omitempty"`
-	OutworkRatePercent           *float64                    `json:"outworkRatePercent,omitempty"`
+	ClinicID                     string                 `json:"clinicId"`
+	Name                         string                 `json:"name"`
+	Description                  string                 `json:"description"`
+	CalculationMethod            string                 `json:"calculationMethod"`
+	FormType                     string                 `json:"formType"`
+	DefaultPaymentResponsibility *string                `json:"defaultPaymentResponsibility,omitempty"`
+	Fields                       []CustomFormFieldInput `json:"fields,omitempty"`
+	ServiceFacilityFeePercent    *float64               `json:"serviceFacilityFeePercent,omitempty"`
+	OutworkEnabled               *bool                  `json:"outworkEnabled,omitempty"`
+	OutworkRatePercent           *float64               `json:"outworkRatePercent,omitempty"`
 }
 
 type CustomFormFieldInput struct {
-	Name                 string          `json:"name"`
-	Label                string          `json:"label"`
-	Type                 string          `json:"type"`
-	Required             bool            `json:"required"`
-	DefaultValue         interface{}     `json:"defaultValue,omitempty"`
-	Placeholder          string          `json:"placeholder,omitempty"`
-	Description          string          `json:"description,omitempty"`
-	GSTConfig            json.RawMessage  `json:"gstConfig,omitempty"`
-	DropdownOptions      json.RawMessage `json:"dropdownOptions,omitempty"`
-	Validation           json.RawMessage  `json:"validation,omitempty"`
-	Order                int             `json:"order"`
-	IncludeInTotal      bool            `json:"includeInTotal"`
-	Section              string          `json:"section,omitempty"`
-	AccountID            *string         `json:"accountId,omitempty"`
-	PaymentResponsibility *string        `json:"paymentResponsibility,omitempty"`
+	Name                  string          `json:"name"`
+	Label                 string          `json:"label"`
+	Type                  string          `json:"type"`
+	Required              bool            `json:"required"`
+	DefaultValue          interface{}     `json:"defaultValue,omitempty"`
+	Placeholder           string          `json:"placeholder,omitempty"`
+	Description           string          `json:"description,omitempty"`
+	GSTConfig             json.RawMessage `json:"gstConfig,omitempty"`
+	DropdownOptions       json.RawMessage `json:"dropdownOptions,omitempty"`
+	Validation            json.RawMessage `json:"validation,omitempty"`
+	Order                 int             `json:"order"`
+	IncludeInTotal        bool            `json:"includeInTotal"`
+	Section               string          `json:"section,omitempty"`
+	AccountID             *string         `json:"accountId,omitempty"`
+	PaymentResponsibility *string         `json:"paymentResponsibility,omitempty"`
 }
 
 // Request to DB mapping for CreateCustomFormRequest
@@ -178,33 +178,33 @@ func (req *CreateCustomFormRequest) ToDBModel(createdBy uuid.UUID) (*CustomForm,
 }
 
 type UpdateCustomFormRequest struct {
-	Name                         *string                 `json:"name,omitempty"`
-	Description                  *string                 `json:"description,omitempty"`
-	CalculationMethod            *string                 `json:"calculationMethod,omitempty"`
-	FormType                     *string                 `json:"formType,omitempty"`
-	DefaultPaymentResponsibility *string                 `json:"defaultPaymentResponsibility,omitempty"`
-	Fields                       []CustomFormFieldInput   `json:"fields,omitempty"`
-	ServiceFacilityFeePercent     *float64                `json:"serviceFacilityFeePercent,omitempty"`
-	OutworkEnabled               *bool                   `json:"outworkEnabled,omitempty"`
-	OutworkRatePercent           *float64                `json:"outworkRatePercent,omitempty"`
+	Name                         *string                `json:"name,omitempty"`
+	Description                  *string                `json:"description,omitempty"`
+	CalculationMethod            *string                `json:"calculationMethod,omitempty"`
+	FormType                     *string                `json:"formType,omitempty"`
+	DefaultPaymentResponsibility *string                `json:"defaultPaymentResponsibility,omitempty"`
+	Fields                       []CustomFormFieldInput `json:"fields,omitempty"`
+	ServiceFacilityFeePercent    *float64               `json:"serviceFacilityFeePercent,omitempty"`
+	OutworkEnabled               *bool                  `json:"outworkEnabled,omitempty"`
+	OutworkRatePercent           *float64               `json:"outworkRatePercent,omitempty"`
 }
 
 type CustomFormResponse struct {
-	ID                           string                      `json:"id"`
-	ClinicID                     string                      `json:"clinicId"`
-	Name                         string                      `json:"name"`
-	Description                  string                      `json:"description"`
-	CalculationMethod            string                      `json:"calculationMethod"`
-	FormType                     string                      `json:"formType"`
-	Status                       string                      `json:"status"`
-	DefaultPaymentResponsibility *string                     `json:"defaultPaymentResponsibility,omitempty"`
-	Fields                       []CustomFormFieldResponse   `json:"fields,omitempty"`
-	ServiceFacilityFeePercent     *float64                    `json:"serviceFacilityFeePercent,omitempty"`
-	OutworkEnabled               *bool                       `json:"outworkEnabled,omitempty"`
-	OutworkRatePercent           *float64                    `json:"outworkRatePercent,omitempty"`
-	CreatedBy                    string                      `json:"createdBy"`
-	CreatedAt                    time.Time                   `json:"createdAt"`
-	UpdatedAt                    time.Time                   `json:"updatedAt"`
+	ID                           string                    `json:"id"`
+	ClinicID                     string                    `json:"clinicId"`
+	Name                         string                    `json:"name"`
+	Description                  string                    `json:"description"`
+	CalculationMethod            string                    `json:"calculationMethod"`
+	FormType                     string                    `json:"formType"`
+	Status                       string                    `json:"status"`
+	DefaultPaymentResponsibility *string                   `json:"defaultPaymentResponsibility,omitempty"`
+	Fields                       []CustomFormFieldResponse `json:"fields,omitempty"`
+	ServiceFacilityFeePercent    *float64                  `json:"serviceFacilityFeePercent,omitempty"`
+	OutworkEnabled               *bool                     `json:"outworkEnabled,omitempty"`
+	OutworkRatePercent           *float64                  `json:"outworkRatePercent,omitempty"`
+	CreatedBy                    string                    `json:"createdBy"`
+	CreatedAt                    time.Time                 `json:"createdAt"`
+	UpdatedAt                    time.Time                 `json:"updatedAt"`
 }
 
 // Map frontend field input to backend CustomFormField
@@ -223,12 +223,12 @@ func (input *CustomFormFieldInput) ToDBModel(formID uuid.UUID, formVersionID uui
 
 	// Build metadata JSON with all extra field info
 	metadata := map[string]interface{}{
-		"name":                 input.Name,
-		"description":          input.Description,
-		"defaultValue":         input.DefaultValue,
-		"includeInTotal":       input.IncludeInTotal,
-		"dropdownOptions":      nil,
-		"validation":           nil,
+		"name":                  input.Name,
+		"description":           input.Description,
+		"defaultValue":          input.DefaultValue,
+		"includeInTotal":        input.IncludeInTotal,
+		"dropdownOptions":       nil,
+		"validation":            nil,
 		"paymentResponsibility": input.PaymentResponsibility,
 	}
 	if len(input.DropdownOptions) > 0 {
@@ -391,22 +391,22 @@ func (req *CustomFormFieldRequest) ToDBModel() (*CustomFormField, error) {
 }
 
 type CustomFormFieldResponse struct {
-	ID                   string          `json:"id"`
-	Name                 string          `json:"name"`
-	Label                string          `json:"label"`
-	Type                 string          `json:"type"`
-	Required             bool            `json:"required"`
-	DefaultValue         interface{}     `json:"defaultValue,omitempty"`
-	Placeholder          string          `json:"placeholder,omitempty"`
-	Description          string          `json:"description,omitempty"`
-	GSTConfig            json.RawMessage `json:"gstConfig"`
-	DropdownOptions      json.RawMessage `json:"dropdownOptions,omitempty"`
-	Validation           json.RawMessage  `json:"validation,omitempty"`
-	Order                int             `json:"order"`
-	IncludeInTotal       bool            `json:"includeInTotal"`
-	Section              string          `json:"section,omitempty"`
-	AccountID            string          `json:"accountId,omitempty"`
-	PaymentResponsibility *string        `json:"paymentResponsibility,omitempty"`
+	ID                    string          `json:"id"`
+	Name                  string          `json:"name"`
+	Label                 string          `json:"label"`
+	Type                  string          `json:"type"`
+	Required              bool            `json:"required"`
+	DefaultValue          interface{}     `json:"defaultValue,omitempty"`
+	Placeholder           string          `json:"placeholder,omitempty"`
+	Description           string          `json:"description,omitempty"`
+	GSTConfig             json.RawMessage `json:"gstConfig"`
+	DropdownOptions       json.RawMessage `json:"dropdownOptions,omitempty"`
+	Validation            json.RawMessage `json:"validation,omitempty"`
+	Order                 int             `json:"order"`
+	IncludeInTotal        bool            `json:"includeInTotal"`
+	Section               string          `json:"section,omitempty"`
+	AccountID             string          `json:"accountId,omitempty"`
+	PaymentResponsibility *string         `json:"paymentResponsibility,omitempty"`
 }
 
 // DB to Response mapping for CustomFormField
@@ -504,21 +504,21 @@ func (f *CustomFormField) ToResponse() *CustomFormFieldResponse {
 	}
 
 	return &CustomFormFieldResponse{
-		ID:                   f.ID.String(),
-		Name:                 name,
-		Label:                f.Label,
-		Type:                 fieldType,
-		Required:             f.IsRequired,
-		DefaultValue:         defaultValue,
-		Placeholder:          f.Placeholder,
-		Description:          description,
-		GSTConfig:            gstConfigJSON,
-		DropdownOptions:      dropdownOptions,
-		Validation:           validation,
-		Order:                f.FieldOrder,
-		IncludeInTotal:       includeInTotal,
-		Section:              section,
-		AccountID:            accountID,
+		ID:                    f.ID.String(),
+		Name:                  name,
+		Label:                 f.Label,
+		Type:                  fieldType,
+		Required:              f.IsRequired,
+		DefaultValue:          defaultValue,
+		Placeholder:           f.Placeholder,
+		Description:           description,
+		GSTConfig:             gstConfigJSON,
+		DropdownOptions:       dropdownOptions,
+		Validation:            validation,
+		Order:                 f.FieldOrder,
+		IncludeInTotal:        includeInTotal,
+		Section:               section,
+		AccountID:             accountID,
 		PaymentResponsibility: paymentResponsibility,
 	}
 }

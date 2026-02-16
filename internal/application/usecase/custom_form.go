@@ -45,11 +45,7 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 		return nil, errors.New("clinic not found")
 	}
 	// Normalise to UPPERCASE so API accepts both lowercase and uppercase
-	req.CalculationMethod = strings.ToUpper(strings.TrimSpace(req.CalculationMethod))
 	req.FormType = strings.ToUpper(strings.TrimSpace(req.FormType))
-	if req.CalculationMethod != util.MethodTypeNet && req.CalculationMethod != util.MethodTypeGross {
-		return nil, errors.New("calculation method must be NET or GROSS")
-	}
 	if req.FormType != util.FormTypeIncome && req.FormType != util.FormTypeExpense && req.FormType != util.FormTypeBoth {
 		return nil, errors.New("form type must be INCOME, EXPENSE, or BOTH")
 	}

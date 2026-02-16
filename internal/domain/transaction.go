@@ -131,7 +131,7 @@ type FormFieldCOAMappingItem struct {
 	FieldID               string  `json:"fieldId"`
 	FieldName             string  `json:"fieldName"`
 	AccountID             *string `json:"accountId,omitempty"`
-	AmountInterpretation  string  `json:"amountInterpretation,omitempty"` // "gross" | "net" | "tax_only"
+	AmountInterpretation  string  `json:"amountInterpretation,omitempty"` // "net" | "tax_only"
 }
 
 // FormFieldCOAMappingResponse form fields with COA and clinic COA list

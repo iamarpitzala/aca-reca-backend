@@ -69,7 +69,7 @@ func InitRouter(e *gin.Engine) {
 	expensesUC := usecase.NewExpensesService(expenseRepo)
 	aocUC := usecase.NewAOCService(aocRepo)
 	customFormUC := usecase.NewCustomFormService(customFormRepo, customFormFieldRepo, customFormVersionRepo, clinicRepo, calcEngine)
-	transactionPostingUC := usecase.NewTransactionPostingService(fieldEntryRepo, customFormRepo, transactionRepo, clinicCOARepo, aocRepo)
+	transactionPostingUC := usecase.NewTransactionPostingService(fieldEntryRepo, customFormRepo, customFormFieldRepo, customFormVersionRepo, transactionRepo, clinicCOARepo, aocRepo, calcEngine)
 	clinicFinancialSettingsUC := usecase.NewClinicFinancialSettingsService(clinicFinancialSettingsRepo, clinicRepo)
 	basSnapshotUC := usecase.NewBASSnapshotService(basSnapshotRepo, clinicRepo)
 	fieldEntryUC := usecase.NewFieldEntryService(fieldEntryRepo, customFormRepo, customFormFieldRepo, clinicRepo, calcEngine)

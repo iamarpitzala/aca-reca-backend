@@ -36,37 +36,3 @@ func buildBASMapping(formType string, totalBase, totalGst, totalAmount, incomeBa
 	}
 }
 
-// resolveCalculationMethod returns whether net and/or gross method apply from form and deductions.
-func resolveCalculationMethod(formCalculationMethod string, deductions *deductionsInput, formServiceFeePct *float64, hasIncome bool) (isNet, isGross bool) {
-	switch formCalculationMethod {
-	case util.MethodTypeNet:
-		isNet = true
-	case util.MethodTypeGross:
-		isGross = true
-	default:
-		calcMethodLower := strings.ToLower(formCalculationMethod)
-		switch calcMethodLower {
-		case util.MethodTypeNet:
-			isNet = true
-		case util.MethodTypeGross:
-			isGross = true
-		default:
-			isNet = true
-		}
-	}
-	if deductions != nil {
-		if deductions.CommissionPercent != nil && *deductions.CommissionPercent > 0 {
-			isNet, isGross = true, false
-		} else if deductions.ServiceFacilityFeePercent != nil && *deductions.ServiceFacilityFeePercent > 0 && !isNet {
-			isGross = true
-		}
-	}
-	if !isNet && !isGross {
-		if formServiceFeePct != nil && *formServiceFeePct > 0 {
-			isGross = true
-		} else if hasIncome {
-			isGross = true
-		}
-	}
-	return isNet, isGross
-}

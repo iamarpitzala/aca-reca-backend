@@ -25,14 +25,9 @@ type entryValue struct {
 	ManualGstAmount *float64    `json:"manualGstAmount"`
 }
 
-// Deductions from request (for service fee % and override; entry-level payment responsibility overrides per-field when set)
+// Deductions from request (entry-level payment responsibility overrides per-field when set)
 type deductionsInput struct {
-	ServiceFacilityFeePercent  *float64 `json:"serviceFacilityFeePercent"`
-	ServiceFeeOverride         *float64 `json:"serviceFeeOverride"`
-	EntryPaymentResponsibility *string  `json:"entryPaymentResponsibility"`
-	CommissionPercent          *float64 `json:"commissionPercent"`
-	SuperHoldingEnabled        *bool    `json:"superHoldingEnabled"`
-	SuperComponentPercent      *float64 `json:"superComponentPercent"`
+	EntryPaymentResponsibility *string `json:"entryPaymentResponsibility"`
 }
 
 // Output structures (match frontend EntryCalculations)
@@ -54,38 +49,33 @@ type basMapping struct {
 }
 
 type calculationsOutput struct {
-	FieldTotals                  []fieldCalc `json:"fieldTotals"`
-	TotalBaseAmount              float64     `json:"totalBaseAmount"`
-	TotalGSTAmount              float64     `json:"totalGSTAmount"`
-	TotalAmount                  float64     `json:"totalAmount"`
-	NetPayable                   float64     `json:"netPayable"`
-	NetReceivable                float64     `json:"netReceivable"`
-	BasMapping                   basMapping  `json:"basMapping"`
-	NetFee                       *float64    `json:"netFee,omitempty"`
-	ServiceFeeBase               *float64    `json:"serviceFeeBase,omitempty"`
-	GstOnServiceFee              *float64    `json:"gstOnServiceFee,omitempty"`
-	TotalServiceFee              *float64    `json:"totalServiceFee,omitempty"`
-	TotalReductions              *float64    `json:"totalReductions,omitempty"`
-	TotalReimbursements          *float64    `json:"totalReimbursements,omitempty"`
-	TotalReductionBase           *float64    `json:"totalReductionBase,omitempty"`
-	TotalExpenseGst              *float64    `json:"totalExpenseGst,omitempty"`
-	ReductionBreakdown           []fieldCalc  `json:"reductionBreakdown,omitempty"`
-	ReimbursementBreakdown       []fieldCalc  `json:"reimbursementBreakdown,omitempty"`
-	AdditionalReductionBreakdown []fieldCalc  `json:"additionalReductionBreakdown,omitempty"`
-	TotalAdditionalReduction     *float64    `json:"totalAdditionalReduction,omitempty"`
-	TotalAdditionalReductionBase *float64    `json:"totalAdditionalReductionBase,omitempty"`
-	TotalAdditionalReductionGst  *float64    `json:"totalAdditionalReductionGst,omitempty"`
-	SubtotalAfterDeductions      *float64    `json:"subtotalAfterDeductions,omitempty"`
-	RemittedAmount               *float64    `json:"remittedAmount,omitempty"`
-	OutworkEnabled               bool        `json:"outworkEnabled"`
-	OutworkRatePercent           *float64    `json:"outworkRatePercent,omitempty"`
-	OutworkChargeBase            *float64    `json:"outworkChargeBase,omitempty"`
-	OutworkChargeGst             *float64    `json:"outworkChargeGst,omitempty"`
-	OutworkChargeTotal           *float64    `json:"outworkChargeTotal,omitempty"`
-	Commission                   *float64    `json:"commission,omitempty"`
-	GstOnCommission              *float64    `json:"gstOnCommission,omitempty"`
-	CommissionComponent          *float64    `json:"commissionComponent,omitempty"`
-	SuperComponent               *float64    `json:"superComponent,omitempty"`
-	TotalForReconciliation        *float64    `json:"totalForReconciliation,omitempty"`
-	TotalPaymentReceived         *float64    `json:"totalPaymentReceived,omitempty"`
+	FieldTotals     []fieldCalc `json:"fieldTotals"`
+	TotalBaseAmount float64     `json:"totalBaseAmount"`
+	TotalGSTAmount  float64     `json:"totalGSTAmount"`
+	TotalAmount     float64     `json:"totalAmount"`
+	NetPayable      float64     `json:"netPayable"`
+	NetReceivable   float64     `json:"netReceivable"`
+	BasMapping      basMapping  `json:"basMapping"`
+	NetFee          *float64    `json:"netFee,omitempty"`
+}
+
+// Gross calculation output types
+// Matches standard naming conventions: camelCase for JSON tags (lowercase gst to match basMapping),
+// struct fields use capital GST for consistency with TotalGSTAmount pattern
+type grossCalculationOutput struct {
+	FieldTotals                   []fieldCalc `json:"fieldTotals"`
+	IncomeExclGST                 float64     `json:"incomeExclGST"`
+	TotalNetExpenses              float64     `json:"totalNetExpenses"`
+	TotalExpensesGST              float64     `json:"totalExpensesGST"`
+	PayByDentistExpenses          float64     `json:"payByDentistExpenses"`
+	NetAmount                     float64     `json:"netAmount"`
+	ServiceAndFacilityFee         float64     `json:"serviceAndFacilityFee"`
+	LabFeeWithOtherCost           *float64    `json:"labFeeWithOtherCost,omitempty"`
+	TotalServiceAndFacility       *float64    `json:"totalServiceAndFacility,omitempty"`
+	GSTOnServiceFee               float64     `json:"GSTOnServiceFee"`
+	TotalServiceAndFacilityIncGST *float64    `json:"totalServiceAndFacilityIncGST,omitempty"`
+	TotalServiceAndFacilityFee    *float64    `json:"totalServiceAndFacilityFee,omitempty"`
+	RemittedCost                  float64     `json:"remittedCost"`
+	AmountPayableToDentist        float64     `json:"amountPayableToDentist"`
+	BasMapping                    basMapping  `json:"basMapping"`
 }

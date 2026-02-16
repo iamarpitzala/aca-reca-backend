@@ -21,6 +21,17 @@ func RunEntryCalculation(
 	valuesJSON []byte,
 	deductionsJSON []byte,
 ) ([]byte, error) {
+	// Route to gross calculation if method is GROSS
+	if formCalculationMethod == util.MethodTypeGross {
+		return RunGrossCalculation(
+			formFieldsJSON,
+			formServiceFeePct,
+			formOutworkEnabled,
+			formOutworkRatePercent,
+			valuesJSON,
+			deductionsJSON,
+		)
+	}
 	var fields []calcField
 	if err := json.Unmarshal(formFieldsJSON, &fields); err != nil {
 		return nil, err
@@ -143,16 +154,6 @@ func RunEntryCalculation(
 	if formType == util.FormTypeIncome || formType == util.FormTypeBoth {
 		nf := round2(totalBase)
 		out.NetFee = &nf
-	}
-
-	hasIncome := formType == util.FormTypeIncome || formType == util.FormTypeBoth
-	isNetMethod, isGrossMethod := resolveCalculationMethod(formCalculationMethod, deductions, formServiceFeePct, hasIncome)
-
-	if hasIncome && isGrossMethod && !isNetMethod {
-		applyGrossMethodCalculations(&out, fields, fieldTotals, deductions, formServiceFeePct, formOutworkEnabled, formOutworkRatePercent)
-	}
-	if hasIncome && isNetMethod && !isGrossMethod {
-		applyNetMethodCalculations(&out, deductions)
 	}
 
 	return json.Marshal(out)

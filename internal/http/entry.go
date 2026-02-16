@@ -28,8 +28,13 @@ func (h *EntryHandler) AddEntry(c *gin.Context) {
 	}
 	var entry domain.CommonEntry
 	if err := c.ShouldBindJSON(&entry); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry data"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	h.service.AddEntry(c, formUUID, entry)
+	field, err := h.service.AddEntry(c, formUUID, entry)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": field})
 }

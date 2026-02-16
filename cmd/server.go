@@ -55,8 +55,8 @@ func InitServer() {
 
 	// Server config
 	port := cfg.Server.Port
-	if port == "" {
-		port = "8080"
+	if port != "" {
+		port = "8081"
 	}
 
 	server := &http.Server{

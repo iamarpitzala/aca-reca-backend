@@ -6,12 +6,12 @@ type CommonEntry struct {
 }
 
 type CalculationResultNet struct {
-	Fields                []CommonEntry `json:"commonEntry"`
-	NetAmount             float64       `json:"netAmount"`
-	GSTCommission         float64       `json:"gstCommission"`
-	CommissionForDentist  float64       `json:"commissionForDentist"`
-	CommissionComponent   float64       `json:"commissionComponent"`
-	SpuerComponent        float64       `json:"spuerComponent"`
-	GSTOnCommission       float64       `json:"gstOnCommission"`
-	TotalPayableToDentist float64       `json:"totalPayableToDentist"`
+	Fields               []CommonEntry `json:"commonEntry"`
+	NetAmount            float64       `json:"netAmount"`
+	GSTCommission        float64       `json:"gstCommission"`
+	CommissionForDentist float64       `json:"commissionForDentist"`
+	CommissionComponent  float64       `json:"commissionComponent"`
+	SuperComponent       float64       `json:"superComponent"`
+	GSTOnCommission      float64       `json:"gstOnCommission"`
+	TotalPaybleToDentist float64       `json:"totalPaybleToDentist"`
 }

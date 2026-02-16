@@ -29,14 +29,17 @@ func (r *customFormRepo) Create(ctx context.Context, form *domain.CustomForm) er
 }
 
 func (r *customFormRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.CustomForm, error) {
-	q := `SELECT id, clinic_id, name, description, calculation_method, form_type, status, fields, default_payment_responsibility, service_facility_fee_percent, outwork_enabled, outwork_rate_percent, version, created_by, created_at, updated_at, published_at, deleted_at FROM tbl_custom_form WHERE id = $1 AND deleted_at IS NULL`
+	q := `SELECT id, clinic_id, name, description, calculation_method, form_type, status, fields, default_payment_responsibility, service_facility_fee_percent,  version, created_by, created_at, updated_at, published_at, deleted_at FROM tbl_custom_form WHERE id = $1 AND deleted_at IS NULL`
 	var form domain.CustomForm
 	if err := r.db.GetContext(ctx, &form, q, id); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("custom form not found")
 		}
+		fmt.Println(err.Error())
 		return nil, err
+
 	}
+
 	return &form, nil
 }
 

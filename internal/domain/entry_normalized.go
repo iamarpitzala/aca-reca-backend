@@ -54,6 +54,23 @@ type EntryDeductions struct {
 	CreatedAt                  time.Time `db:"created_at"`
 }
 
+// EntryNetDetails represents tbl_entry_net_details
+type EntryNetDetails struct {
+	ID                      uuid.UUID `db:"id"`
+	EntryID                 uuid.UUID `db:"source_entry_id"`
+	CommissionPercent       float64   `db:"commission_percent"`
+	Commission              float64   `db:"commission"`
+	GSTOnCommission         float64   `db:"gst_on_commission"`
+	TotalPaymentReceived     float64   `db:"total_payment_received"`
+	SuperHoldingEnabled      bool      `db:"super_holding_enabled"`
+	SuperComponentPercent    *float64  `db:"super_component_percent"`
+	CommissionComponent      *float64  `db:"commission_component"`
+	SuperComponent           *float64  `db:"super_component"`
+	TotalForReconciliation   *float64  `db:"total_for_reconciliation"`
+	CreatedAt                time.Time `db:"created_at"`
+	UpdatedAt                time.Time `db:"updated_at"`
+}
+
 // EntryGrossDetails represents tbl_entry_gross_details
 type EntryGrossDetails struct {
 	ID                      uuid.UUID `db:"id"`

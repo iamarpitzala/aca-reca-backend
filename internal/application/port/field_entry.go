@@ -15,3 +15,10 @@ type FieldEntryRepository interface {
 	Update(ctx context.Context, entry *domain.FieldEntry) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
+
+type EntryNetDetailsRepository interface {
+	Create(ctx context.Context, netDetails *domain.EntryNetDetails) error
+	GetByEntryID(ctx context.Context, entryID uuid.UUID) (*domain.EntryNetDetails, error)
+	Update(ctx context.Context, netDetails *domain.EntryNetDetails) error
+	Delete(ctx context.Context, entryID uuid.UUID) error
+}

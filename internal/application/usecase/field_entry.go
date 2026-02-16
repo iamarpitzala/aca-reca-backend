@@ -4,29 +4,46 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
+	"github.com/iamarpitzala/aca-reca-backend/internal/calculation"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 )
 
 type FieldEntryService struct {
-	repo        port.FieldEntryRepository
-	formRepo    port.CustomFormRepository
-	fieldRepo   port.CustomFormFieldRepository
-	clinicRepo  port.ClinicRepository
-	calcEngine  port.EntryCalculationEngine
+	repo                port.FieldEntryRepository
+	formRepo            port.CustomFormRepository
+	fieldRepo           port.CustomFormFieldRepository
+	clinicRepo          port.ClinicRepository
+	calcRepo            port.CustomFormCalculationRepository
+	netDetailsRepo      port.EntryNetDetailsRepository
+	financialSettingsRepo port.ClinicFinancialSettingsRepository
+	calcEngine          port.EntryCalculationEngine
 }
 
-func NewFieldEntryService(repo port.FieldEntryRepository, formRepo port.CustomFormRepository, fieldRepo port.CustomFormFieldRepository, clinicRepo port.ClinicRepository, calcEngine port.EntryCalculationEngine) *FieldEntryService {
+func NewFieldEntryService(
+	repo port.FieldEntryRepository,
+	formRepo port.CustomFormRepository,
+	fieldRepo port.CustomFormFieldRepository,
+	clinicRepo port.ClinicRepository,
+	calcRepo port.CustomFormCalculationRepository,
+	netDetailsRepo port.EntryNetDetailsRepository,
+	financialSettingsRepo port.ClinicFinancialSettingsRepository,
+	calcEngine port.EntryCalculationEngine,
+) *FieldEntryService {
 	return &FieldEntryService{
-		repo:       repo,
-		formRepo:   formRepo,
-		fieldRepo:  fieldRepo,
-		clinicRepo: clinicRepo,
-		calcEngine: calcEngine,
+		repo:                repo,
+		formRepo:            formRepo,
+		fieldRepo:           fieldRepo,
+		clinicRepo:          clinicRepo,
+		calcRepo:            calcRepo,
+		netDetailsRepo:      netDetailsRepo,
+		financialSettingsRepo: financialSettingsRepo,
+		calcEngine:          calcEngine,
 	}
 }
 
@@ -195,6 +212,23 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		}
 	}
 
+	// NET Method: Calculate and store net details if calculation method is NET
+	// Get calculation method (form version takes precedence over form level)
+	calculationMethod := form.CalculationMethod
+	formCalc, err := s.calcRepo.GetByFormVersionID(ctx, formVersionID)
+	if err == nil && formCalc != nil {
+		calculationMethod = formCalc.CalculationMethod
+	}
+
+	// If NET method, calculate and store net details
+	if calculationMethod == "NET" {
+		if err := s.calculateAndStoreNetDetails(ctx, form.ClinicID, fieldEntries[0].ID, fieldValueResponses, req.Deductions, now); err != nil {
+			// Log error but don't fail entry creation
+			// TODO: Add proper logging
+			_ = err
+		}
+	}
+
 	return &domain.EntryResponse{
 		ID:                    entryID.String(),
 		FormID:                req.FormID,
@@ -360,13 +394,6 @@ func (s *FieldEntryService) GetByFormID(ctx context.Context, formID uuid.UUID) (
 		entryGroups[groupKey] = append(entryGroups[groupKey], entry)
 	}
 
-	// Get all fields for this form to map field IDs to field names
-	fields, _ := s.fieldRepo.GetByFormID(ctx, formID)
-	fieldMap := make(map[uuid.UUID]domain.CustomFormField)
-	for _, field := range fields {
-		fieldMap[field.ID] = field
-	}
-
 	// Convert grouped entries to EntryResponse
 	results := make([]domain.EntryResponse, 0, len(entryGroups))
 	for _, entries := range entryGroups {
@@ -376,6 +403,13 @@ func (s *FieldEntryService) GetByFormID(ctx context.Context, formID uuid.UUID) (
 
 		// Use first entry's metadata for the group
 		firstEntry := entries[0]
+
+		// Get fields for this specific form version to ensure correct mapping
+		fields, _ := s.fieldRepo.GetByFormVersionID(ctx, firstEntry.FormVersionID)
+		fieldMap := make(map[uuid.UUID]domain.CustomFormField)
+		for _, field := range fields {
+			fieldMap[field.ID] = field
+		}
 
 		// Build field value responses
 		fieldValueResponses := make([]domain.EntryFieldValueResponse, 0, len(entries))
@@ -400,8 +434,9 @@ func (s *FieldEntryService) GetByFormID(ctx context.Context, formID uuid.UUID) (
 		entryID := firstEntry.ID.String()
 
 		// Calculate totals
-		calculationsJSON, _ := s.calculateEntryTotals(ctx, form, firstEntry.FormVersionID, fieldValueResponses, nil)
-		if len(calculationsJSON) == 0 {
+		calculationsJSON, calcErr := s.calculateEntryTotals(ctx, form, firstEntry.FormVersionID, fieldValueResponses, nil)
+		if calcErr != nil || len(calculationsJSON) == 0 {
+			// If calculation fails, use empty calculations
 			calculationsJSON = []byte(`{"fieldTotals":[],"totalBaseAmount":0,"totalGSTAmount":0,"totalAmount":0,"netPayable":0,"netReceivable":0,"basMapping":{"gstOnSales1A":0,"gstCredit1B":0,"totalSalesG1":0,"expensesG11":0}}`)
 		} else {
 			// Update field values with calculated amounts
@@ -788,6 +823,10 @@ func (s *FieldEntryService) calculateEntryTotals(ctx context.Context, form *doma
 		return nil, err
 	}
 
+	// Debug: Log what we're sending to calculation engine (disabled)
+	// fmt.Printf("DEBUG: Fields JSON: %s\n", string(fieldsJSON))
+	// fmt.Printf("DEBUG: Values JSON: %s\n", string(valuesJSON))
+
 	// Get form calculation settings (service facility fee, outwork, etc.)
 	// For now, use defaults - these should come from form or form version
 	var serviceFacilityFeePercent *float64
@@ -810,4 +849,88 @@ func (s *FieldEntryService) calculateEntryTotals(ctx context.Context, form *doma
 	}
 
 	return calculationsJSON, nil
+}
+
+// calculateAndStoreNetDetails calculates NET method details and stores them in tbl_entry_net_details
+func (s *FieldEntryService) calculateAndStoreNetDetails(
+	ctx context.Context,
+	clinicID uuid.UUID,
+	entryID uuid.UUID,
+	fieldValueResponses []domain.EntryFieldValueResponse,
+	deductionsJSON json.RawMessage,
+	now time.Time,
+) error {
+	// Step 1: Parse deductions to get commission percent and super settings
+	commissionPercent, superHoldingEnabled, superComponentPercent, err := calculation.ParseNetDeductions(deductionsJSON)
+	if err != nil {
+		return err
+	}
+
+	// If commission percent is 0, skip net details calculation
+	if commissionPercent == 0 {
+		return nil
+	}
+
+	// Step 2: Calculate total payment received from field values
+	// Sum all field values that are included in total
+	totalPaymentReceived := 0.0
+	for _, val := range fieldValueResponses {
+		if val.TotalAmount != nil {
+			totalPaymentReceived += *val.TotalAmount
+		} else {
+			totalPaymentReceived += val.Value
+		}
+	}
+
+	// Step 3: Get clinic financial settings for GST defaults
+	var gstRate float64 = 10.0 // Default GST rate
+	var gstType string = "exclusive" // Default GST type
+
+	financialSettings, err := s.financialSettingsRepo.GetByClinicID(ctx, clinicID)
+	if err == nil && financialSettings != nil {
+		// Get GST defaults from financial settings
+		gstDefaults, err := financialSettings.GetGSTDefaultsMap()
+		if err == nil {
+			// Try to get GST rate from defaults
+			if rateStr, ok := gstDefaults["defaultGSTRate"]; ok {
+				if rate, err := strconv.ParseFloat(rateStr, 64); err == nil {
+					gstRate = rate
+				}
+			}
+			// Try to get GST type from defaults
+			if typeStr, ok := gstDefaults["defaultGSTType"]; ok {
+				gstType = typeStr
+			}
+		}
+	}
+
+	// Step 4: Run NET calculation
+	netInput := calculation.NetCalculationInput{
+		TotalPaymentReceived: totalPaymentReceived,
+		CommissionPercent:    commissionPercent,
+		SuperHoldingEnabled:  superHoldingEnabled,
+		SuperComponentPercent: superComponentPercent,
+		GSTRate:              gstRate,
+		GSTType:              gstType,
+	}
+	netOutput := calculation.RunNetCalculation(netInput)
+
+	// Step 5: Create and store net details
+	netDetails := &domain.EntryNetDetails{
+		ID:                      uuid.New(),
+		EntryID:                 entryID,
+		CommissionPercent:       netOutput.CommissionPercent,
+		Commission:              netOutput.Commission,
+		GSTOnCommission:        netOutput.GSTOnCommission,
+		TotalPaymentReceived:     netOutput.TotalPaymentReceived,
+		SuperHoldingEnabled:      netOutput.SuperHoldingEnabled,
+		SuperComponentPercent:    netOutput.SuperComponentPercent,
+		CommissionComponent:      netOutput.CommissionComponent,
+		SuperComponent:           netOutput.SuperComponent,
+		TotalForReconciliation:   netOutput.TotalForReconciliation,
+		CreatedAt:                now,
+		UpdatedAt:                now,
+	}
+
+	return s.netDetailsRepo.Create(ctx, netDetails)
 }

@@ -35,3 +35,8 @@ type CustomFormVersionRepository interface {
 	GetByFormID(ctx context.Context, formID uuid.UUID) ([]domain.CustomFormVersion, error)
 	SetActive(ctx context.Context, formID uuid.UUID, versionID uuid.UUID) error
 }
+
+type CustomFormCalculationRepository interface {
+	GetByFormVersionID(ctx context.Context, formVersionID uuid.UUID) (*domain.CustomFormCalculation, error)
+	GetByFormID(ctx context.Context, formID uuid.UUID) (*domain.CustomFormCalculation, error)
+}

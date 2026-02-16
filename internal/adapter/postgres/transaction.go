@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
@@ -19,69 +20,91 @@ func NewTransactionRepository(db *sqlx.DB) port.TransactionRepository {
 	return &transactionRepo{db: db}
 }
 
-func (r *transactionRepo) Create(ctx context.Context, t *domain.Transaction) error {
-	query := `INSERT INTO tbl_transaction (
-		id, clinic_id, source_entry_id, source_form_id, field_id, coa_id, account_code, account_name, tax_category,
-		transaction_date, reference, details, gross_amount, gst_amount, net_amount, status, created_at, updated_at
-	) VALUES (
-		:id, :clinic_id, :source_entry_id, :source_form_id, :field_id, :coa_id, :account_code, :account_name, :tax_category,
-		:transaction_date, :reference, :details, :gross_amount, :gst_amount, :net_amount, :status, :created_at, :updated_at
-	)`
-	_, err := r.db.NamedExecContext(ctx, query, t)
-	return err
+func (r *transactionRepo) Create(ctx context.Context, t *domain.TransactionWithLedger) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Insert into tbl_transaction (header)
+	headerQuery := `INSERT INTO tbl_transaction (id, clinic_id, source_entry_id, created_at, updated_at) 
+		VALUES ($1, $2, $3, $4, $5)`
+	_, err = tx.ExecContext(ctx, headerQuery, t.ID, t.ClinicID, t.SourceEntryID, t.CreatedAt, t.UpdatedAt)
+	if err != nil {
+		return err
+	}
+
+	// Insert into tbl_transaction_ledger (details)
+	ledgerQuery := `INSERT INTO tbl_transaction_ledger (
+		id, transaction_id, coa_id, account_code, account_name, tax_category,
+		transaction_date, reference, details, gross_amount, gst_amount, net_amount, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
+	_, err = tx.ExecContext(ctx, ledgerQuery,
+		uuid.New(), t.ID, t.COAID, t.AccountCode, t.AccountName, t.TaxCategory,
+		t.TransactionDate, t.Reference, t.Details, t.GrossAmount, t.GSTAmount, t.NetAmount, t.CreatedAt, t.UpdatedAt)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
-func (r *transactionRepo) ListByClinicID(ctx context.Context, clinicID uuid.UUID, f *domain.ListTransactionsFilters) ([]domain.Transaction, int, error) {
-	base := `FROM tbl_transaction WHERE clinic_id = $1`
+func (r *transactionRepo) ListByClinicID(ctx context.Context, clinicID uuid.UUID, f *domain.ListTransactionsFilters) ([]domain.TransactionWithLedger, int, error) {
+	base := `FROM tbl_transaction t 
+		INNER JOIN tbl_transaction_ledger tl ON t.id = tl.transaction_id 
+		INNER JOIN tbl_custom_form_entry e ON t.source_entry_id = e.id
+		WHERE t.clinic_id = $1`
 	args := []interface{}{clinicID}
 	argNum := 2
 
 	if f.Search != "" {
-		base += fmt.Sprintf(" AND (account_name ILIKE $%d OR reference ILIKE $%d OR details ILIKE $%d)", argNum, argNum, argNum)
+		base += fmt.Sprintf(" AND (tl.account_name ILIKE $%d OR tl.reference ILIKE $%d OR tl.details ILIKE $%d)", argNum, argNum, argNum)
 		args = append(args, "%"+f.Search+"%")
 		argNum++
 	}
 	if f.TaxCategory != "" {
-		base += fmt.Sprintf(" AND tax_category = $%d", argNum)
+		base += fmt.Sprintf(" AND tl.tax_category = $%d", argNum)
 		args = append(args, f.TaxCategory)
 		argNum++
 	}
 	if f.Status != "" {
-		base += fmt.Sprintf(" AND status = $%d", argNum)
-		args = append(args, f.Status)
-		argNum++
+		// Status is not in current schema, skip this filter
+		// base += fmt.Sprintf(" AND status = $%d", argNum)
+		// args = append(args, f.Status)
+		// argNum++
 	}
 	if f.COAID != "" {
-		base += fmt.Sprintf(" AND coa_id = $%d", argNum)
+		base += fmt.Sprintf(" AND tl.coa_id = $%d", argNum)
 		args = append(args, f.COAID)
 		argNum++
 	}
 	if f.DateFrom != "" {
-		base += fmt.Sprintf(" AND transaction_date >= $%d", argNum)
+		base += fmt.Sprintf(" AND tl.transaction_date >= $%d", argNum)
 		args = append(args, f.DateFrom)
 		argNum++
 	}
 	if f.DateTo != "" {
-		base += fmt.Sprintf(" AND transaction_date <= $%d", argNum)
+		base += fmt.Sprintf(" AND tl.transaction_date <= $%d", argNum)
 		args = append(args, f.DateTo)
 		argNum++
 	}
 
-	sortCol := "transaction_date"
+	sortCol := "tl.transaction_date"
 	if f.SortField != "" {
 		switch f.SortField {
 		case "date":
-			sortCol = "transaction_date"
+			sortCol = "tl.transaction_date"
 		case "account":
-			sortCol = "account_name"
+			sortCol = "tl.account_name"
 		case "reference":
-			sortCol = "reference"
+			sortCol = "tl.reference"
 		case "gross":
-			sortCol = "gross_amount"
+			sortCol = "tl.gross_amount"
 		case "gst":
-			sortCol = "gst_amount"
+			sortCol = "tl.gst_amount"
 		case "net":
-			sortCol = "net_amount"
+			sortCol = "tl.net_amount"
 		}
 	}
 	sortDir := "DESC"
@@ -106,31 +129,132 @@ func (r *transactionRepo) ListByClinicID(ctx context.Context, clinicID uuid.UUID
 	offset := (page - 1) * limit
 	args = append(args, limit, offset)
 
-	sel := `SELECT id, clinic_id, source_entry_id, source_form_id, field_id, coa_id, account_code, account_name, tax_category,
-		transaction_date, reference, details, gross_amount, gst_amount, net_amount, status, created_at, updated_at `
+	sel := `SELECT 
+		tl.id, t.id as transaction_id, t.clinic_id, t.source_entry_id, 
+		e.form_id as source_form_id,
+		tl.coa_id, tl.account_code, tl.account_name, tl.tax_category,
+		tl.transaction_date, tl.reference, tl.details, 
+		tl.gross_amount, tl.gst_amount, tl.net_amount, 
+		t.created_at, t.updated_at `
 	listQuery := sel + base + " ORDER BY " + sortCol + " " + sortDir + fmt.Sprintf(" LIMIT $%d OFFSET $%d", argNum, argNum+1)
 
-	var list []domain.Transaction
-	if err := r.db.SelectContext(ctx, &list, listQuery, args...); err != nil {
+	type dbRow struct {
+		ID              uuid.UUID `db:"id"`
+		TransactionID   uuid.UUID `db:"transaction_id"`
+		ClinicID        uuid.UUID `db:"clinic_id"`
+		SourceEntryID   uuid.UUID `db:"source_entry_id"`
+		SourceFormID    uuid.UUID `db:"source_form_id"`
+		COAID           uuid.UUID `db:"coa_id"`
+		AccountCode     string    `db:"account_code"`
+		AccountName     string    `db:"account_name"`
+		TaxCategory     string    `db:"tax_category"`
+		TransactionDate time.Time `db:"transaction_date"`
+		Reference       string    `db:"reference"`
+		Details         string    `db:"details"`
+		GrossAmount     float64   `db:"gross_amount"`
+		GSTAmount       float64   `db:"gst_amount"`
+		NetAmount       float64   `db:"net_amount"`
+		CreatedAt       time.Time `db:"created_at"`
+		UpdatedAt       time.Time `db:"updated_at"`
+	}
+
+	var rows []dbRow
+	if err := r.db.SelectContext(ctx, &rows, listQuery, args...); err != nil {
 		return nil, 0, fmt.Errorf("list transactions: %w", err)
 	}
-	if list == nil {
-		list = []domain.Transaction{}
+
+	list := make([]domain.TransactionWithLedger, len(rows))
+	for i, row := range rows {
+		list[i] = domain.TransactionWithLedger{
+			Transaction: domain.Transaction{
+				ID:            row.TransactionID,
+				ClinicID:      row.ClinicID,
+				SourceEntryID: row.SourceEntryID,
+				CreatedAt:     row.CreatedAt,
+				UpdatedAt:     row.UpdatedAt,
+			},
+			SourceFormID:    row.SourceFormID,
+			COAID:           row.COAID,
+			AccountCode:     row.AccountCode,
+			AccountName:     row.AccountName,
+			TaxCategory:     row.TaxCategory,
+			TransactionDate: row.TransactionDate,
+			Reference:       row.Reference,
+			Details:         row.Details,
+			GrossAmount:     row.GrossAmount,
+			GSTAmount:       row.GSTAmount,
+			NetAmount:       row.NetAmount,
+			Status:          "POSTED", // Default status since not in schema
+		}
 	}
+
 	return list, total, nil
 }
 
-func (r *transactionRepo) ListByEntryID(ctx context.Context, entryID uuid.UUID) ([]domain.Transaction, error) {
-	query := `SELECT id, clinic_id, source_entry_id, source_form_id, field_id, coa_id, account_code, account_name, tax_category,
-		transaction_date, reference, details, gross_amount, gst_amount, net_amount, status, created_at, updated_at
-		FROM tbl_transaction WHERE source_entry_id = $1 ORDER BY transaction_date, account_code`
-	var list []domain.Transaction
-	if err := r.db.SelectContext(ctx, &list, query, entryID); err != nil {
+func (r *transactionRepo) ListByEntryID(ctx context.Context, entryID uuid.UUID) ([]domain.TransactionWithLedger, error) {
+	query := `SELECT 
+		tl.id, t.id as transaction_id, t.clinic_id, t.source_entry_id,
+		e.form_id as source_form_id,
+		tl.coa_id, tl.account_code, tl.account_name, tl.tax_category,
+		tl.transaction_date, tl.reference, tl.details,
+		tl.gross_amount, tl.gst_amount, tl.net_amount,
+		t.created_at, t.updated_at
+		FROM tbl_transaction t
+		INNER JOIN tbl_transaction_ledger tl ON t.id = tl.transaction_id
+		INNER JOIN tbl_custom_form_entry e ON t.source_entry_id = e.id
+		WHERE t.source_entry_id = $1 
+		ORDER BY tl.transaction_date, tl.account_code`
+
+	type dbRow struct {
+		ID              uuid.UUID `db:"id"`
+		TransactionID   uuid.UUID `db:"transaction_id"`
+		ClinicID        uuid.UUID `db:"clinic_id"`
+		SourceEntryID   uuid.UUID `db:"source_entry_id"`
+		SourceFormID    uuid.UUID `db:"source_form_id"`
+		COAID           uuid.UUID `db:"coa_id"`
+		AccountCode     string    `db:"account_code"`
+		AccountName     string    `db:"account_name"`
+		TaxCategory     string    `db:"tax_category"`
+		TransactionDate time.Time `db:"transaction_date"`
+		Reference       string    `db:"reference"`
+		Details         string    `db:"details"`
+		GrossAmount     float64   `db:"gross_amount"`
+		GSTAmount       float64   `db:"gst_amount"`
+		NetAmount       float64   `db:"net_amount"`
+		CreatedAt       time.Time `db:"created_at"`
+		UpdatedAt       time.Time `db:"updated_at"`
+	}
+
+	var rows []dbRow
+	if err := r.db.SelectContext(ctx, &rows, query, entryID); err != nil {
 		return nil, err
 	}
-	if list == nil {
-		list = []domain.Transaction{}
+
+	list := make([]domain.TransactionWithLedger, len(rows))
+	for i, row := range rows {
+		list[i] = domain.TransactionWithLedger{
+			Transaction: domain.Transaction{
+				ID:            row.TransactionID,
+				ClinicID:      row.ClinicID,
+				SourceEntryID: row.SourceEntryID,
+				CreatedAt:     row.CreatedAt,
+				UpdatedAt:     row.UpdatedAt,
+			},
+			SourceFormID:    row.SourceFormID,
+			COAID:           row.COAID,
+			AccountCode:     row.AccountCode,
+			AccountName:     row.AccountName,
+			TaxCategory:     row.TaxCategory,
+			TransactionDate: row.TransactionDate,
+			Reference:       row.Reference,
+			Details:         row.Details,
+			GrossAmount:     row.GrossAmount,
+			GSTAmount:       row.GSTAmount,
+			NetAmount:       row.NetAmount,
+			Status:          "POSTED",
+		}
 	}
+
 	return list, nil
 }
 

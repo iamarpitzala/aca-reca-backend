@@ -144,10 +144,14 @@ func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entry
 			netAmt = ft.BaseAmount
 		}
 
-		t := &domain.Transaction{
-			ID:              uuid.New(),
-			ClinicID:        form.ClinicID,
-			SourceEntryID:   entryID,
+		t := &domain.TransactionWithLedger{
+			Transaction: domain.Transaction{
+				ID:            uuid.New(),
+				ClinicID:      entry.ClinicID,
+				SourceEntryID: entryID,
+				CreatedAt:     now,
+				UpdatedAt:     now,
+			},
 			SourceFormID:    entry.FormID,
 			FieldID:         &ft.FieldID,
 			COAID:           coaID,
@@ -161,8 +165,6 @@ func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entry
 			GSTAmount:       gstAmt,
 			NetAmount:       netAmt,
 			Status:          util.TransactionStatusPosted,
-			CreatedAt:       now,
-			UpdatedAt:       now,
 		}
 		if err := s.txRepo.Create(ctx, t); err != nil {
 			return nil, err
@@ -255,10 +257,11 @@ func (s *TransactionPostingService) GetFormFieldCOAMapping(ctx context.Context, 
 	}, nil
 }
 
-func transactionToResponse(t *domain.Transaction) *domain.TransactionResponse {
+func transactionToResponse(t *domain.TransactionWithLedger) *domain.TransactionResponse {
 	dateStr := t.TransactionDate.Format("2006-01-02")
 	resp := &domain.TransactionResponse{
 		ID:            t.ID.String(),
+		TransactionID: t.ID.String(),
 		ClinicID:      t.ClinicID.String(),
 		SourceEntryID: t.SourceEntryID.String(),
 		SourceFormID:  t.SourceFormID.String(),

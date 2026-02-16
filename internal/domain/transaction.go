@@ -35,31 +35,55 @@ func TaxNameToCategory(name string) string {
 	}
 }
 
-// Transaction DB model
+// Transaction DB model (header table)
 type Transaction struct {
-	ID             uuid.UUID  `db:"id"`
-	ClinicID       uuid.UUID  `db:"clinic_id"`
-	SourceEntryID  uuid.UUID  `db:"source_entry_id"`
-	SourceFormID   uuid.UUID  `db:"source_form_id"`
-	FieldID        *string    `db:"field_id"`
-	COAID          uuid.UUID  `db:"coa_id"`
-	AccountCode    string     `db:"account_code"`
-	AccountName    string     `db:"account_name"`
-	TaxCategory    string     `db:"tax_category"`
+	ID            uuid.UUID `db:"id"`
+	ClinicID      uuid.UUID `db:"clinic_id"`
+	SourceEntryID uuid.UUID `db:"source_entry_id"`
+	CreatedAt     time.Time `db:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at"`
+}
+
+// TransactionLedger DB model (detail table with all transaction data)
+type TransactionLedger struct {
+	ID              uuid.UUID `db:"id"`
+	TransactionID   uuid.UUID `db:"transaction_id"`
+	COAID           uuid.UUID `db:"coa_id"`
+	AccountCode     string    `db:"account_code"`
+	AccountName     string    `db:"account_name"`
+	TaxCategory     string    `db:"tax_category"`
 	TransactionDate time.Time `db:"transaction_date"`
-	Reference      string     `db:"reference"`
-	Details        string     `db:"details"`
-	GrossAmount    float64    `db:"gross_amount"`
-	GSTAmount      float64    `db:"gst_amount"`
-	NetAmount      float64    `db:"net_amount"`
-	Status         string     `db:"status"`
-	CreatedAt      time.Time  `db:"created_at"`
-	UpdatedAt      time.Time  `db:"updated_at"`
+	Reference       string    `db:"reference"`
+	Details         string    `db:"details"`
+	GrossAmount     float64   `db:"gross_amount"`
+	GSTAmount       float64   `db:"gst_amount"`
+	NetAmount       float64   `db:"net_amount"`
+	CreatedAt       time.Time `db:"created_at"`
+	UpdatedAt       time.Time `db:"updated_at"`
+}
+
+// TransactionWithLedger combines transaction header with ledger details
+type TransactionWithLedger struct {
+	Transaction
+	SourceFormID    uuid.UUID
+	FieldID         *string
+	COAID           uuid.UUID
+	AccountCode     string
+	AccountName     string
+	TaxCategory     string
+	TransactionDate time.Time
+	Reference       string
+	Details         string
+	GrossAmount     float64
+	GSTAmount       float64
+	NetAmount       float64
+	Status          string
 }
 
 // TransactionResponse API response
 type TransactionResponse struct {
 	ID              string    `json:"id"`
+	TransactionID   string    `json:"transactionId"`
 	ClinicID        string    `json:"clinicId"`
 	SourceEntryID   string    `json:"sourceEntryId"`
 	SourceFormID    string    `json:"sourceFormId"`

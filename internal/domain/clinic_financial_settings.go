@@ -5,38 +5,39 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
-// FinancialYearStart represents the start month of the financial year
+// FinancialYearStart represents the start month of the financial year (values from util).
 type FinancialYearStart string
 
 const (
-	FinancialYearStartJuly    FinancialYearStart = "JULY"
-	FinancialYearStartJanuary FinancialYearStart = "JANUARY"
+	FinancialYearStartJuly    FinancialYearStart = FinancialYearStart(util.FinancialYearStartJuly)
+	FinancialYearStartJanuary FinancialYearStart = FinancialYearStart(util.FinancialYearStartJanuary)
 )
 
-// AccountingMethod represents the accounting method used
+// AccountingMethod represents the accounting method used (values from util).
 type AccountingMethod string
 
 const (
-	AccountingMethodCash    AccountingMethod = "CASH"
-	AccountingMethodAccrual AccountingMethod = "ACCRUAL"
+	AccountingMethodCash    AccountingMethod = AccountingMethod(util.AccountingMethodCash)
+	AccountingMethodAccrual AccountingMethod = AccountingMethod(util.AccountingMethodAccrual)
 )
 
-// GSTReportingFrequency represents how often GST is reported
+// GSTReportingFrequency represents how often GST is reported (values from util).
 type GSTReportingFrequency string
 
 const (
-	GSTReportingFrequencyQuarterly GSTReportingFrequency = "QUARTERLY"
-	GSTReportingFrequencyAnnually  GSTReportingFrequency = "ANNUALLY"
+	GSTReportingFrequencyQuarterly GSTReportingFrequency = GSTReportingFrequency(util.PeriodQuarterly)
+	GSTReportingFrequencyAnnually  GSTReportingFrequency = GSTReportingFrequency(util.PeriodAnnually)
 )
 
-// DefaultAmountMode represents how amounts are entered by default
+// DefaultAmountMode represents how amounts are entered by default (values from util).
 type DefaultAmountMode string
 
 const (
-	DefaultAmountModeGSTInclusive DefaultAmountMode = "GST_INCLUSIVE"
-	DefaultAmountModeGSTExclusive DefaultAmountMode = "GST_EXCLUSIVE"
+	DefaultAmountModeGSTInclusive DefaultAmountMode = DefaultAmountMode(util.DefaultAmountModeGSTInclusive)
+	DefaultAmountModeGSTExclusive DefaultAmountMode = DefaultAmountMode(util.DefaultAmountModeGSTExclusive)
 )
 
 // ClinicFinancialSettings represents financial settings for a clinic

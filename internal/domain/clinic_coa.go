@@ -21,6 +21,15 @@ type ClinicCOARequest struct {
 	COAID uuid.UUID `json:"coaId" binding:"required"`
 }
 
+// CreateCOAForClinicRequest creates a new chart-of-accounts entry and assigns it to the clinic.
+type CreateCOAForClinicRequest struct {
+	Code          string  `json:"code" binding:"required"`
+	Name          string  `json:"name" binding:"required"`
+	AccountTypeID int     `json:"accountTypeId" binding:"required"`
+	AccountTaxID  int     `json:"accountTaxId" binding:"required"`
+	Description   *string `json:"description"`
+}
+
 // ClinicCOAResponse is the API response for a clinic–AOC association.
 type ClinicCOAResponse struct {
 	ID        uuid.UUID  `json:"id"`
@@ -41,4 +50,20 @@ func (c *ClinicCOA) ToResponse() *ClinicCOAResponse {
 		UpdatedAt: c.UpdatedAt,
 		DeletedAt: c.DeletedAt,
 	}
+}
+
+// ClinicCOAWithDetails is the enriched response for clinic COA list (association + AOC details).
+type ClinicCOAWithDetails struct {
+	ID               uuid.UUID  `json:"id"`
+	ClinicID         uuid.UUID  `json:"clinicId"`
+	COAID            uuid.UUID  `json:"coaId"`
+	Code             string     `json:"code"`
+	Name             string     `json:"name"`
+	AccountTypeID    int        `json:"accountTypeId"`
+	AccountTaxID     int        `json:"accountTaxId"`
+	AccountTypeName  string     `json:"accountTypeName,omitempty"`
+	AccountTaxName   string     `json:"accountTaxName,omitempty"`
+	Description      *string    `json:"description,omitempty"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	UpdatedAt        time.Time  `json:"updatedAt"`
 }

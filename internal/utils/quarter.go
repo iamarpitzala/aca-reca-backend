@@ -5,15 +5,16 @@ import (
 	"time"
 
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
-// QuarterStatus represents the status of a quarter
+// QuarterStatus represents the status of a quarter (values from util).
 type QuarterStatus string
 
 const (
-	QuarterStatusOpen  QuarterStatus = "open"
-	QuarterStatusLocked QuarterStatus = "locked"
-	QuarterStatusDraft QuarterStatus = "draft"
+	QuarterStatusOpen   QuarterStatus = QuarterStatus(util.QuarterStatusOpen)
+	QuarterStatusLocked QuarterStatus = QuarterStatus(util.QuarterStatusLocked)
+	QuarterStatusDraft  QuarterStatus = QuarterStatus(util.QuarterStatusDraft)
 )
 
 // CalculatedQuarter represents a quarter calculated from financial settings

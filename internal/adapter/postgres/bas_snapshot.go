@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -83,8 +84,8 @@ func (r *basSnapshotRepo) GetFinalisedByClinicIDs(ctx context.Context, clinicIDs
 	
 	query, args, err := sqlx.In(`SELECT id, clinic_id, period_start, period_end, period_type, g1_total_sales, g2_export_sales, g3_gst_free_sales, g10_capital_purchases, g11_non_capital_purchases, label_1a_gst_on_sales, label_1b_gst_on_purchases, net_gst_payable, status, finalised_at, finalised_by, snapshot_data, created_at, updated_at, deleted_at
 		FROM tbl_bas_snapshot 
-		WHERE clinic_id IN (?) AND period_start = ? AND period_end = ? AND status IN ('FINALISED', 'LOCKED') AND deleted_at IS NULL
-		ORDER BY clinic_id, period_start DESC`, clinicIDs, periodStart, periodEnd)
+		WHERE clinic_id IN (?) AND period_start = ? AND period_end = ? AND status IN (?, ?) AND deleted_at IS NULL
+		ORDER BY clinic_id, period_start DESC`, clinicIDs, periodStart, periodEnd, util.BASStatusFinalised, util.BASStatusLocked)
 	if err != nil {
 		return nil, err
 	}

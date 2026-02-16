@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 // Custom form field and form types (match frontend customForm.ts)
@@ -24,31 +25,31 @@ const (
 type FormStatus string
 
 const (
-	FormStatusDraft     FormStatus = "draft"
-	FormStatusPublished FormStatus = "published"
-	FormStatusArchived  FormStatus = "archived"
+	FormStatusDraft     FormStatus = FormStatus(util.FormStatusDraft)
+	FormStatusPublished FormStatus = FormStatus(util.FormStatusPublished)
+	FormStatusArchived  FormStatus = FormStatus(util.FormStatusArchived)
 )
 
 type FormType string
 
 const (
-	FormTypeIncome  FormType = "income"
-	FormTypeExpense FormType = "expense"
-	FormTypeBoth    FormType = "both"
+	FormTypeIncome  FormType = FormType(util.FormTypeIncome)
+	FormTypeExpense FormType = FormType(util.FormTypeExpense)
+	FormTypeBoth    FormType = FormType(util.FormTypeBoth)
 )
 
 type CalculationMethod string
 
 const (
-	CalcMethodNet   CalculationMethod = "net"
-	CalcMethodGross CalculationMethod = "gross"
+	CalcMethodNet   CalculationMethod = CalculationMethod(util.MethodTypeNet)
+	CalcMethodGross CalculationMethod = CalculationMethod(util.MethodTypeGross)
 )
 
 type PaymentResponsibility string
 
 const (
-	PaymentOwner  PaymentResponsibility = "owner"
-	PaymentClinic PaymentResponsibility = "clinic"
+	PaymentOwner  PaymentResponsibility = PaymentResponsibility(util.PaymentResponsibilityOwner)
+	PaymentClinic PaymentResponsibility = PaymentResponsibility(util.PaymentResponsibilityClinic)
 )
 
 // FieldGSTConfig, DropdownOption, ConditionalLogicRule, FieldValidation, CustomFormField

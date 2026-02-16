@@ -30,6 +30,7 @@ func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFor
 	entries.GET("/clinic/:clinicId", handler.GetEntriesByClinicID)
 	entries.GET("/:entryId", handler.GetEntryByID)
 	entries.PUT("/:entryId", handler.UpdateEntry)
+	entries.POST("/:entryId/recalculate", handler.RecalculateEntry)
 	entries.DELETE("/:entryId", handler.DeleteEntry)
 
 	// Transactions from form entries (COA mapping)

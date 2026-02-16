@@ -3,6 +3,7 @@ package domain
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // ConvertNormalizedToJSONB converts a normalized entry structure to JSONB format (for API compatibility)
@@ -13,29 +14,65 @@ func ConvertNormalizedToJSONB(normalized *NormalizedEntry) (*CustomFormEntry, er
 
 	// Convert field values to JSONB
 	values := make([]map[string]interface{}, 0, len(normalized.FieldValues))
-	for _, fv := range normalized.FieldValues {
-		val := map[string]interface{}{
-			"fieldId":   fv.FieldID,
-			"fieldName": fv.FieldName,
+	if len(normalized.FieldValues) > 0 {
+		for _, fv := range normalized.FieldValues {
+			val := map[string]interface{}{
+				"fieldId":   fv.FieldID,
+				"fieldName": fv.FieldName,
+			}
+			if fv.Value != nil {
+				val["value"] = *fv.Value
+			} else if fv.TextValue != nil {
+				val["value"] = *fv.TextValue
+			} else if fv.BooleanValue != nil {
+				val["value"] = *fv.BooleanValue
+			}
+			if fv.ManualGstAmount != nil {
+				val["manualGstAmount"] = *fv.ManualGstAmount
+			}
+			values = append(values, val)
 		}
-		if fv.Value != nil {
-			val["value"] = *fv.Value
-		} else if fv.TextValue != nil {
-			val["value"] = *fv.TextValue
-		} else if fv.BooleanValue != nil {
-			val["value"] = *fv.BooleanValue
+	} else if len(normalized.FieldCalculations) > 0 {
+		for _, fc := range normalized.FieldCalculations {
+			val := map[string]interface{}{
+				"fieldId":   fc.FieldID,
+				"fieldName": fc.FieldName,
+			}
+			gstType := strings.ToLower(fc.GstType)
+			if gstType == "inclusive" {
+				val["value"] = fc.TotalAmount
+			} else {
+				val["value"] = fc.BaseAmount
+			}
+			values = append(values, val)
 		}
-		if fv.ManualGstAmount != nil {
-			val["manualGstAmount"] = *fv.ManualGstAmount
+	} else {
+		seen := make(map[string]bool)
+		addFromBreakdown := func(fieldID, fieldName string, totalAmount float64) {
+			if fieldID == "" || seen[fieldID] {
+				return
+			}
+			seen[fieldID] = true
+			values = append(values, map[string]interface{}{
+				"fieldId":   fieldID,
+				"fieldName": fieldName,
+				"value":     totalAmount,
+			})
 		}
-		values = append(values, val)
+		for _, r := range normalized.GrossReductions {
+			addFromBreakdown(r.FieldID, r.FieldName, r.TotalAmount)
+		}
+		for _, r := range normalized.GrossReimbursements {
+			addFromBreakdown(r.FieldID, r.FieldName, r.TotalAmount)
+		}
+		for _, r := range normalized.GrossAdditionalReductions {
+			addFromBreakdown(r.FieldID, r.FieldName, r.TotalAmount)
+		}
 	}
 	valuesJSON, _ := json.Marshal(values)
 
 	// Convert calculations to JSONB
 	calculations := make(map[string]interface{})
-
-	// Field totals
 	fieldTotals := make([]map[string]interface{}, 0, len(normalized.FieldCalculations))
 	for _, fc := range normalized.FieldCalculations {
 		fieldTotals = append(fieldTotals, map[string]interface{}{
@@ -50,7 +87,6 @@ func ConvertNormalizedToJSONB(normalized *NormalizedEntry) (*CustomFormEntry, er
 	}
 	calculations["fieldTotals"] = fieldTotals
 
-	// Summary totals
 	if normalized.Summary != nil {
 		s := normalized.Summary
 		calculations["totalBaseAmount"] = s.TotalBaseAmount
@@ -69,7 +105,6 @@ func ConvertNormalizedToJSONB(normalized *NormalizedEntry) (*CustomFormEntry, er
 		}
 	}
 
-	// Net method fields
 	if normalized.NetDetails != nil {
 		nd := normalized.NetDetails
 		calculations["commission"] = nd.Commission
@@ -86,7 +121,6 @@ func ConvertNormalizedToJSONB(normalized *NormalizedEntry) (*CustomFormEntry, er
 		}
 	}
 
-	// Gross method fields
 	if normalized.GrossDetails != nil {
 		gd := normalized.GrossDetails
 		calculations["serviceFeeBase"] = gd.ServiceFeeBase
@@ -100,52 +134,36 @@ func ConvertNormalizedToJSONB(normalized *NormalizedEntry) (*CustomFormEntry, er
 		}
 	}
 
-	// Gross reductions
 	if len(normalized.GrossReductions) > 0 {
 		reductionBreakdown := make([]map[string]interface{}, 0, len(normalized.GrossReductions))
 		for _, r := range normalized.GrossReductions {
 			reductionBreakdown = append(reductionBreakdown, map[string]interface{}{
-				"fieldId":     r.FieldID,
-				"fieldName":   r.FieldName,
-				"baseAmount":  r.BaseAmount,
-				"gstAmount":   r.GstAmount,
-				"totalAmount": r.TotalAmount,
+				"fieldId": r.FieldID, "fieldName": r.FieldName,
+				"baseAmount": r.BaseAmount, "gstAmount": r.GstAmount, "totalAmount": r.TotalAmount,
 			})
 		}
 		calculations["reductionBreakdown"] = reductionBreakdown
 	}
-
-	// Gross reimbursements
 	if len(normalized.GrossReimbursements) > 0 {
 		reimbursementBreakdown := make([]map[string]interface{}, 0, len(normalized.GrossReimbursements))
 		for _, r := range normalized.GrossReimbursements {
 			reimbursementBreakdown = append(reimbursementBreakdown, map[string]interface{}{
-				"fieldId":     r.FieldID,
-				"fieldName":   r.FieldName,
-				"baseAmount":  r.BaseAmount,
-				"gstAmount":   r.GstAmount,
-				"totalAmount": r.TotalAmount,
+				"fieldId": r.FieldID, "fieldName": r.FieldName,
+				"baseAmount": r.BaseAmount, "gstAmount": r.GstAmount, "totalAmount": r.TotalAmount,
 			})
 		}
 		calculations["reimbursementBreakdown"] = reimbursementBreakdown
 	}
-
-	// Gross additional reductions
 	if len(normalized.GrossAdditionalReductions) > 0 {
 		additionalReductionBreakdown := make([]map[string]interface{}, 0, len(normalized.GrossAdditionalReductions))
 		for _, r := range normalized.GrossAdditionalReductions {
 			additionalReductionBreakdown = append(additionalReductionBreakdown, map[string]interface{}{
-				"fieldId":     r.FieldID,
-				"fieldName":   r.FieldName,
-				"baseAmount":  r.BaseAmount,
-				"gstAmount":   r.GstAmount,
-				"totalAmount": r.TotalAmount,
+				"fieldId": r.FieldID, "fieldName": r.FieldName,
+				"baseAmount": r.BaseAmount, "gstAmount": r.GstAmount, "totalAmount": r.TotalAmount,
 			})
 		}
 		calculations["additionalReductionBreakdown"] = additionalReductionBreakdown
 	}
-
-	// Gross reductions summary
 	if normalized.GrossReductionsSummary != nil {
 		rs := normalized.GrossReductionsSummary
 		calculations["totalReductions"] = rs.TotalReductions
@@ -156,8 +174,6 @@ func ConvertNormalizedToJSONB(normalized *NormalizedEntry) (*CustomFormEntry, er
 		calculations["totalAdditionalReductionBase"] = rs.TotalAdditionalReductionBase
 		calculations["totalAdditionalReductionGst"] = rs.TotalAdditionalReductionGst
 	}
-
-	// Gross outwork
 	if normalized.GrossOutwork != nil {
 		o := normalized.GrossOutwork
 		calculations["outworkEnabled"] = o.OutworkEnabled
@@ -171,7 +187,6 @@ func ConvertNormalizedToJSONB(normalized *NormalizedEntry) (*CustomFormEntry, er
 
 	calculationsJSON, _ := json.Marshal(calculations)
 
-	// Convert deductions to JSONB
 	var deductionsJSON json.RawMessage
 	if normalized.Deductions != nil {
 		deductions := make(map[string]interface{})
@@ -246,7 +261,6 @@ func ConvertJSONBToNormalized(entry *CustomFormEntry, form *CustomForm) (*Normal
 		},
 	}
 
-	// Parse field values
 	var values []map[string]interface{}
 	if len(entry.Values) > 0 {
 		if err := json.Unmarshal(entry.Values, &values); err != nil {
@@ -281,7 +295,6 @@ func ConvertJSONBToNormalized(entry *CustomFormEntry, form *CustomForm) (*Normal
 		}
 	}
 
-	// Parse calculations
 	var calc map[string]interface{}
 	if len(entry.Calculations) > 0 {
 		if err := json.Unmarshal(entry.Calculations, &calc); err != nil {
@@ -289,7 +302,6 @@ func ConvertJSONBToNormalized(entry *CustomFormEntry, form *CustomForm) (*Normal
 		}
 	}
 
-	// Parse field totals
 	if fieldTotals, ok := calc["fieldTotals"].([]interface{}); ok {
 		for i, ft := range fieldTotals {
 			ftMap, ok := ft.(map[string]interface{})
@@ -332,326 +344,41 @@ func ConvertJSONBToNormalized(entry *CustomFormEntry, form *CustomForm) (*Normal
 		}
 	}
 
-	// Parse summary - always create summary even if calculations are empty
-	summary := &EntrySummary{
-		EntryID:   entry.ID,
-		CreatedAt: entry.CreatedAt,
-		UpdatedAt: entry.UpdatedAt,
-	}
-	if calc != nil {
-		if val, ok := calc["totalBaseAmount"].(float64); ok {
-			summary.TotalBaseAmount = val
-		}
-		if val, ok := calc["totalGSTAmount"].(float64); ok {
-			summary.TotalGstAmount = val
-		}
-		if val, ok := calc["totalAmount"].(float64); ok {
-			summary.TotalAmount = val
-		}
-		if val, ok := calc["netPayable"].(float64); ok {
-			summary.NetPayable = val
-		}
-		if val, ok := calc["netReceivable"].(float64); ok {
-			summary.NetReceivable = val
-		}
-		if val, ok := calc["netFee"].(float64); ok {
-			summary.NetFee = &val
-		}
-		if basMap, ok := calc["basMapping"].(map[string]interface{}); ok {
-			if val, ok := basMap["gstOnSales1A"].(float64); ok {
-				summary.BasGstOnSales1A = val
-			}
-			if val, ok := basMap["gstCredit1B"].(float64); ok {
-				summary.BasGstCredit1B = val
-			}
-			if val, ok := basMap["totalSalesG1"].(float64); ok {
-				summary.BasTotalSalesG1 = val
-			}
-			if val, ok := basMap["expensesG11"].(float64); ok {
-				summary.BasExpensesG11 = val
-			}
-		}
-	}
-	normalized.Summary = summary
+	normalized.Summary = parseSummaryFromCalc(entry.ID, entry.CreatedAt, entry.UpdatedAt, calc)
 
-	// Parse deductions
-	if len(entry.Deductions) > 0 {
-		var deductions map[string]interface{}
-		if err := json.Unmarshal(entry.Deductions, &deductions); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal deductions: %w", err)
-		}
-		ded := &EntryDeductions{
-			EntryID:   entry.ID,
-			CreatedAt: entry.CreatedAt,
-		}
-		if val, ok := deductions["serviceFacilityFeePercent"].(float64); ok {
-			ded.ServiceFacilityFeePercent = &val
-		}
-		if val, ok := deductions["serviceFeeOverride"].(float64); ok {
-			ded.ServiceFeeOverride = &val
-		}
-		if val, ok := deductions["commissionPercent"].(float64); ok {
-			ded.CommissionPercent = &val
-		}
-		if val, ok := deductions["superHoldingEnabled"].(bool); ok {
-			ded.SuperHoldingEnabled = &val
-		}
-		if val, ok := deductions["superComponentPercent"].(float64); ok {
-			ded.SuperComponentPercent = &val
-		}
-		if val, ok := deductions["outworkEnabled"].(bool); ok {
-			ded.OutworkEnabled = &val
-		}
-		if val, ok := deductions["outworkRatePercent"].(float64); ok {
-			ded.OutworkRatePercent = &val
-		}
-		normalized.Deductions = ded
+	ded, err := parseDeductionsFromEntry(entry)
+	if err != nil {
+		return nil, err
 	}
+	normalized.Deductions = ded
 
-	// Parse net method details
-	if form.CalculationMethod == "net" {
-		nd := &EntryNetDetails{
-			EntryID:    entry.ID,
-			Commission: 0,
-			CreatedAt:  entry.CreatedAt,
-			UpdatedAt:  entry.UpdatedAt,
-		}
-		
-		// Set commission percent from deductions (required field)
-		if normalized.Deductions != nil && normalized.Deductions.CommissionPercent != nil {
-			nd.CommissionPercent = *normalized.Deductions.CommissionPercent
-		} else {
-			// Default to 0 if not provided
-			nd.CommissionPercent = 0
-		}
-		
-		// Set super holding enabled from deductions
-		if normalized.Deductions != nil && normalized.Deductions.SuperHoldingEnabled != nil {
-			nd.SuperHoldingEnabled = *normalized.Deductions.SuperHoldingEnabled
-		}
-		
-		// Set super component percent from deductions
-		if normalized.Deductions != nil && normalized.Deductions.SuperComponentPercent != nil {
-			nd.SuperComponentPercent = normalized.Deductions.SuperComponentPercent
-		}
-		
-		// Populate calculated values from calculations JSONB if available
-		if calc != nil {
-			if commission, ok := calc["commission"].(float64); ok {
-				nd.Commission = commission
-			}
-			if val, ok := calc["gstOnCommission"].(float64); ok {
-				nd.GstOnCommission = val
-			}
-			if val, ok := calc["totalPaymentReceived"].(float64); ok {
-				nd.TotalPaymentReceived = val
-			}
-			if val, ok := calc["commissionComponent"].(float64); ok {
-				nd.CommissionComponent = &val
-			}
-			if val, ok := calc["superComponent"].(float64); ok {
-				nd.SuperComponent = &val
-			}
-			if val, ok := calc["totalForReconciliation"].(float64); ok {
-				nd.TotalForReconciliation = &val
-			}
-		}
-		
-		// If super holding is enabled but super-related fields are not set, calculate them from commission
-		// This handles cases where calculations JSONB might be missing these fields
-		if nd.SuperHoldingEnabled && nd.CommissionComponent == nil {
-			// Calculate commission component and super component from commission
-			superPercent := 12.0
-			if nd.SuperComponentPercent != nil {
-				superPercent = *nd.SuperComponentPercent
-			}
-			superMultiplier := 1.0 + (superPercent / 100.0)
-			commissionComponent := nd.Commission / superMultiplier
-			nd.CommissionComponent = &commissionComponent
-			
-			superComponent := commissionComponent * (superPercent / 100.0)
-			nd.SuperComponent = &superComponent
-			
-			totalForReconciliation := superComponent + commissionComponent
-			nd.TotalForReconciliation = &totalForReconciliation
-		}
-		
-		normalized.NetDetails = nd
-	}
+	normalized.NetDetails = parseNetDetailsFromCalc(entry, form, calc, ded)
+	normalized.GrossDetails = parseGrossDetailsFromCalc(entry, form, calc, ded)
 
-	// Parse gross method details
-	if calc != nil && form.CalculationMethod == "gross" {
-		if serviceFeeBase, ok := calc["serviceFeeBase"].(float64); ok {
-			gd := &EntryGrossDetails{
-				EntryID:        entry.ID,
-				ServiceFeeBase: serviceFeeBase,
-				CreatedAt:      entry.CreatedAt,
-				UpdatedAt:      entry.UpdatedAt,
-			}
-			if val, ok := calc["gstOnServiceFee"].(float64); ok {
-				gd.GstOnServiceFee = val
-			}
-			if val, ok := calc["totalServiceFee"].(float64); ok {
-				gd.TotalServiceFee = val
-			}
-			if val, ok := calc["subtotalAfterDeductions"].(float64); ok {
-				gd.SubtotalAfterDeductions = &val
-			}
-			if val, ok := calc["remittedAmount"].(float64); ok {
-				gd.RemittedAmount = &val
-			}
-			if normalized.Deductions != nil && normalized.Deductions.ServiceFacilityFeePercent != nil {
-				gd.ServiceFacilityFeePercent = *normalized.Deductions.ServiceFacilityFeePercent
-			}
-			normalized.GrossDetails = gd
-		}
-	}
-
-	// Parse gross reductions
 	if calc != nil {
 		if reductionBreakdown, ok := calc["reductionBreakdown"].([]interface{}); ok {
 			for i, rb := range reductionBreakdown {
-				rbMap, ok := rb.(map[string]interface{})
-				if !ok {
-					continue
+				if rbMap, ok := rb.(map[string]interface{}); ok {
+					normalized.GrossReductions = append(normalized.GrossReductions, parseBreakdownToGrossReduction(entry.ID, i, entry.CreatedAt, rbMap))
 				}
-				gr := EntryGrossReduction{
-					EntryID:      entry.ID,
-					DisplayOrder: i,
-					CreatedAt:    entry.CreatedAt,
-				}
-				if fieldID, ok := rbMap["fieldId"].(string); ok {
-					gr.FieldID = fieldID
-				}
-				if fieldName, ok := rbMap["fieldName"].(string); ok {
-					gr.FieldName = fieldName
-				}
-				if baseAmount, ok := rbMap["baseAmount"].(float64); ok {
-					gr.BaseAmount = baseAmount
-				}
-				if gstAmount, ok := rbMap["gstAmount"].(float64); ok {
-					gr.GstAmount = gstAmount
-				}
-				if totalAmount, ok := rbMap["totalAmount"].(float64); ok {
-					gr.TotalAmount = totalAmount
-				}
-				normalized.GrossReductions = append(normalized.GrossReductions, gr)
 			}
 		}
-
-		// Parse gross reimbursements
 		if reimbursementBreakdown, ok := calc["reimbursementBreakdown"].([]interface{}); ok {
 			for i, rb := range reimbursementBreakdown {
-				rbMap, ok := rb.(map[string]interface{})
-				if !ok {
-					continue
+				if rbMap, ok := rb.(map[string]interface{}); ok {
+					normalized.GrossReimbursements = append(normalized.GrossReimbursements, parseBreakdownToGrossReimbursement(entry.ID, i, entry.CreatedAt, rbMap))
 				}
-				gr := EntryGrossReimbursement{
-					EntryID:      entry.ID,
-					DisplayOrder: i,
-					CreatedAt:    entry.CreatedAt,
-				}
-				if fieldID, ok := rbMap["fieldId"].(string); ok {
-					gr.FieldID = fieldID
-				}
-				if fieldName, ok := rbMap["fieldName"].(string); ok {
-					gr.FieldName = fieldName
-				}
-				if baseAmount, ok := rbMap["baseAmount"].(float64); ok {
-					gr.BaseAmount = baseAmount
-				}
-				if gstAmount, ok := rbMap["gstAmount"].(float64); ok {
-					gr.GstAmount = gstAmount
-				}
-				if totalAmount, ok := rbMap["totalAmount"].(float64); ok {
-					gr.TotalAmount = totalAmount
-				}
-				normalized.GrossReimbursements = append(normalized.GrossReimbursements, gr)
 			}
 		}
-
-		// Parse gross additional reductions
 		if additionalReductionBreakdown, ok := calc["additionalReductionBreakdown"].([]interface{}); ok {
 			for i, rb := range additionalReductionBreakdown {
-				rbMap, ok := rb.(map[string]interface{})
-				if !ok {
-					continue
+				if rbMap, ok := rb.(map[string]interface{}); ok {
+					normalized.GrossAdditionalReductions = append(normalized.GrossAdditionalReductions, parseBreakdownToGrossAdditionalReduction(entry.ID, i, entry.CreatedAt, rbMap))
 				}
-				gar := EntryGrossAdditionalReduction{
-					EntryID:      entry.ID,
-					DisplayOrder: i,
-					CreatedAt:    entry.CreatedAt,
-				}
-				if fieldID, ok := rbMap["fieldId"].(string); ok {
-					gar.FieldID = fieldID
-				}
-				if fieldName, ok := rbMap["fieldName"].(string); ok {
-					gar.FieldName = fieldName
-				}
-				if baseAmount, ok := rbMap["baseAmount"].(float64); ok {
-					gar.BaseAmount = baseAmount
-				}
-				if gstAmount, ok := rbMap["gstAmount"].(float64); ok {
-					gar.GstAmount = gstAmount
-				}
-				if totalAmount, ok := rbMap["totalAmount"].(float64); ok {
-					gar.TotalAmount = totalAmount
-				}
-				normalized.GrossAdditionalReductions = append(normalized.GrossAdditionalReductions, gar)
 			}
 		}
-
-		// Parse gross reductions summary
-		if totalReductions, ok := calc["totalReductions"].(float64); ok {
-			rs := &EntryGrossReductionsSummary{
-				EntryID:         entry.ID,
-				TotalReductions: totalReductions,
-				CreatedAt:       entry.CreatedAt,
-				UpdatedAt:       entry.UpdatedAt,
-			}
-			if val, ok := calc["totalReductionBase"].(float64); ok {
-				rs.TotalReductionBase = val
-			}
-			if val, ok := calc["totalExpenseGst"].(float64); ok {
-				rs.TotalExpenseGst = val
-			}
-			if val, ok := calc["totalReimbursements"].(float64); ok {
-				rs.TotalReimbursements = val
-			}
-			if val, ok := calc["totalAdditionalReduction"].(float64); ok {
-				rs.TotalAdditionalReduction = val
-			}
-			if val, ok := calc["totalAdditionalReductionBase"].(float64); ok {
-				rs.TotalAdditionalReductionBase = val
-			}
-			if val, ok := calc["totalAdditionalReductionGst"].(float64); ok {
-				rs.TotalAdditionalReductionGst = val
-			}
-			normalized.GrossReductionsSummary = rs
-		}
-
-		// Parse gross outwork
-		if outworkChargeBase, ok := calc["outworkChargeBase"].(float64); ok {
-			o := &EntryGrossOutwork{
-				EntryID:           entry.ID,
-				OutworkChargeBase: outworkChargeBase,
-				CreatedAt:         entry.CreatedAt,
-				UpdatedAt:         entry.UpdatedAt,
-			}
-			if val, ok := calc["outworkEnabled"].(bool); ok {
-				o.OutworkEnabled = val
-			}
-			if val, ok := calc["outworkRatePercent"].(float64); ok {
-				o.OutworkRatePercent = &val
-			}
-			if val, ok := calc["outworkChargeGst"].(float64); ok {
-				o.OutworkChargeGst = val
-			}
-			if val, ok := calc["outworkChargeTotal"].(float64); ok {
-				o.OutworkChargeTotal = val
-			}
-			normalized.GrossOutwork = o
-		}
+		normalized.GrossReductionsSummary = parseGrossReductionsSummaryFromCalc(entry, calc)
+		normalized.GrossOutwork = parseGrossOutworkFromCalc(entry, calc)
 	}
 
 	return normalized, nil

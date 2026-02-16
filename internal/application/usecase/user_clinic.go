@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type UserClinicService struct {
@@ -40,7 +41,7 @@ func (s *UserClinicService) AssociateUserWithClinic(ctx context.Context, userID,
 		return nil, errors.New("user not found")
 	}
 	if role == "" {
-		role = "owner"
+		role = util.RoleOwner
 	}
 	now := time.Now()
 	uc := &domain.UserClinic{
@@ -65,6 +66,10 @@ func (s *UserClinicService) GetClinicUsers(ctx context.Context, clinicID uuid.UU
 	return s.ucRepo.GetClinicUsers(ctx, clinicID)
 }
 
+func (s *UserClinicService) GetByID(ctx context.Context, id uuid.UUID) (*domain.UserClinic, error) {
+	return s.ucRepo.GetByID(ctx, id)
+}
+
 func (s *UserClinicService) RemoveUserFromClinic(ctx context.Context, id uuid.UUID) error {
 	_, err := s.ucRepo.GetByID(ctx, id)
 	if err != nil {
@@ -79,4 +84,14 @@ func (s *UserClinicService) UserHasAccessToClinic(ctx context.Context, userID, c
 		return false, err
 	}
 	return uc != nil, nil
+}
+
+// UserRoleInClinic returns the authenticated user's role for the clinic (e.g. "owner", "member").
+// Returns empty string if the user is not associated with the clinic.
+func (s *UserClinicService) UserRoleInClinic(ctx context.Context, userID, clinicID uuid.UUID) (string, error) {
+	uc, err := s.ucRepo.GetByUserAndClinic(ctx, userID, clinicID)
+	if err != nil || uc == nil {
+		return "", err
+	}
+	return uc.Role, nil
 }

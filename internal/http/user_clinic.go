@@ -2,10 +2,12 @@ package http
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type UserClinicHandler struct {
@@ -39,6 +41,27 @@ func (h *UserClinicHandler) AssociateUserWithClinic(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+	authUserUUID, ok := authUserID.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+
+	role, err := h.userClinicUC.UserRoleInClinic(c.Request.Context(), authUserUUID, req.ClinicID)
+	if err != nil || role == "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
+		return
+	}
+	if !strings.EqualFold(role, util.RoleOwner) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: only the clinic owner can add users"})
 		return
 	}
 
@@ -93,16 +116,17 @@ func (h *UserClinicHandler) GetUserClinics(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "user clinics retrieved successfully", "userClinics": userClinics})
 }
 
-// GetClinicUsers retrieves all users for a clinic
+// GetClinicUsers retrieves all users for a clinic. Requester must have access to the clinic.
 // GET /api/v1/user-clinic/clinic/:clinicId
 // @Summary Get clinic's users
-// @Description Get all users associated with a clinic
+// @Description Get all users associated with a clinic. User must have access to the clinic.
 // @Tags UserClinic
 // @Accept json
 // @Produce json
 // @Param clinicId path string true "Clinic ID"
 // @Success 200 {object} domain.H
 // @Failure 400 {object} domain.H
+// @Failure 403 {object} domain.H
 // @Failure 500 {object} domain.H
 // @Router /user-clinic/clinic/{clinicId} [get]
 func (h *UserClinicHandler) GetClinicUsers(c *gin.Context) {
@@ -110,6 +134,23 @@ func (h *UserClinicHandler) GetClinicUsers(c *gin.Context) {
 	clinicID, err := uuid.Parse(clinicIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		return
+	}
+
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+	authUserUUID, ok := authUserID.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+
+	hasAccess, err := h.userClinicUC.UserHasAccessToClinic(c.Request.Context(), authUserUUID, clinicID)
+	if err != nil || !hasAccess {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
 		return
 	}
 
@@ -122,16 +163,17 @@ func (h *UserClinicHandler) GetClinicUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "clinic users retrieved successfully", "clinicUsers": clinicUsers})
 }
 
-// RemoveUserFromClinic removes a user-clinic association
+// RemoveUserFromClinic removes a user-clinic association. Only the clinic owner can remove users.
 // DELETE /api/v1/user-clinic/:id
 // @Summary Remove user from clinic
-// @Description Remove a user-clinic association
+// @Description Remove a user-clinic association. Only the clinic owner can perform this action.
 // @Tags UserClinic
 // @Accept json
 // @Produce json
 // @Param id path string true "User-Clinic Association ID"
 // @Success 200 {object} domain.H
 // @Failure 400 {object} domain.H
+// @Failure 403 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
 // @Router /user-clinic/{id} [delete]
@@ -140,6 +182,33 @@ func (h *UserClinicHandler) RemoveUserFromClinic(c *gin.Context) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid association ID"})
+		return
+	}
+
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+	authUserUUID, ok := authUserID.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+
+	assoc, err := h.userClinicUC.GetByID(c.Request.Context(), id)
+	if err != nil || assoc == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user-clinic association not found"})
+		return
+	}
+
+	role, err := h.userClinicUC.UserRoleInClinic(c.Request.Context(), authUserUUID, assoc.ClinicID)
+	if err != nil || role == "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
+		return
+	}
+	if !strings.EqualFold(role, util.RoleOwner) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: only the clinic owner can remove users"})
 		return
 	}
 

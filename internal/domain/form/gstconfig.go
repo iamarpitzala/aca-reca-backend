@@ -1,13 +1,16 @@
 package form
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/util"
+)
 
 type GstType string
 
 const (
-	GstTypeInclusive GstType = "INCLUSIVE"
-	GstTypeExclusive GstType = "EXCLUSIVE"
-	GstTypeManual    GstType = "MANUAL"
+	GstTypeInclusive GstType = GstType(util.GSTTypeInclusive)
+	GstTypeExclusive GstType = GstType(util.GSTTypeExclusive)
+	GstTypeManual    GstType = GstType(util.GSTTypeManual)
 )
 
 type GstRate float64

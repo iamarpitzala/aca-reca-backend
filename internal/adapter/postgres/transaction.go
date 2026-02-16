@@ -51,6 +51,11 @@ func (r *transactionRepo) ListByClinicID(ctx context.Context, clinicID uuid.UUID
 		args = append(args, f.Status)
 		argNum++
 	}
+	if f.COAID != "" {
+		base += fmt.Sprintf(" AND coa_id = $%d", argNum)
+		args = append(args, f.COAID)
+		argNum++
+	}
 	if f.DateFrom != "" {
 		base += fmt.Sprintf(" AND transaction_date >= $%d", argNum)
 		args = append(args, f.DateFrom)

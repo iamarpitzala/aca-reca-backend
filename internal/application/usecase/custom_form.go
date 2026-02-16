@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type CustomFormService struct {
@@ -29,11 +31,14 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 	if _, err := s.clinicRepo.GetByID(ctx, clinicID); err != nil {
 		return nil, errors.New("clinic not found")
 	}
-	if req.CalculationMethod != "net" && req.CalculationMethod != "gross" {
-		return nil, errors.New("calculation method must be net or gross")
+	// Normalise to UPPERCASE so API accepts both lowercase and uppercase
+	req.CalculationMethod = strings.ToUpper(strings.TrimSpace(req.CalculationMethod))
+	req.FormType = strings.ToUpper(strings.TrimSpace(req.FormType))
+	if req.CalculationMethod != util.MethodTypeNet && req.CalculationMethod != util.MethodTypeGross {
+		return nil, errors.New("calculation method must be NET or GROSS")
 	}
-	if req.FormType != "income" && req.FormType != "expense" && req.FormType != "both" {
-		return nil, errors.New("form type must be income, expense, or both")
+	if req.FormType != util.FormTypeIncome && req.FormType != util.FormTypeExpense && req.FormType != util.FormTypeBoth {
+		return nil, errors.New("form type must be INCOME, EXPENSE, or BOTH")
 	}
 	if len(req.Fields) == 0 {
 		req.Fields = []byte("[]")
@@ -41,6 +46,11 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 	outworkEnabled := false
 	if req.OutworkEnabled != nil {
 		outworkEnabled = *req.OutworkEnabled
+	}
+	defaultPayment := req.DefaultPaymentResponsibility
+	if defaultPayment == nil || *defaultPayment == "" {
+		v := util.PaymentResponsibilityOwner
+		defaultPayment = &v
 	}
 	now := time.Now()
 	form := &domain.CustomForm{
@@ -50,9 +60,9 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 		Description:                  req.Description,
 		CalculationMethod:            req.CalculationMethod,
 		FormType:                     req.FormType,
-		Status:                       "draft",
+		Status:                       util.FormStatusDraft,
 		Fields:                       req.Fields,
-		DefaultPaymentResponsibility: req.DefaultPaymentResponsibility,
+		DefaultPaymentResponsibility: defaultPayment,
 		ServiceFacilityFeePercent:    req.ServiceFacilityFeePercent,
 		OutworkEnabled:               outworkEnabled,
 		OutworkRatePercent:           req.OutworkRatePercent,
@@ -68,11 +78,15 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 }
 
 func (s *CustomFormService) GetByID(ctx context.Context, id uuid.UUID) (*domain.CustomFormResponse, error) {
-	form, err := s.repo.GetByID(ctx, id)
+	form, err := s.getFormByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	return customFormToResponse(form), nil
+}
+
+func (s *CustomFormService) getFormByID(ctx context.Context, id uuid.UUID) (*domain.CustomForm, error) {
+	return s.repo.GetByID(ctx, id)
 }
 
 func (s *CustomFormService) GetByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.CustomFormResponse, error) {
@@ -103,39 +117,12 @@ func (s *CustomFormService) Update(ctx context.Context, form *domain.CustomForm)
 	return s.repo.Update(ctx, form)
 }
 
-// UpdateByRequest updates a form from API request (handles draft vs published).
 func (s *CustomFormService) UpdateByRequest(ctx context.Context, id uuid.UUID, req *domain.UpdateCustomFormRequest) (*domain.CustomFormResponse, error) {
-	form, err := s.repo.GetByID(ctx, id)
+	form, err := s.getFormByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if form.Status == "published" {
-		if req.Fields != nil {
-			form.Fields = req.Fields
-		}
-	} else {
-		if req.Name != nil {
-			form.Name = *req.Name
-		}
-		if req.Description != nil {
-			form.Description = *req.Description
-		}
-		if req.Fields != nil {
-			form.Fields = req.Fields
-		}
-		if req.DefaultPaymentResponsibility != nil {
-			form.DefaultPaymentResponsibility = req.DefaultPaymentResponsibility
-		}
-		if req.ServiceFacilityFeePercent != nil {
-			form.ServiceFacilityFeePercent = req.ServiceFacilityFeePercent
-		}
-		if req.OutworkEnabled != nil {
-			form.OutworkEnabled = *req.OutworkEnabled
-		}
-		if req.OutworkRatePercent != nil {
-			form.OutworkRatePercent = req.OutworkRatePercent
-		}
-	}
+	applyUpdateToForm(form, req)
 	form.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, form); err != nil {
 		return nil, err
@@ -143,12 +130,42 @@ func (s *CustomFormService) UpdateByRequest(ctx context.Context, id uuid.UUID, r
 	return customFormToResponse(form), nil
 }
 
+func applyUpdateToForm(form *domain.CustomForm, req *domain.UpdateCustomFormRequest) {
+	if form.Status == util.FormStatusPublished {
+		if req.Fields != nil {
+			form.Fields = req.Fields
+		}
+		return
+	}
+	if req.Name != nil {
+		form.Name = *req.Name
+	}
+	if req.Description != nil {
+		form.Description = *req.Description
+	}
+	if req.Fields != nil {
+		form.Fields = req.Fields
+	}
+	if req.DefaultPaymentResponsibility != nil {
+		form.DefaultPaymentResponsibility = req.DefaultPaymentResponsibility
+	}
+	if req.ServiceFacilityFeePercent != nil {
+		form.ServiceFacilityFeePercent = req.ServiceFacilityFeePercent
+	}
+	if req.OutworkEnabled != nil {
+		form.OutworkEnabled = *req.OutworkEnabled
+	}
+	if req.OutworkRatePercent != nil {
+		form.OutworkRatePercent = req.OutworkRatePercent
+	}
+}
+
 func (s *CustomFormService) Publish(ctx context.Context, id uuid.UUID) (*domain.CustomFormResponse, error) {
-	form, err := s.repo.GetByID(ctx, id)
+	form, err := s.getFormByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if form.Status == "published" {
+	if form.Status == util.FormStatusPublished {
 		return nil, errors.New("form is already published")
 	}
 	if len(form.Fields) == 0 || string(form.Fields) == "[]" {
@@ -157,7 +174,7 @@ func (s *CustomFormService) Publish(ctx context.Context, id uuid.UUID) (*domain.
 	if err := s.repo.Publish(ctx, id); err != nil {
 		return nil, err
 	}
-	form.Status = "published"
+	form.Status = util.FormStatusPublished
 	now := time.Now()
 	form.PublishedAt = &now
 	form.UpdatedAt = now
@@ -165,31 +182,31 @@ func (s *CustomFormService) Publish(ctx context.Context, id uuid.UUID) (*domain.
 }
 
 func (s *CustomFormService) Unpublish(ctx context.Context, id uuid.UUID) (*domain.CustomFormResponse, error) {
-	form, err := s.repo.GetByID(ctx, id)
+	form, err := s.getFormByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if form.Status != "published" {
+	if form.Status != util.FormStatusPublished {
 		return nil, errors.New("only published forms can be unpublished")
 	}
 	if err := s.repo.Unpublish(ctx, id); err != nil {
 		return nil, err
 	}
-	form.Status = "draft"
+	form.Status = util.FormStatusDraft
 	form.PublishedAt = nil
 	form.UpdatedAt = time.Now()
 	return customFormToResponse(form), nil
 }
 
 func (s *CustomFormService) Archive(ctx context.Context, id uuid.UUID) (*domain.CustomFormResponse, error) {
-	form, err := s.repo.GetByID(ctx, id)
+	form, err := s.getFormByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	if err := s.repo.Archive(ctx, id); err != nil {
 		return nil, err
 	}
-	form.Status = "archived"
+	form.Status = util.FormStatusArchived
 	form.UpdatedAt = time.Now()
 	return customFormToResponse(form), nil
 }
@@ -198,9 +215,8 @@ func (s *CustomFormService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
 }
 
-// Duplicate creates a copy of a form in draft status.
 func (s *CustomFormService) Duplicate(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.CustomFormResponse, error) {
-	form, err := s.repo.GetByID(ctx, id)
+	form, err := s.getFormByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +228,7 @@ func (s *CustomFormService) Duplicate(ctx context.Context, id uuid.UUID, userID 
 		Description:                  form.Description,
 		CalculationMethod:            form.CalculationMethod,
 		FormType:                     form.FormType,
-		Status:                       "draft",
+		Status:                       util.FormStatusDraft,
 		Fields:                       form.Fields,
 		DefaultPaymentResponsibility: form.DefaultPaymentResponsibility,
 		ServiceFacilityFeePercent:    form.ServiceFacilityFeePercent,
@@ -239,14 +255,14 @@ func (s *CustomFormService) CreateEntryFromRequest(ctx context.Context, req *dom
 	if err != nil {
 		return nil, errors.New("invalid clinic ID")
 	}
-	form, err := s.repo.GetByID(ctx, formID)
+	form, err := s.getFormByID(ctx, formID)
 	if err != nil {
 		return nil, err
 	}
 	if form.ClinicID != clinicID {
 		return nil, errors.New("clinic does not own this form")
 	}
-	if form.Status != "published" {
+	if form.Status != util.FormStatusPublished {
 		return nil, errors.New("cannot create entries for unpublished forms")
 	}
 
@@ -391,7 +407,7 @@ func (s *CustomFormService) UpdateEntryFromRequest(ctx context.Context, id uuid.
 	if err != nil {
 		return nil, err
 	}
-	form, err := s.repo.GetByID(ctx, entry.FormID)
+	form, err := s.getFormByID(ctx, entry.FormID)
 	if err != nil {
 		return nil, err
 	}
@@ -433,9 +449,49 @@ func (s *CustomFormService) DeleteEntry(ctx context.Context, id uuid.UUID) error
 	return s.repo.DeleteEntry(ctx, id)
 }
 
+// RecalculateEntry recomputes calculations from stored field values and deductions, then persists
+// updated summary, field calculations, and gross/net tables (Phase 3: recalculation from DB).
+func (s *CustomFormService) RecalculateEntry(ctx context.Context, entryID uuid.UUID) (*domain.CustomFormEntryResponse, error) {
+	entry, err := s.repo.GetEntryByID(ctx, entryID)
+	if err != nil {
+		return nil, err
+	}
+	form, err := s.getFormByID(ctx, entry.FormID)
+	if err != nil {
+		return nil, err
+	}
+	valuesJSON := entry.Values
+	if len(valuesJSON) == 0 {
+		valuesJSON = []byte("[]")
+	}
+	deductionsForCalc := mergeEntryPaymentResponsibilityIntoDeductions(entry.Deductions, entry.PaymentResponsibility)
+	if len(deductionsForCalc) == 0 {
+		deductionsForCalc = nil
+	}
+	calculations, err := s.calcEngine.RunEntryCalculation(
+		form.Fields,
+		form.FormType,
+		form.CalculationMethod,
+		form.ServiceFacilityFeePercent,
+		form.OutworkEnabled,
+		form.OutworkRatePercent,
+		valuesJSON,
+		deductionsForCalc,
+	)
+	if err != nil {
+		return nil, err
+	}
+	entry.Calculations = calculations
+	entry.UpdatedAt = time.Now()
+	if err := s.repo.UpdateEntry(ctx, entry); err != nil {
+		return nil, err
+	}
+	return customFormEntryToResponse(entry), nil
+}
+
 // PreviewCalculations returns calculations for given form and values (no save).
 func (s *CustomFormService) PreviewCalculations(ctx context.Context, formID uuid.UUID, valuesJSON, deductionsJSON []byte) ([]byte, error) {
-	form, err := s.repo.GetByID(ctx, formID)
+	form, err := s.getFormByID(ctx, formID)
 	if err != nil {
 		return nil, err
 	}

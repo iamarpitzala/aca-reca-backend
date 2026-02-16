@@ -5,23 +5,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
-// BASPeriodType represents the type of BAS period
+// BASPeriodType represents the type of BAS period (values from util).
 type BASPeriodType string
 
 const (
-	BASPeriodTypeQuarterly BASPeriodType = "QUARTERLY"
-	BASPeriodTypeAnnually   BASPeriodType = "ANNUALLY"
+	BASPeriodTypeQuarterly BASPeriodType = BASPeriodType(util.PeriodQuarterly)
+	BASPeriodTypeAnnually   BASPeriodType = BASPeriodType(util.PeriodAnnually)
 )
 
-// BASStatus represents the status of a BAS
+// BASStatus represents the status of a BAS (values from util).
 type BASStatus string
 
 const (
-	BASStatusDraft     BASStatus = "DRAFT"
-	BASStatusFinalised BASStatus = "FINALISED"
-	BASStatusLocked    BASStatus = "LOCKED"
+	BASStatusDraft     BASStatus = BASStatus(util.BASStatusDraft)
+	BASStatusFinalised BASStatus = BASStatus(util.BASStatusFinalised)
+	BASStatusLocked    BASStatus = BASStatus(util.BASStatusLocked)
 )
 
 // BASSnapshot represents a finalised BAS record

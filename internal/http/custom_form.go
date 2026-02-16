@@ -24,36 +24,8 @@ func NewCustomFormHandler(formUC *usecase.CustomFormService, postingUC *usecase.
 	return &CustomFormHandler{formUC: formUC, postingUC: postingUC, userClinicUC: userClinicUC}
 }
 
-func (h *CustomFormHandler) getAuthUserID(c *gin.Context) (uuid.UUID, bool) {
-	v, ok := c.Get("user_id")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return uuid.Nil, false
-	}
-	userID, ok := v.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user context"})
-		return uuid.Nil, false
-	}
-	return userID, true
-}
-
-// checkClinicAccess verifies the authenticated user has access to the clinic.
-func (h *CustomFormHandler) checkClinicAccess(c *gin.Context, clinicID uuid.UUID) bool {
-	userID, ok := h.getAuthUserID(c)
-	if !ok {
-		return false
-	}
-	hasAccess, err := h.userClinicUC.UserHasAccessToClinic(c.Request.Context(), userID, clinicID)
-	if err != nil || !hasAccess {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
-		return false
-	}
-	return true
-}
-
 func (h *CustomFormHandler) Create(c *gin.Context) {
-	userID, ok := h.getAuthUserID(c)
+	userID, ok := GetAuthUserID(c)
 	if !ok {
 		return
 	}
@@ -67,7 +39,7 @@ func (h *CustomFormHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	resp, err := h.formUC.Create(c.Request.Context(), &req, userID)
@@ -90,7 +62,7 @@ func (h *CustomFormHandler) GetByID(c *gin.Context) {
 		return
 	}
 	clinicID, _ := uuid.Parse(resp.ClinicID)
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	utils.JSONResponse(c, http.StatusOK, "custom form retrieved", resp, nil)
@@ -102,7 +74,7 @@ func (h *CustomFormHandler) GetByClinicID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	list, err := h.formUC.GetByClinicID(c.Request.Context(), clinicID)
@@ -119,7 +91,7 @@ func (h *CustomFormHandler) GetPublishedByClinicID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	list, err := h.formUC.GetPublishedByClinicID(c.Request.Context(), clinicID)
@@ -142,7 +114,7 @@ func (h *CustomFormHandler) Update(c *gin.Context) {
 		return
 	}
 	clinicID, _ := uuid.Parse(form.ClinicID)
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	var req domain.UpdateCustomFormRequest
@@ -170,7 +142,7 @@ func (h *CustomFormHandler) Publish(c *gin.Context) {
 		return
 	}
 	clinicID, _ := uuid.Parse(form.ClinicID)
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	resp, err := h.formUC.Publish(c.Request.Context(), id)
@@ -193,7 +165,7 @@ func (h *CustomFormHandler) Unpublish(c *gin.Context) {
 		return
 	}
 	clinicID, _ := uuid.Parse(form.ClinicID)
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	resp, err := h.formUC.Unpublish(c.Request.Context(), id)
@@ -216,7 +188,7 @@ func (h *CustomFormHandler) Archive(c *gin.Context) {
 		return
 	}
 	clinicID, _ := uuid.Parse(form.ClinicID)
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	resp, err := h.formUC.Archive(c.Request.Context(), id)
@@ -239,7 +211,7 @@ func (h *CustomFormHandler) Delete(c *gin.Context) {
 		return
 	}
 	clinicID, _ := uuid.Parse(form.ClinicID)
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	if err := h.formUC.Delete(c.Request.Context(), id); err != nil {
@@ -250,7 +222,7 @@ func (h *CustomFormHandler) Delete(c *gin.Context) {
 }
 
 func (h *CustomFormHandler) Duplicate(c *gin.Context) {
-	userID, ok := h.getAuthUserID(c)
+	userID, ok := GetAuthUserID(c)
 	if !ok {
 		return
 	}
@@ -265,7 +237,7 @@ func (h *CustomFormHandler) Duplicate(c *gin.Context) {
 		return
 	}
 	clinicID, _ := uuid.Parse(form.ClinicID)
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	resp, err := h.formUC.Duplicate(c.Request.Context(), id, userID)
@@ -279,7 +251,7 @@ func (h *CustomFormHandler) Duplicate(c *gin.Context) {
 // Entry handlers
 
 func (h *CustomFormHandler) CreateEntry(c *gin.Context) {
-	userID, ok := h.getAuthUserID(c)
+	userID, ok := GetAuthUserID(c)
 	if !ok {
 		return
 	}
@@ -293,12 +265,27 @@ func (h *CustomFormHandler) CreateEntry(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	resp, err := h.formUC.CreateEntryFromRequest(c.Request.Context(), &req, userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	entryID, err := uuid.Parse(resp.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid entry id"})
+		return
+	}
+	if _, err := h.postingUC.PostEntryToLedger(c.Request.Context(), entryID); err != nil {
+		c.JSON(http.StatusCreated, gin.H{
+			"success":                        true,
+			"message":                        "entry created",
+			"data":                            resp,
+			"transactionGenerationWarning":   "transactions could not be generated; you can retry via POST /entries/" + resp.ID + "/transactions",
+			"transactionGenerationError":     err.Error(),
+		})
 		return
 	}
 	utils.JSONResponse(c, http.StatusCreated, "entry created", resp, nil)
@@ -315,7 +302,7 @@ func (h *CustomFormHandler) GetEntryByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	if !h.checkClinicAccess(c, entry.ClinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, entry.ClinicID) {
 		return
 	}
 	resp, err := h.formUC.GetEntryResponseByID(c.Request.Context(), id)
@@ -338,7 +325,7 @@ func (h *CustomFormHandler) GetEntriesByFormID(c *gin.Context) {
 		return
 	}
 	clinicID, _ := uuid.Parse(form.ClinicID)
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	list, err := h.formUC.GetEntriesResponseByFormID(c.Request.Context(), formID)
@@ -355,7 +342,7 @@ func (h *CustomFormHandler) GetEntriesByClinicID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	list, err := h.formUC.GetEntriesResponseByClinicID(c.Request.Context(), clinicID)
@@ -377,7 +364,7 @@ func (h *CustomFormHandler) UpdateEntry(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	if !h.checkClinicAccess(c, entry.ClinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, entry.ClinicID) {
 		return
 	}
 	var req domain.UpdateEntryRequest
@@ -388,6 +375,16 @@ func (h *CustomFormHandler) UpdateEntry(c *gin.Context) {
 	resp, err := h.formUC.UpdateEntryFromRequest(c.Request.Context(), id, &req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if _, err := h.postingUC.PostEntryToLedger(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success":                        true,
+			"message":                        "entry updated",
+			"data":                            resp,
+			"transactionGenerationWarning":   "transactions could not be regenerated; you can retry via POST /entries/" + id.String() + "/transactions",
+			"transactionGenerationError":     err.Error(),
+		})
 		return
 	}
 	utils.JSONResponse(c, http.StatusOK, "entry updated", resp, nil)
@@ -404,7 +401,7 @@ func (h *CustomFormHandler) DeleteEntry(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	if !h.checkClinicAccess(c, entry.ClinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, entry.ClinicID) {
 		return
 	}
 	if err := h.formUC.DeleteEntry(c.Request.Context(), id); err != nil {
@@ -412,6 +409,28 @@ func (h *CustomFormHandler) DeleteEntry(c *gin.Context) {
 		return
 	}
 	utils.JSONResponse(c, http.StatusOK, "entry deleted", nil, nil)
+}
+
+func (h *CustomFormHandler) RecalculateEntry(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("entryId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		return
+	}
+	entry, err := h.formUC.GetEntryByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	if !RequireClinicAccess(c, h.userClinicUC, entry.ClinicID) {
+		return
+	}
+	resp, err := h.formUC.RecalculateEntry(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "entry recalculated", resp, nil)
 }
 
 func (h *CustomFormHandler) PreviewCalculations(c *gin.Context) {
@@ -431,7 +450,7 @@ func (h *CustomFormHandler) PreviewCalculations(c *gin.Context) {
 		return
 	}
 	clinicID, _ := uuid.Parse(form.ClinicID)
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	deductions := req.Deductions
@@ -464,7 +483,7 @@ func (h *CustomFormHandler) GenerateEntryTransactions(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	if !h.checkClinicAccess(c, entry.ClinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, entry.ClinicID) {
 		return
 	}
 	list, err := h.postingUC.PostEntryToLedger(c.Request.Context(), entryID)
@@ -486,7 +505,7 @@ func (h *CustomFormHandler) GetEntryTransactions(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	if !h.checkClinicAccess(c, entry.ClinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, entry.ClinicID) {
 		return
 	}
 	list, err := h.postingUC.ListJournalEntriesByEntry(c.Request.Context(), entryID)
@@ -503,13 +522,14 @@ func (h *CustomFormHandler) GetClinicTransactions(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	f := &domain.ListTransactionsFilters{
 		Search:        c.Query("search"),
 		TaxCategory:   c.Query("taxCategory"),
 		Status:        c.Query("status"),
+		COAID:         c.Query("coaId"),
 		DateFrom:      c.Query("dateFrom"),
 		DateTo:        c.Query("dateTo"),
 		SortField:     c.DefaultQuery("sortField", "date"),
@@ -546,7 +566,7 @@ func (h *CustomFormHandler) GetFormFieldCOAMapping(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
 		return
 	}
-	if !h.checkClinicAccess(c, clinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
 	resp, err := h.postingUC.GetFormFieldCOAMapping(c.Request.Context(), formID, clinicID)

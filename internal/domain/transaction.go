@@ -6,12 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Transaction status
-const (
-	TransactionStatusPosted = "posted"
-	TransactionStatusDraft  = "draft"
-	TransactionStatusVoided = "voided"
-)
+// Transaction status constants are in util (TransactionStatusPosted, etc.).
 
 // Tax category (matches frontend)
 const (
@@ -69,6 +64,7 @@ type TransactionResponse struct {
 	SourceEntryID   string    `json:"sourceEntryId"`
 	SourceFormID    string    `json:"sourceFormId"`
 	FieldID         *string   `json:"fieldId,omitempty"`
+	COAID           string    `json:"coaId,omitempty"`
 	AccountCode     string    `json:"accountCode"`
 	AccountName     string    `json:"accountName"`
 	TaxCategory     string    `json:"taxCategory"`
@@ -85,15 +81,16 @@ type TransactionResponse struct {
 
 // ListTransactionsFilters for listing
 type ListTransactionsFilters struct {
-	Search       string
-	TaxCategory  string
-	Status       string
-	DateFrom     string
-	DateTo       string
-	SortField    string
+	Search        string
+	TaxCategory   string
+	Status        string
+	COAID         string // filter by chart of account (uuid)
+	DateFrom      string
+	DateTo        string
+	SortField     string
 	SortDirection string
-	Page         int
-	Limit        int
+	Page          int
+	Limit         int
 }
 
 // ListTransactionsResponse paginated response
@@ -107,9 +104,10 @@ type ListTransactionsResponse struct {
 
 // FormFieldCOAMappingItem for GET form field COA mapping
 type FormFieldCOAMappingItem struct {
-	FieldID   string  `json:"fieldId"`
-	FieldName string  `json:"fieldName"`
-	AccountID *string `json:"accountId,omitempty"`
+	FieldID               string  `json:"fieldId"`
+	FieldName             string  `json:"fieldName"`
+	AccountID             *string `json:"accountId,omitempty"`
+	AmountInterpretation  string  `json:"amountInterpretation,omitempty"` // "gross" | "net" | "tax_only"
 }
 
 // FormFieldCOAMappingResponse form fields with COA and clinic COA list

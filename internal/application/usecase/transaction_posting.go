@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 // TransactionPostingService handles posting form entries to the general ledger (journal entries).
@@ -35,9 +37,10 @@ func NewTransactionPostingService(
 }
 
 type formFieldForMapping struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	AccountID *string `json:"accountId"`
+	ID                  string  `json:"id"`
+	Name                string  `json:"name"`
+	AccountID           *string `json:"accountId"`
+	AmountInterpretation string  `json:"amountInterpretation"` // "gross" | "net" | "tax_only" - what the field value represents
 }
 
 type fieldCalc struct {
@@ -128,6 +131,27 @@ func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entry
 		}
 		taxCategory := domain.TaxNameToCategory(tax.Name)
 
+		grossAmt := ft.TotalAmount
+		gstAmt := ft.GstAmount
+		netAmt := ft.BaseAmount
+		interp := strings.ToLower(strings.TrimSpace(field.AmountInterpretation))
+		switch interp {
+		case "tax_only":
+			grossAmt = ft.GstAmount
+			gstAmt = ft.GstAmount
+			netAmt = 0
+		case "net":
+			// Net is primary; gross = net + gst (already in field totals)
+			grossAmt = ft.TotalAmount
+			netAmt = ft.BaseAmount
+			gstAmt = ft.GstAmount
+		default:
+			// "gross" or empty: value is gross
+			grossAmt = ft.TotalAmount
+			gstAmt = ft.GstAmount
+			netAmt = ft.BaseAmount
+		}
+
 		t := &domain.Transaction{
 			ID:              uuid.New(),
 			ClinicID:        entry.ClinicID,
@@ -141,10 +165,10 @@ func (s *TransactionPostingService) PostEntryToLedger(ctx context.Context, entry
 			TransactionDate: date,
 			Reference:       ref,
 			Details:         form.Name + " - " + ft.FieldName,
-			GrossAmount:     ft.TotalAmount,
-			GSTAmount:       ft.GstAmount,
-			NetAmount:       ft.BaseAmount,
-			Status:          domain.TransactionStatusPosted,
+			GrossAmount:     grossAmt,
+			GSTAmount:       gstAmt,
+			NetAmount:       netAmt,
+			Status:          util.TransactionStatusPosted,
 			CreatedAt:       now,
 			UpdatedAt:       now,
 		}
@@ -217,10 +241,15 @@ func (s *TransactionPostingService) GetFormFieldCOAMapping(ctx context.Context, 
 	}
 	items := make([]domain.FormFieldCOAMappingItem, 0, len(fields))
 	for _, f := range fields {
+		interp := strings.ToLower(strings.TrimSpace(f.AmountInterpretation))
+		if interp != "net" && interp != "tax_only" {
+			interp = "gross"
+		}
 		items = append(items, domain.FormFieldCOAMappingItem{
-			FieldID:   f.ID,
-			FieldName: f.Name,
-			AccountID: f.AccountID,
+			FieldID:              f.ID,
+			FieldName:            f.Name,
+			AccountID:            f.AccountID,
+			AmountInterpretation: interp,
 		})
 	}
 	coas, err := s.aocRepo.ListAOCsAssignedToClinic(ctx, clinicID)
@@ -241,7 +270,7 @@ func (s *TransactionPostingService) GetFormFieldCOAMapping(ctx context.Context, 
 
 func transactionToResponse(t *domain.Transaction) *domain.TransactionResponse {
 	dateStr := t.TransactionDate.Format("2006-01-02")
-	return &domain.TransactionResponse{
+	resp := &domain.TransactionResponse{
 		ID:            t.ID.String(),
 		ClinicID:      t.ClinicID.String(),
 		SourceEntryID: t.SourceEntryID.String(),
@@ -260,4 +289,8 @@ func transactionToResponse(t *domain.Transaction) *domain.TransactionResponse {
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
 	}
+	if t.COAID != uuid.Nil {
+		resp.COAID = t.COAID.String()
+	}
+	return resp
 }

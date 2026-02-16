@@ -37,7 +37,6 @@ func InitRouter(e *gin.Engine) {
 
 	// Token service (implements port.TokenProvider; stays in service for JWT)
 	tokenService := service.NewTokenService(cfg.JWT)
-	oauthService := service.NewOAuthService(cfg.OAuth, sqlxDB)
 
 	// Repositories (driven adapters)
 	clinicRepo := postgres.NewClinicRepository(sqlxDB)
@@ -45,6 +44,8 @@ func InitRouter(e *gin.Engine) {
 	userClinicRepo := postgres.NewUserClinicRepository(sqlxDB)
 	userRepo := postgres.NewUserRepository(sqlxDB)
 	sessionRepo := postgres.NewSessionRepository(sqlxDB)
+	oauthProviderRepo := postgres.NewOAuthProviderRepository(sqlxDB)
+	oauthService := service.NewOAuthService(cfg.OAuth, oauthProviderRepo, userRepo)
 	expenseRepo := postgres.NewExpenseRepository(sqlxDB)
 	aocRepo := postgres.NewAOCRepository(sqlxDB)
 	customFormRepo := postgres.NewCustomFormRepository(sqlxDB)
@@ -56,10 +57,10 @@ func InitRouter(e *gin.Engine) {
 	calcEngine := calculation.NewEntryCalculationEngine()
 
 	// Use cases (application layer)
-	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService)
 	clinicUC := usecase.NewClinicService(clinicRepo)
-	clinicCOAUC := usecase.NewClinicCOAService(clinicCOARepo, clinicRepo, aocRepo)
 	userClinicUC := usecase.NewUserClinicService(userClinicRepo, clinicRepo, userRepo)
+	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService, clinicUC, userClinicUC)
+	clinicCOAUC := usecase.NewClinicCOAService(clinicCOARepo, clinicRepo, aocRepo)
 	quarterUC := usecase.NewQuarterService(clinicFinancialSettingsRepo)
 	expensesUC := usecase.NewExpensesService(expenseRepo)
 	aocUC := usecase.NewAOCService(aocRepo)

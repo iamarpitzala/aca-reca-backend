@@ -55,6 +55,65 @@ func (r *clinicCOARepo) ListByClinicID(ctx context.Context, clinicID uuid.UUID) 
 	return list, nil
 }
 
+type clinicCOAWithDetailsRow struct {
+	ID              uuid.UUID  `db:"id"`
+	ClinicID        uuid.UUID  `db:"clinic_id"`
+	COAID           uuid.UUID  `db:"coa_id"`
+	Code            string     `db:"code"`
+	Name            string     `db:"name"`
+	AccountTypeID   int        `db:"account_type_id"`
+	AccountTaxID    int        `db:"account_tax_id"`
+	AccountTypeName *string    `db:"account_type_name"`
+	AccountTaxName  *string    `db:"account_tax_name"`
+	Description     *string    `db:"description"`
+	CreatedAt       time.Time  `db:"created_at"`
+	UpdatedAt       time.Time  `db:"updated_at"`
+}
+
+func (r *clinicCOARepo) ListByClinicIDWithDetails(ctx context.Context, clinicID uuid.UUID) ([]domain.ClinicCOAWithDetails, error) {
+	query := `SELECT cc.id, cc.clinic_id, cc.coa_id, cc.created_at, cc.updated_at,
+		a.code, a.name, a.account_type_id, a.account_tax_id, a.description,
+		at.name AS account_type_name, ax.name AS account_tax_name
+		FROM tbl_clinic_coa cc
+		INNER JOIN tbl_account a ON a.id = cc.coa_id AND a.deleted_at IS NULL
+		LEFT JOIN tbl_account_type at ON at.id = a.account_type_id
+		LEFT JOIN tbl_account_tax ax ON ax.id = a.account_tax_id
+		WHERE cc.clinic_id = $1 AND cc.deleted_at IS NULL
+		ORDER BY a.code ASC`
+	var rows []clinicCOAWithDetailsRow
+	if err := r.db.SelectContext(ctx, &rows, query, clinicID); err != nil {
+		return nil, err
+	}
+	if rows == nil {
+		return []domain.ClinicCOAWithDetails{}, nil
+	}
+	out := make([]domain.ClinicCOAWithDetails, len(rows))
+	for i := range rows {
+		out[i] = domain.ClinicCOAWithDetails{
+			ID:              rows[i].ID,
+			ClinicID:        rows[i].ClinicID,
+			COAID:           rows[i].COAID,
+			Code:            rows[i].Code,
+			Name:            rows[i].Name,
+			AccountTypeID:   rows[i].AccountTypeID,
+			AccountTaxID:    rows[i].AccountTaxID,
+			AccountTypeName: safeStr(rows[i].AccountTypeName),
+			AccountTaxName:  safeStr(rows[i].AccountTaxName),
+			Description:     rows[i].Description,
+			CreatedAt:       rows[i].CreatedAt,
+			UpdatedAt:       rows[i].UpdatedAt,
+		}
+	}
+	return out, nil
+}
+
+func safeStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func (r *clinicCOARepo) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `UPDATE tbl_clinic_coa SET deleted_at = $1, updated_at = $1 WHERE id = $2`
 	_, err := r.db.ExecContext(ctx, query, time.Now(), id)

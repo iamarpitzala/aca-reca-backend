@@ -20,16 +20,6 @@ func NewBASSnapshotHandler(basUC *usecase.BASSnapshotService) *BASSnapshotHandle
 	}
 }
 
-// getAuthUserID extracts user ID from JWT context
-func (h *BASSnapshotHandler) getAuthUserID(c *gin.Context) (uuid.UUID, bool) {
-	userIDVal, exists := c.Get("user_id")
-	if !exists {
-		return uuid.Nil, false
-	}
-	userUUID, ok := userIDVal.(uuid.UUID)
-	return userUUID, ok
-}
-
 // CreateBASSnapshot creates a new BAS snapshot (draft)
 // POST /api/v1/clinic/:id/bas-snapshot
 func (h *BASSnapshotHandler) CreateBASSnapshot(c *gin.Context) {
@@ -107,9 +97,8 @@ func (h *BASSnapshotHandler) FinaliseBAS(c *gin.Context) {
 		return
 	}
 	
-	userID, ok := h.getAuthUserID(c)
+	userID, ok := GetAuthUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
 	

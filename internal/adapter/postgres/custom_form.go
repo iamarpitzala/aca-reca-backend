@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -50,9 +51,9 @@ func (r *customFormRepo) GetByClinicID(ctx context.Context, clinicID uuid.UUID) 
 }
 
 func (r *customFormRepo) GetPublishedByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.CustomForm, error) {
-	q := `SELECT id, clinic_id, name, description, calculation_method, form_type, status, fields, default_payment_responsibility, service_facility_fee_percent, outwork_enabled, outwork_rate_percent, version, created_by, created_at, updated_at, published_at, deleted_at FROM tbl_custom_form WHERE clinic_id = $1 AND status = 'published' AND deleted_at IS NULL ORDER BY name`
+	q := `SELECT id, clinic_id, name, description, calculation_method, form_type, status, fields, default_payment_responsibility, service_facility_fee_percent, outwork_enabled, outwork_rate_percent, version, created_by, created_at, updated_at, published_at, deleted_at FROM tbl_custom_form WHERE clinic_id = $1 AND status = $2 AND deleted_at IS NULL ORDER BY name`
 	var rows []domain.CustomForm
-	if err := r.db.SelectContext(ctx, &rows, q, clinicID); err != nil {
+	if err := r.db.SelectContext(ctx, &rows, q, clinicID, util.FormStatusPublished); err != nil {
 		return nil, fmt.Errorf("failed to get published custom forms: %w", err)
 	}
 	return rows, nil
@@ -66,7 +67,7 @@ func (r *customFormRepo) Update(ctx context.Context, form *domain.CustomForm) er
 
 func (r *customFormRepo) Publish(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
-	res, err := r.db.ExecContext(ctx, `UPDATE tbl_custom_form SET status = 'published', published_at = $1, updated_at = $1 WHERE id = $2 AND deleted_at IS NULL`, now, id)
+	res, err := r.db.ExecContext(ctx, `UPDATE tbl_custom_form SET status = $1, published_at = $2, updated_at = $2 WHERE id = $3 AND deleted_at IS NULL`, util.FormStatusPublished, now, id)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func (r *customFormRepo) Publish(ctx context.Context, id uuid.UUID) error {
 
 func (r *customFormRepo) Unpublish(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
-	res, err := r.db.ExecContext(ctx, `UPDATE tbl_custom_form SET status = 'draft', published_at = NULL, updated_at = $1 WHERE id = $2 AND deleted_at IS NULL`, now, id)
+	res, err := r.db.ExecContext(ctx, `UPDATE tbl_custom_form SET status = $1, published_at = NULL, updated_at = $2 WHERE id = $3 AND deleted_at IS NULL`, util.FormStatusDraft, now, id)
 	if err != nil {
 		return err
 	}
@@ -89,7 +90,7 @@ func (r *customFormRepo) Unpublish(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *customFormRepo) Archive(ctx context.Context, id uuid.UUID) error {
-	res, err := r.db.ExecContext(ctx, `UPDATE tbl_custom_form SET status = 'archived', updated_at = $1 WHERE id = $2 AND deleted_at IS NULL`, time.Now(), id)
+	res, err := r.db.ExecContext(ctx, `UPDATE tbl_custom_form SET status = $1, updated_at = $2 WHERE id = $3 AND deleted_at IS NULL`, util.FormStatusArchived, time.Now(), id)
 	if err != nil {
 		return err
 	}

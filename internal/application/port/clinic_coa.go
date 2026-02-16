@@ -11,6 +11,7 @@ type ClinicCOARepository interface {
 	Create(ctx context.Context, cc *domain.ClinicCOA) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.ClinicCOA, error)
 	ListByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.ClinicCOA, error)
+	ListByClinicIDWithDetails(ctx context.Context, clinicID uuid.UUID) ([]domain.ClinicCOAWithDetails, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	Exists(ctx context.Context, clinicID, coaID uuid.UUID) (bool, error)
 }

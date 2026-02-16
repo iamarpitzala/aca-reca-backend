@@ -1,10 +1,12 @@
 package form
 
+import "github.com/iamarpitzala/aca-reca-backend/util"
+
 type CalculationMethod string
 
 const (
-	CalculationMethodNet   CalculationMethod = "NET"
-	CalculationMethodGross CalculationMethod = "GROSS"
+	CalculationMethodNet   CalculationMethod = CalculationMethod(util.MethodTypeNet)
+	CalculationMethodGross CalculationMethod = CalculationMethod(util.MethodTypeGross)
 )
 
 func (c CalculationMethod) String() string {

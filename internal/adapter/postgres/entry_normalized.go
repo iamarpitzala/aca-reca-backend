@@ -9,24 +9,30 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 	"github.com/jmoiron/sqlx"
 )
 
-// saveNormalizedEntry saves an entry in normalized tables
+// saveNormalizedEntry saves an entry in normalized tables (creates new entry)
 func (r *customFormRepo) saveNormalizedEntry(ctx context.Context, tx *sqlx.Tx, entry *domain.CustomFormEntry, form *domain.CustomForm) error {
-	// Convert JSONB entry to normalized structure
 	normalized, err := domain.ConvertJSONBToNormalized(entry, form)
 	if err != nil {
 		return fmt.Errorf("failed to convert entry to normalized: %w", err)
 	}
 
-	// Save header
+	// Save header (only for create)
 	headerQ := `INSERT INTO tbl_entry_header (id, form_id, form_name, form_type, calculation_method, clinic_id, quarter_id, entry_date, description, remarks, payment_responsibility, created_by, created_at, updated_at)
 		VALUES (:id, :form_id, :form_name, :form_type, :calculation_method, :clinic_id, :quarter_id, :entry_date, :description, :remarks, :payment_responsibility, :created_by, :created_at, :updated_at)`
 	if _, err := tx.NamedExecContext(ctx, headerQ, normalized.Header); err != nil {
 		return fmt.Errorf("failed to insert entry header: %w", err)
 	}
 
+	return r.saveNormalizedEntryChildren(ctx, tx, normalized)
+}
+
+// saveNormalizedEntryChildren saves child tables only (field values, calculations, summary, etc.).
+// Used by both saveNormalizedEntry (create) and updateNormalizedEntry (update).
+func (r *customFormRepo) saveNormalizedEntryChildren(ctx context.Context, tx *sqlx.Tx, normalized *domain.NormalizedEntry) error {
 	// Save field values
 	if len(normalized.FieldValues) > 0 {
 		for _, fv := range normalized.FieldValues {
@@ -39,10 +45,13 @@ func (r *customFormRepo) saveNormalizedEntry(ctx context.Context, tx *sqlx.Tx, e
 		}
 	}
 
-	// Save field calculations
+	// Save field calculations and build field_id -> calculation id for gross breakdown linking (Phase 2)
+	fieldIDToCalcID := make(map[string]uuid.UUID)
 	if len(normalized.FieldCalculations) > 0 {
-		for _, fc := range normalized.FieldCalculations {
+		for i := range normalized.FieldCalculations {
+			fc := &normalized.FieldCalculations[i]
 			fc.ID = uuid.New()
+			fieldIDToCalcID[fc.FieldID] = fc.ID
 			fcQ := `INSERT INTO tbl_entry_field_calculation (id, entry_id, field_id, field_name, base_amount, gst_amount, total_amount, gst_rate, gst_type, section, payment_responsibility, display_order, created_at)
 				VALUES (:id, :entry_id, :field_id, :field_name, :base_amount, :gst_amount, :total_amount, :gst_rate, :gst_type, :section, :payment_responsibility, :display_order, :created_at)`
 			if _, err := tx.NamedExecContext(ctx, fcQ, fc); err != nil {
@@ -81,9 +90,13 @@ func (r *customFormRepo) saveNormalizedEntry(ctx context.Context, tx *sqlx.Tx, e
 		}
 	}
 
-	// Save gross reductions
+	// Save gross reductions (link to field calculation by field_id)
 	if len(normalized.GrossReductions) > 0 {
-		for _, gr := range normalized.GrossReductions {
+		for i := range normalized.GrossReductions {
+			gr := &normalized.GrossReductions[i]
+			if id, ok := fieldIDToCalcID[gr.FieldID]; ok {
+				gr.FieldCalculationID = &id
+			}
 			gr.ID = uuid.New()
 			grQ := `INSERT INTO tbl_entry_gross_reduction (id, entry_id, field_calculation_id, field_id, field_name, base_amount, gst_amount, total_amount, display_order, created_at)
 				VALUES (:id, :entry_id, :field_calculation_id, :field_id, :field_name, :base_amount, :gst_amount, :total_amount, :display_order, :created_at)`
@@ -93,9 +106,13 @@ func (r *customFormRepo) saveNormalizedEntry(ctx context.Context, tx *sqlx.Tx, e
 		}
 	}
 
-	// Save gross reimbursements
+	// Save gross reimbursements (link to field calculation by field_id)
 	if len(normalized.GrossReimbursements) > 0 {
-		for _, gr := range normalized.GrossReimbursements {
+		for i := range normalized.GrossReimbursements {
+			gr := &normalized.GrossReimbursements[i]
+			if id, ok := fieldIDToCalcID[gr.FieldID]; ok {
+				gr.FieldCalculationID = &id
+			}
 			gr.ID = uuid.New()
 			grQ := `INSERT INTO tbl_entry_gross_reimbursement (id, entry_id, field_calculation_id, field_id, field_name, base_amount, gst_amount, total_amount, display_order, created_at)
 				VALUES (:id, :entry_id, :field_calculation_id, :field_id, :field_name, :base_amount, :gst_amount, :total_amount, :display_order, :created_at)`
@@ -105,9 +122,13 @@ func (r *customFormRepo) saveNormalizedEntry(ctx context.Context, tx *sqlx.Tx, e
 		}
 	}
 
-	// Save gross additional reductions
+	// Save gross additional reductions (link to field calculation by field_id)
 	if len(normalized.GrossAdditionalReductions) > 0 {
-		for _, gar := range normalized.GrossAdditionalReductions {
+		for i := range normalized.GrossAdditionalReductions {
+			gar := &normalized.GrossAdditionalReductions[i]
+			if id, ok := fieldIDToCalcID[gar.FieldID]; ok {
+				gar.FieldCalculationID = &id
+			}
 			gar.ID = uuid.New()
 			garQ := `INSERT INTO tbl_entry_gross_additional_reduction (id, entry_id, field_calculation_id, field_id, field_name, base_amount, gst_amount, total_amount, display_order, created_at)
 				VALUES (:id, :entry_id, :field_calculation_id, :field_id, :field_name, :base_amount, :gst_amount, :total_amount, :display_order, :created_at)`
@@ -205,7 +226,7 @@ func (r *customFormRepo) loadNormalizedEntry(ctx context.Context, tx *sqlx.Tx, e
 	}
 
 	// Load net details
-	if calcMethod == "net" {
+	if calcMethod == util.MethodTypeNet {
 		netQ := `SELECT id, entry_id, commission_percent, commission, gst_on_commission, total_payment_received, super_holding_enabled, super_component_percent, commission_component, super_component, total_for_reconciliation, created_at, updated_at
 			FROM tbl_entry_net_details WHERE entry_id = $1`
 		var netDetails domain.EntryNetDetails
@@ -219,7 +240,7 @@ func (r *customFormRepo) loadNormalizedEntry(ctx context.Context, tx *sqlx.Tx, e
 	}
 
 	// Load gross details
-	if calcMethod == "gross" {
+	if calcMethod == util.MethodTypeGross {
 		grossQ := `SELECT id, entry_id, service_facility_fee_percent, service_fee_base, gst_on_service_fee, total_service_fee, subtotal_after_deductions, remitted_amount, created_at, updated_at
 			FROM tbl_entry_gross_details WHERE entry_id = $1`
 		var grossDetails domain.EntryGrossDetails
@@ -289,28 +310,32 @@ func (r *customFormRepo) deleteNormalizedEntry(ctx context.Context, tx *sqlx.Tx,
 	return err
 }
 
-// updateNormalizedEntry updates an entry in normalized tables
-func (r *customFormRepo) updateNormalizedEntry(ctx context.Context, tx *sqlx.Tx, entry *domain.CustomFormEntry, form *domain.CustomForm) error {
-	// Delete existing normalized data (except header)
-	entryID := entry.ID
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_field_value WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_field_calculation WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_summary WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_net_details WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_gross_details WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_gross_reduction WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_gross_reimbursement WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_gross_additional_reduction WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_gross_reductions_summary WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_gross_outwork WHERE entry_id = $1`, entryID)
-	tx.ExecContext(ctx, `DELETE FROM tbl_entry_deductions WHERE entry_id = $1`, entryID)
+// normalizedEntryChildTables lists tables that store normalized entry children (deleted on update).
+var normalizedEntryChildTables = []string{
+	"tbl_entry_field_value", "tbl_entry_field_calculation", "tbl_entry_summary",
+	"tbl_entry_net_details", "tbl_entry_gross_details", "tbl_entry_gross_reduction",
+	"tbl_entry_gross_reimbursement", "tbl_entry_gross_additional_reduction",
+	"tbl_entry_gross_reductions_summary", "tbl_entry_gross_outwork", "tbl_entry_deductions",
+}
 
-	// Update header
+// updateNormalizedEntry updates an entry in normalized tables (header already exists; rewrite children)
+func (r *customFormRepo) updateNormalizedEntry(ctx context.Context, tx *sqlx.Tx, entry *domain.CustomFormEntry, form *domain.CustomForm) error {
+	entryID := entry.ID
+	for _, table := range normalizedEntryChildTables {
+		q := fmt.Sprintf("DELETE FROM %s WHERE entry_id = $1", table)
+		if _, err := tx.ExecContext(ctx, q, entryID); err != nil {
+			return fmt.Errorf("failed to delete from %s: %w", table, err)
+		}
+	}
+
 	headerQ := `UPDATE tbl_entry_header SET updated_at = $1 WHERE id = $2`
 	if _, err := tx.ExecContext(ctx, headerQ, entry.UpdatedAt, entryID); err != nil {
 		return fmt.Errorf("failed to update entry header: %w", err)
 	}
 
-	// Re-save normalized data
-	return r.saveNormalizedEntry(ctx, tx, entry, form)
+	normalized, err := domain.ConvertJSONBToNormalized(entry, form)
+	if err != nil {
+		return fmt.Errorf("failed to convert entry to normalized: %w", err)
+	}
+	return r.saveNormalizedEntryChildren(ctx, tx, normalized)
 }

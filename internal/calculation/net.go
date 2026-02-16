@@ -2,6 +2,7 @@ package calculation
 
 import (
 	"encoding/json"
+	"math"
 	"strings"
 
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
@@ -9,9 +10,10 @@ import (
 )
 
 // NetCalculationInput holds input for NET method calculation.
+// NetAmount is computed first (income - expenses by section); CommissionPercent is owner %.
 type NetCalculationInput struct {
-	TotalPaymentReceived  float64
-	CommissionPercent     float64
+	NetAmount             float64  // from CalculateNetAmountBySection
+	CommissionPercent     float64  // owner %
 	SuperHoldingEnabled   bool
 	SuperComponentPercent *float64
 	GSTRate               float64
@@ -20,55 +22,63 @@ type NetCalculationInput struct {
 
 // NetCalculationOutput holds output from RunNetCalculation.
 type NetCalculationOutput struct {
-	CommissionPercent     float64
-	Commission            float64
-	GSTOnCommission       float64
-	TotalPaymentReceived  float64
-	SuperHoldingEnabled   bool
-	SuperComponentPercent *float64
-	CommissionComponent   *float64
-	SuperComponent        *float64
-	TotalForReconciliation *float64
+	CommissionPercent       float64
+	Commission              float64
+	GSTOnCommission         float64
+	TotalPaymentReceived    float64
+	SuperHoldingEnabled     bool
+	SuperComponentPercent   *float64
+	CommissionComponent     *float64
+	SuperComponent          *float64
+	TotalForReconciliation  *float64
 }
 
-// RunNetCalculation computes NET method details: commission, GST on commission, super components.
+const gstRateOnCommission = 0.1 // 10% GST on commission
+
+// RunNetCalculation computes NET method details after net amount is known.
+// If super holding enabled: commission_component = netAmount/(1+super%), super_component = commission_component*super%,
+// total_for_reconciliation = commission_component + super_component, GST = commission_component*0.1, total_payment_received = commission_component + GST.
+// Else: commission = net*owner%, GST = commission*0.1, total_payment_received = commission + GST; commission_component/super/total_for_reconciliation = 0.
 func RunNetCalculation(input NetCalculationInput) NetCalculationOutput {
 	out := NetCalculationOutput{
-		CommissionPercent:    input.CommissionPercent,
-		TotalPaymentReceived: round2(input.TotalPaymentReceived),
-		SuperHoldingEnabled:  input.SuperHoldingEnabled,
+		CommissionPercent:     input.CommissionPercent,
+		SuperHoldingEnabled:   input.SuperHoldingEnabled,
 		SuperComponentPercent: input.SuperComponentPercent,
 	}
 
-	// commission = total_payment_received × (commission_percent / 100)
-	commission := input.TotalPaymentReceived * (input.CommissionPercent / 100)
+	// Round net amount to 2 decimals first so 100.00 stays 100.00 (avoids float drift giving 39.97)
+	netAmount := round2(input.NetAmount)
+	// Commission = net * owner%; round with half-up so 100*40% = 40.00 exactly
+	commission := round2HalfUp(netAmount * (input.CommissionPercent / 100))
 
-	// GST on commission based on type
-	gstType := strings.ToLower(input.GSTType)
-	rate := input.GSTRate / 100
-	if gstType == util.GSTTypeInclusive {
-		// gst_on_commission = commission × (gst_rate / (100 + gst_rate))
-		out.GSTOnCommission = commission * (input.GSTRate / (100 + input.GSTRate))
-		out.Commission = round2(commission)
-	} else {
-		// exclusive or default
-		out.GSTOnCommission = round2(commission * rate)
-		out.Commission = round2(commission)
-	}
-
-	// commission_component = commission - gst_on_commission (net to dentist before super)
-	commissionComponent := out.Commission - out.GSTOnCommission
-	out.CommissionComponent = ptrFloat64(round2(commissionComponent))
-
-	if input.SuperHoldingEnabled && input.SuperComponentPercent != nil {
+	if input.SuperHoldingEnabled && input.SuperComponentPercent != nil && *input.SuperComponentPercent > 0 {
+		// Super holding enabled: derive from commission (rounded)
 		superPct := *input.SuperComponentPercent / 100
-		superComp := commissionComponent * superPct
-		out.SuperComponent = ptrFloat64(round2(superComp))
-		// total_for_reconciliation = commission_component - super_component
-		recon := commissionComponent - superComp
-		out.TotalForReconciliation = ptrFloat64(round2(recon))
+		// commission_component = commission / (1 + super_component%) — round each step
+		commissionComponent := round2(commission / (1 + superPct))
+		superComponent := round2(commissionComponent * superPct)
+		totalForReconciliation := round2(commissionComponent + superComponent)
+		gstOnCommission := round2(commissionComponent * gstRateOnCommission)
+		totalPaymentReceived := round2(commissionComponent + gstOnCommission)
+
+		out.CommissionComponent = ptrFloat64(commissionComponent)
+		out.SuperComponent = ptrFloat64(superComponent)
+		out.TotalForReconciliation = ptrFloat64(totalForReconciliation)
+		out.GSTOnCommission = gstOnCommission
+		out.TotalPaymentReceived = totalPaymentReceived
+		out.Commission = totalPaymentReceived
 	} else {
-		out.TotalForReconciliation = ptrFloat64(round2(commissionComponent))
+		// Else: commission = net*owner% (already rounded), GST = commission*0.1, total = commission + GST
+		gstOnCommission := round2(commission * gstRateOnCommission)
+		totalPaymentReceived := round2(commission + gstOnCommission)
+
+		out.Commission = commission
+		out.GSTOnCommission = gstOnCommission
+		out.TotalPaymentReceived = totalPaymentReceived
+		out.CommissionComponent = ptrFloat64(0)
+		out.SuperComponent = ptrFloat64(0)
+		out.SuperComponentPercent = ptrFloat64(0)
+		out.TotalForReconciliation = ptrFloat64(0)
 	}
 
 	return out
@@ -78,6 +88,53 @@ func RunNetCalculation(input NetCalculationInput) NetCalculationOutput {
 type NetAmountResult struct {
 	IncomeExclGST float64
 	NetAmount     float64
+}
+
+// CalculateNetAmountBySection computes net amount for NET method (create entry side).
+// Uses section type already defined on each field: INCOME vs EXPENSE.
+// Loops over field values, sums amounts by section (amount = TotalAmount or Value already received),
+// then net amount = total income - total expenses.
+func CalculateNetAmountBySection(
+	fieldValueResponses []domain.EntryFieldValueResponse,
+	fields []domain.CustomFormField,
+) NetAmountResult {
+	fieldByID := make(map[string]domain.CustomFormField)
+	for _, f := range fields {
+		fieldByID[f.ID.String()] = f
+	}
+
+	// Sum in integer cents to avoid float drift (e.g. 33.33+33.33+33.34 must equal 100.00)
+	var totalIncomeCents, totalExpensesCents int64
+	for _, val := range fieldValueResponses {
+		f, ok := fieldByID[val.FieldID]
+		if !ok {
+			continue
+		}
+		sec := getSection(f.Section)
+		amount := 0.0
+		if val.TotalAmount != nil {
+			amount = *val.TotalAmount
+		} else {
+			amount = val.Value
+		}
+		amountCents := int64(math.Round(amount * 100))
+
+		switch sec {
+		case "income":
+			totalIncomeCents += amountCents
+		case "expense":
+			totalExpensesCents += amountCents
+		}
+	}
+
+	netCents := totalIncomeCents - totalExpensesCents
+	// Convert back to dollars with exact 2-decimal values (no float drift)
+	totalIncome := float64(totalIncomeCents) / 100
+	netAmount := float64(netCents) / 100
+	return NetAmountResult{
+		IncomeExclGST: totalIncome,
+		NetAmount:     netAmount,
+	}
 }
 
 // CalculateNetAmountFromFieldValues computes net income, net expenses, and net amount from field value responses.

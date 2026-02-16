@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
 	"strconv"
 	"strings"
 	"time"
@@ -265,7 +266,7 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 
 	// Step 13: Calculate and store method-specific details
 	if calculationMethod == "NET" {
-		if err := s.calculateAndStoreNetDetails(ctx, form.ClinicID, fieldEntries[0].ID, fieldValueResponses, req.Deductions, gstSettings, now); err != nil {
+		if err := s.calculateAndStoreNetDetails(ctx, form.ClinicID, fieldEntries[0].ID, fieldValueResponses, req.Deductions, gstSettings, fields, now); err != nil {
 			// Log error but don't fail entry creation
 			_ = err
 		}
@@ -938,6 +939,7 @@ func (s *FieldEntryService) calculateAndStoreNetDetails(
 		Rate float64
 		Type string
 	},
+	fields []domain.CustomFormField,
 	now time.Time,
 ) error {
 	// Step 1: Parse deductions to get commission percent and super settings
@@ -951,33 +953,24 @@ func (s *FieldEntryService) calculateAndStoreNetDetails(
 		return nil
 	}
 
-	// Step 2: Calculate total payment received from field values
-	// Sum all field values that are included in total
-	totalPaymentReceived := 0.0
-	for _, val := range fieldValueResponses {
-		if val.TotalAmount != nil {
-			totalPaymentReceived += *val.TotalAmount
-		} else {
-			totalPaymentReceived += val.Value
-		}
-	}
+	// Step 2: Calculate net_amount (first step for NET method): by section type INCOME vs EXPENSE,
+	// using amounts already received in each field; net amount = income - expenses.
+	netAmountResult := calculation.CalculateNetAmountBySection(fieldValueResponses, fields)
 
-	// Step 3: Use GST settings passed as parameter (already fetched)
-	gstRate := gstSettings.Rate
-	gstType := gstSettings.Type
-
-	// Step 4: Run NET calculation
+	// Step 3: Run commission calculation (after net amount): uses net amount and owner %;
+	// if super holding enabled: commission_component, super_component, total_for_reconciliation, GST, total_payment_received;
+	// else: commission = net*owner%, GST, total_payment_received, and super-related fields zeroed.
 	netInput := calculation.NetCalculationInput{
-		TotalPaymentReceived:  totalPaymentReceived,
+		NetAmount:             netAmountResult.NetAmount,
 		CommissionPercent:     commissionPercent,
 		SuperHoldingEnabled:   superHoldingEnabled,
 		SuperComponentPercent: superComponentPercent,
-		GSTRate:               gstRate,
-		GSTType:               gstType,
+		GSTRate:               gstSettings.Rate,
+		GSTType:               gstSettings.Type,
 	}
 	netOutput := calculation.RunNetCalculation(netInput)
 
-	// Step 5: Create and store net details
+	// Step 6: Create and store net details (including net_amount from field values)
 	netDetails := &domain.EntryNetDetails{
 		ID:                     uuid.New(),
 		EntryID:                entryID,
@@ -985,6 +978,7 @@ func (s *FieldEntryService) calculateAndStoreNetDetails(
 		Commission:             netOutput.Commission,
 		GSTOnCommission:        netOutput.GSTOnCommission,
 		TotalPaymentReceived:   netOutput.TotalPaymentReceived,
+		NetAmount:              netAmountResult.NetAmount,
 		SuperHoldingEnabled:    netOutput.SuperHoldingEnabled,
 		SuperComponentPercent:  netOutput.SuperComponentPercent,
 		CommissionComponent:    netOutput.CommissionComponent,

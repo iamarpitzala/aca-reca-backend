@@ -61,14 +61,15 @@ type EntryNetDetails struct {
 	CommissionPercent       float64   `db:"commission_percent"`
 	Commission              float64   `db:"commission"`
 	GSTOnCommission         float64   `db:"gst_on_commission"`
-	TotalPaymentReceived     float64   `db:"total_payment_received"`
-	SuperHoldingEnabled      bool      `db:"super_holding_enabled"`
-	SuperComponentPercent    *float64  `db:"super_component_percent"`
-	CommissionComponent      *float64  `db:"commission_component"`
-	SuperComponent           *float64  `db:"super_component"`
-	TotalForReconciliation   *float64  `db:"total_for_reconciliation"`
-	CreatedAt                time.Time `db:"created_at"`
-	UpdatedAt                time.Time `db:"updated_at"`
+	TotalPaymentReceived    float64   `db:"total_payment_received"`
+	NetAmount               float64   `db:"net_amount"`
+	SuperHoldingEnabled     bool      `db:"super_holding_enabled"`
+	SuperComponentPercent   *float64  `db:"super_component_percent"`
+	CommissionComponent     *float64  `db:"commission_component"`
+	SuperComponent          *float64  `db:"super_component"`
+	TotalForReconciliation  *float64  `db:"total_for_reconciliation"`
+	CreatedAt               time.Time `db:"created_at"`
+	UpdatedAt               time.Time `db:"updated_at"`
 }
 
 // EntryGrossDetails represents tbl_entry_gross_details

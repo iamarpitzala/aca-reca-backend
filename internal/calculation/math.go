@@ -5,7 +5,27 @@ import (
 	"strconv"
 )
 
-func round2(n float64) float64 { return math.Round(n*100) / 100 }
+// round2 rounds to 2 decimal places. Uses math.Round (half to even).
+func round2(n float64) float64 {
+	if n == 0 {
+		return 0
+	}
+	return math.Round(n*100) / 100
+}
+
+// round2HalfUp rounds to 2 decimals with 0.5 rounding up (standard for currency).
+// Ensures e.g. 100.00 * 40% = 40.00 not 39.97 when float drift would give 39.996.
+func round2HalfUp(n float64) float64 {
+	if n == 0 {
+		return 0
+	}
+	// Scale to cents, round 0.5 up, scale back
+	cents := n * 100
+	if cents < 0 {
+		return math.Ceil(cents-0.5) / 100
+	}
+	return math.Floor(cents+0.5) / 100
+}
 
 // parseFloat parses a numeric value from JSON (number or string).
 func parseFloat(v interface{}) float64 {

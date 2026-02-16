@@ -23,12 +23,12 @@ func NewEntryNetDetailsRepository(db *sqlx.DB) port.EntryNetDetailsRepository {
 func (r *entryNetDetailsRepo) Create(ctx context.Context, netDetails *domain.EntryNetDetails) error {
 	q := `INSERT INTO tbl_entry_net_details (
 		id, source_entry_id, commission_percent, commission, gst_on_commission,
-		total_payment_received, super_holding_enabled, super_component_percent,
+		total_payment_received, net_amount, super_holding_enabled, super_component_percent,
 		commission_component, super_component, total_for_reconciliation,
 		created_at, updated_at
 	) VALUES (
 		:id, :source_entry_id, :commission_percent, :commission, :gst_on_commission,
-		:total_payment_received, :super_holding_enabled, :super_component_percent,
+		:total_payment_received, :net_amount, :super_holding_enabled, :super_component_percent,
 		:commission_component, :super_component, :total_for_reconciliation,
 		:created_at, :updated_at
 	)`
@@ -40,7 +40,7 @@ func (r *entryNetDetailsRepo) GetByEntryID(ctx context.Context, entryID uuid.UUI
 	q := `
 		SELECT
 			id, source_entry_id, commission_percent, commission, gst_on_commission,
-			total_payment_received, super_holding_enabled, super_component_percent,
+			total_payment_received, net_amount, super_holding_enabled, super_component_percent,
 			commission_component, super_component, total_for_reconciliation,
 			created_at, updated_at
 		FROM tbl_entry_net_details
@@ -64,6 +64,7 @@ func (r *entryNetDetailsRepo) Update(ctx context.Context, netDetails *domain.Ent
 			commission = :commission,
 			gst_on_commission = :gst_on_commission,
 			total_payment_received = :total_payment_received,
+			net_amount = :net_amount,
 			super_holding_enabled = :super_holding_enabled,
 			super_component_percent = :super_component_percent,
 			commission_component = :commission_component,

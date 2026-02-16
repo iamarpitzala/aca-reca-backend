@@ -6,6 +6,7 @@ type EntryCalculationEngine interface {
 	RunEntryCalculation(
 		formFieldsJSON []byte,
 		formType string,
+		formCalculationMethod string,
 		serviceFacilityFeePercent *float64,
 		outworkEnabled bool,
 		outworkRatePercent *float64,

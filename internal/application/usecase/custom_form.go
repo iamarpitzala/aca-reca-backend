@@ -282,6 +282,7 @@ func (s *CustomFormService) CreateEntryFromRequest(ctx context.Context, req *dom
 	calculations, err := s.calcEngine.RunEntryCalculation(
 		form.Fields,
 		form.FormType,
+		form.CalculationMethod,
 		form.ServiceFacilityFeePercent,
 		form.OutworkEnabled,
 		form.OutworkRatePercent,
@@ -406,6 +407,7 @@ func (s *CustomFormService) UpdateEntryFromRequest(ctx context.Context, id uuid.
 	calculations, err := s.calcEngine.RunEntryCalculation(
 		form.Fields,
 		form.FormType,
+		form.CalculationMethod,
 		form.ServiceFacilityFeePercent,
 		form.OutworkEnabled,
 		form.OutworkRatePercent,
@@ -443,6 +445,7 @@ func (s *CustomFormService) PreviewCalculations(ctx context.Context, formID uuid
 	return s.calcEngine.RunEntryCalculation(
 		form.Fields,
 		form.FormType,
+		form.CalculationMethod,
 		form.ServiceFacilityFeePercent,
 		form.OutworkEnabled,
 		form.OutworkRatePercent,

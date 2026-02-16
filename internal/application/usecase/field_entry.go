@@ -15,14 +15,17 @@ import (
 )
 
 type FieldEntryService struct {
-	repo                port.FieldEntryRepository
-	formRepo            port.CustomFormRepository
-	fieldRepo           port.CustomFormFieldRepository
-	clinicRepo          port.ClinicRepository
-	calcRepo            port.CustomFormCalculationRepository
-	netDetailsRepo      port.EntryNetDetailsRepository
-	financialSettingsRepo port.ClinicFinancialSettingsRepository
-	calcEngine          port.EntryCalculationEngine
+	repo                    port.FieldEntryRepository
+	formRepo                port.CustomFormRepository
+	fieldRepo               port.CustomFormFieldRepository
+	clinicRepo              port.ClinicRepository
+	calcRepo                port.CustomFormCalculationRepository
+	netDetailsRepo          port.EntryNetDetailsRepository
+	grossDetailsRepo        port.EntryGrossDetailsRepository
+	grossReductionRepo       port.EntryGrossReductionRepository
+	grossReimbursementRepo   port.EntryGrossReimbursementRepository
+	financialSettingsRepo   port.ClinicFinancialSettingsRepository
+	calcEngine              port.EntryCalculationEngine
 }
 
 func NewFieldEntryService(
@@ -32,18 +35,24 @@ func NewFieldEntryService(
 	clinicRepo port.ClinicRepository,
 	calcRepo port.CustomFormCalculationRepository,
 	netDetailsRepo port.EntryNetDetailsRepository,
+	grossDetailsRepo port.EntryGrossDetailsRepository,
+	grossReductionRepo port.EntryGrossReductionRepository,
+	grossReimbursementRepo port.EntryGrossReimbursementRepository,
 	financialSettingsRepo port.ClinicFinancialSettingsRepository,
 	calcEngine port.EntryCalculationEngine,
 ) *FieldEntryService {
 	return &FieldEntryService{
-		repo:                repo,
-		formRepo:            formRepo,
-		fieldRepo:           fieldRepo,
-		clinicRepo:          clinicRepo,
-		calcRepo:            calcRepo,
-		netDetailsRepo:      netDetailsRepo,
-		financialSettingsRepo: financialSettingsRepo,
-		calcEngine:          calcEngine,
+		repo:                    repo,
+		formRepo:                formRepo,
+		fieldRepo:               fieldRepo,
+		clinicRepo:              clinicRepo,
+		calcRepo:                calcRepo,
+		netDetailsRepo:          netDetailsRepo,
+		grossDetailsRepo:        grossDetailsRepo,
+		grossReductionRepo:       grossReductionRepo,
+		grossReimbursementRepo:   grossReimbursementRepo,
+		financialSettingsRepo:   financialSettingsRepo,
+		calcEngine:              calcEngine,
 	}
 }
 
@@ -94,32 +103,58 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		return nil, errors.New("invalid form ID")
 	}
 
-	// Verify form exists
+	// Step 1: Verify form exists and get clinic ID
 	form, err := s.formRepo.GetByID(ctx, formID)
 	if err != nil {
 		return nil, errors.New("form not found")
 	}
 
-	// Verify clinic exists
+	// Step 2: Verify clinic exists
 	if _, err := s.clinicRepo.GetByID(ctx, form.ClinicID); err != nil {
 		return nil, errors.New("clinic not found")
 	}
 
-	// Create field entries for each value
-	entryID := uuid.New()
-	now := time.Now()
-	fieldEntries := make([]*domain.FieldEntry, 0, len(req.Values))
-
-	for _, val := range req.Values {
+	// Step 3: Parse field IDs and validate
+	fieldIDs := make([]uuid.UUID, 0, len(req.Values))
+	fieldIDMap := make(map[string]int) // Map fieldID string to index in req.Values
+	for i, val := range req.Values {
 		fieldID, err := uuid.Parse(val.FieldID)
 		if err != nil {
 			return nil, errors.New("invalid field ID: " + val.FieldID)
 		}
+		fieldIDs = append(fieldIDs, fieldID)
+		fieldIDMap[val.FieldID] = i
+	}
 
-		// Get the field to retrieve its form_version_id
-		field, err := s.fieldRepo.GetByID(ctx, fieldID)
-		if err != nil {
-			return nil, errors.New("field not found: " + val.FieldID)
+	// Step 4: Get form version ID from first field (assuming all fields belong to same version)
+	// Fetch first field to get formVersionID
+	firstField, err := s.fieldRepo.GetByID(ctx, fieldIDs[0])
+	if err != nil {
+		return nil, errors.New("field not found: " + fieldIDs[0].String())
+	}
+	formVersionID := firstField.FormVersionID
+
+	// Step 5: Fetch ALL fields for this form version ONCE (optimization)
+	fields, err := s.fieldRepo.GetByFormVersionID(ctx, formVersionID)
+	if err != nil {
+		return nil, errors.New("failed to fetch form fields")
+	}
+
+	// Build field map by ID for quick lookups
+	fieldMap := make(map[uuid.UUID]domain.CustomFormField)
+	for _, field := range fields {
+		fieldMap[field.ID] = field
+	}
+
+	// Step 6: Create field entries using field map
+	entryID := uuid.New()
+	now := time.Now()
+	fieldEntries := make([]*domain.FieldEntry, 0, len(req.Values))
+
+	for _, fieldID := range fieldIDs {
+		field, ok := fieldMap[fieldID]
+		if !ok {
+			return nil, errors.New("field not found: " + fieldID.String())
 		}
 
 		fieldEntry := &domain.FieldEntry{
@@ -127,7 +162,7 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 			FormID:            formID,
 			FormVersionID:     field.FormVersionID,
 			CustomFormFieldID: fieldID,
-			Value:             val.Value,
+			Value:             req.Values[fieldIDMap[fieldID.String()]].Value,
 			CreatedBy:         userID,
 			CreatedAt:         now,
 			UpdatedAt:         now,
@@ -136,30 +171,26 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		fieldEntries = append(fieldEntries, fieldEntry)
 	}
 
-	// Save all field entries
+	// Step 7: Save all field entries
 	for _, entry := range fieldEntries {
 		if err := s.repo.Create(ctx, entry); err != nil {
 			return nil, err
 		}
 	}
 
-	// Get form version ID from first field entry
-	formVersionID := fieldEntries[0].FormVersionID
-
-	// Build field value responses
+	// Step 8: Build field value responses using field map
 	fieldValueResponses := make([]domain.EntryFieldValueResponse, len(fieldEntries))
 	for i, entry := range fieldEntries {
-		// Find the corresponding input value to get field name
-		var fieldName string
+		field := fieldMap[entry.CustomFormFieldID]
+		valIndex := fieldIDMap[entry.CustomFormFieldID.String()]
 		var manualGSTAmount *float64
-		if i < len(req.Values) {
-			fieldName = req.Values[i].FieldName
-			manualGSTAmount = req.Values[i].ManualGSTAmount
+		if valIndex < len(req.Values) {
+			manualGSTAmount = req.Values[valIndex].ManualGSTAmount
 		}
 
 		fieldValueResponses[i] = domain.EntryFieldValueResponse{
 			FieldID:         entry.CustomFormFieldID.String(),
-			FieldName:       fieldName,
+			FieldName:       field.Label, // Use field label from DB
 			Value:           entry.Value,
 			BaseAmount:      nil, // Will be populated by calculation
 			GSTAmount:       nil, // Will be populated by calculation
@@ -168,8 +199,21 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		}
 	}
 
-	// Calculate totals using calculation engine
-	calculationsJSON, err := s.calculateEntryTotals(ctx, form, formVersionID, fieldValueResponses, req.Deductions)
+	// Step 9: Get form calculation settings ONCE (for both calculation and method-specific logic)
+	formCalc, err := s.calcRepo.GetByFormVersionID(ctx, formVersionID)
+	if err != nil && err.Error() != "calculation settings not found" {
+		// Log error but continue (formCalc can be nil)
+		_ = err
+	}
+
+	// Step 10: Determine calculation method (form version takes precedence over form level)
+	calculationMethod := form.CalculationMethod
+	if formCalc != nil && formCalc.CalculationMethod != "" {
+		calculationMethod = formCalc.CalculationMethod
+	}
+
+	// Step 11: Calculate totals using calculation engine (with proper form calculation settings)
+	calculationsJSON, err := s.calculateEntryTotals(ctx, form, formVersionID, fieldValueResponses, req.Deductions, formCalc)
 	if err != nil {
 		// If calculation fails, use empty calculations but log the error
 		calculationsJSON = []byte(`{"fieldTotals":[],"totalBaseAmount":0,"totalGSTAmount":0,"totalAmount":0,"netPayable":0,"netReceivable":0,"basMapping":{"gstOnSales1A":0,"gstCredit1B":0,"totalSalesG1":0,"expensesG11":0}}`)
@@ -212,19 +256,23 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		}
 	}
 
-	// NET Method: Calculate and store net details if calculation method is NET
-	// Get calculation method (form version takes precedence over form level)
-	calculationMethod := form.CalculationMethod
-	formCalc, err := s.calcRepo.GetByFormVersionID(ctx, formVersionID)
-	if err == nil && formCalc != nil {
-		calculationMethod = formCalc.CalculationMethod
-	}
+	// Step 12: Get GST settings ONCE (will be reused in method-specific calculations)
+	gstRate, gstType := s.getGSTSettings(ctx, form.ClinicID)
+	gstSettings := struct {
+		Rate float64
+		Type string
+	}{Rate: gstRate, Type: gstType}
 
-	// If NET method, calculate and store net details
+	// Step 13: Calculate and store method-specific details
 	if calculationMethod == "NET" {
-		if err := s.calculateAndStoreNetDetails(ctx, form.ClinicID, fieldEntries[0].ID, fieldValueResponses, req.Deductions, now); err != nil {
+		if err := s.calculateAndStoreNetDetails(ctx, form.ClinicID, fieldEntries[0].ID, fieldValueResponses, req.Deductions, gstSettings, now); err != nil {
 			// Log error but don't fail entry creation
-			// TODO: Add proper logging
+			_ = err
+		}
+	} else if calculationMethod == "GROSS" {
+		// Pass fields, gstSettings, and formCalc to avoid re-fetching
+		if err := s.calculateAndStoreGrossDetails(ctx, form.ClinicID, formVersionID, fieldEntries[0].ID, calculationsJSON, fieldValueResponses, req.Deductions, fields, gstSettings, formCalc, now); err != nil {
+			// Log error but don't fail entry creation
 			_ = err
 		}
 	}
@@ -307,7 +355,7 @@ func (s *FieldEntryService) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 	}
 
 	// Calculate totals
-	calculationsJSON, _ := s.calculateEntryTotals(ctx, form, entry.FormVersionID, fieldValueResponses, nil)
+	calculationsJSON, _ := s.calculateEntryTotals(ctx, form, entry.FormVersionID, fieldValueResponses, nil, nil)
 	if len(calculationsJSON) == 0 {
 		calculationsJSON = []byte(`{"fieldTotals":[],"totalBaseAmount":0,"totalGSTAmount":0,"totalAmount":0,"netPayable":0,"netReceivable":0,"basMapping":{"gstOnSales1A":0,"gstCredit1B":0,"totalSalesG1":0,"expensesG11":0}}`)
 	} else {
@@ -434,7 +482,7 @@ func (s *FieldEntryService) GetByFormID(ctx context.Context, formID uuid.UUID) (
 		entryID := firstEntry.ID.String()
 
 		// Calculate totals
-		calculationsJSON, calcErr := s.calculateEntryTotals(ctx, form, firstEntry.FormVersionID, fieldValueResponses, nil)
+		calculationsJSON, calcErr := s.calculateEntryTotals(ctx, form, firstEntry.FormVersionID, fieldValueResponses, nil, nil)
 		if calcErr != nil || len(calculationsJSON) == 0 {
 			// If calculation fails, use empty calculations
 			calculationsJSON = []byte(`{"fieldTotals":[],"totalBaseAmount":0,"totalGSTAmount":0,"totalAmount":0,"netPayable":0,"netReceivable":0,"basMapping":{"gstOnSales1A":0,"gstCredit1B":0,"totalSalesG1":0,"expensesG11":0}}`)
@@ -593,7 +641,7 @@ func (s *FieldEntryService) GetByClinicID(ctx context.Context, clinicID uuid.UUI
 		entryID := firstEntry.ID.String()
 		
 		// Calculate totals
-		calculationsJSON, _ := s.calculateEntryTotals(ctx, form, firstEntry.FormVersionID, fieldValueResponses, nil)
+		calculationsJSON, _ := s.calculateEntryTotals(ctx, form, firstEntry.FormVersionID, fieldValueResponses, nil, nil)
 		if len(calculationsJSON) == 0 {
 			calculationsJSON = []byte(`{"fieldTotals":[],"totalBaseAmount":0,"totalGSTAmount":0,"totalAmount":0,"netPayable":0,"netReceivable":0,"basMapping":{"gstOnSales1A":0,"gstCredit1B":0,"totalSalesG1":0,"expensesG11":0}}`)
 		} else {
@@ -718,8 +766,30 @@ func (s *FieldEntryService) GetClinicIDFromForm(ctx context.Context, formID uuid
 	return form.ClinicID, nil
 }
 
+// getGSTSettings fetches GST settings from clinic financial settings
+func (s *FieldEntryService) getGSTSettings(ctx context.Context, clinicID uuid.UUID) (gstRate float64, gstType string) {
+	gstRate = 10.0 // Default GST rate
+	gstType = "exclusive" // Default GST type
+
+	financialSettings, err := s.financialSettingsRepo.GetByClinicID(ctx, clinicID)
+	if err == nil && financialSettings != nil {
+		gstDefaults, err := financialSettings.GetGSTDefaultsMap()
+		if err == nil {
+			if rateStr, ok := gstDefaults["defaultGSTRate"]; ok {
+				if rate, err := strconv.ParseFloat(rateStr, 64); err == nil {
+					gstRate = rate
+				}
+			}
+			if typeStr, ok := gstDefaults["defaultGSTType"]; ok {
+				gstType = typeStr
+			}
+		}
+	}
+	return gstRate, gstType
+}
+
 // calculateEntryTotals computes subtotals, GST, and totals for an entry
-func (s *FieldEntryService) calculateEntryTotals(ctx context.Context, form *domain.CustomForm, formVersionID uuid.UUID, values []domain.EntryFieldValueResponse, deductions json.RawMessage) (json.RawMessage, error) {
+func (s *FieldEntryService) calculateEntryTotals(ctx context.Context, form *domain.CustomForm, formVersionID uuid.UUID, values []domain.EntryFieldValueResponse, deductions json.RawMessage, formCalc *domain.CustomFormCalculation) (json.RawMessage, error) {
 	// Get form fields for this version
 	fields, err := s.fieldRepo.GetByFormVersionID(ctx, formVersionID)
 	if err != nil {
@@ -828,10 +898,16 @@ func (s *FieldEntryService) calculateEntryTotals(ctx context.Context, form *doma
 	// fmt.Printf("DEBUG: Values JSON: %s\n", string(valuesJSON))
 
 	// Get form calculation settings (service facility fee, outwork, etc.)
-	// For now, use defaults - these should come from form or form version
 	var serviceFacilityFeePercent *float64
 	var outworkEnabled bool
 	var outworkRatePercent *float64
+
+	// Use form calculation settings if available
+	if formCalc != nil {
+		serviceFacilityFeePercent = formCalc.ServiceFacilityFeePercent
+		outworkEnabled = formCalc.OutworkEnabled
+		outworkRatePercent = formCalc.OutworkRatePercent
+	}
 
 	// Call calculation engine
 	calculationsJSON, err := s.calcEngine.RunEntryCalculation(
@@ -858,6 +934,10 @@ func (s *FieldEntryService) calculateAndStoreNetDetails(
 	entryID uuid.UUID,
 	fieldValueResponses []domain.EntryFieldValueResponse,
 	deductionsJSON json.RawMessage,
+	gstSettings struct {
+		Rate float64
+		Type string
+	},
 	now time.Time,
 ) error {
 	// Step 1: Parse deductions to get commission percent and super settings
@@ -882,27 +962,9 @@ func (s *FieldEntryService) calculateAndStoreNetDetails(
 		}
 	}
 
-	// Step 3: Get clinic financial settings for GST defaults
-	var gstRate float64 = 10.0 // Default GST rate
-	var gstType string = "exclusive" // Default GST type
-
-	financialSettings, err := s.financialSettingsRepo.GetByClinicID(ctx, clinicID)
-	if err == nil && financialSettings != nil {
-		// Get GST defaults from financial settings
-		gstDefaults, err := financialSettings.GetGSTDefaultsMap()
-		if err == nil {
-			// Try to get GST rate from defaults
-			if rateStr, ok := gstDefaults["defaultGSTRate"]; ok {
-				if rate, err := strconv.ParseFloat(rateStr, 64); err == nil {
-					gstRate = rate
-				}
-			}
-			// Try to get GST type from defaults
-			if typeStr, ok := gstDefaults["defaultGSTType"]; ok {
-				gstType = typeStr
-			}
-		}
-	}
+	// Step 3: Use GST settings passed as parameter (already fetched)
+	gstRate := gstSettings.Rate
+	gstType := gstSettings.Type
 
 	// Step 4: Run NET calculation
 	netInput := calculation.NetCalculationInput{
@@ -933,4 +995,146 @@ func (s *FieldEntryService) calculateAndStoreNetDetails(
 	}
 
 	return s.netDetailsRepo.Create(ctx, netDetails)
+}
+
+// calculateAndStoreGrossDetails calculates GROSS method details and stores them (similar to NET method)
+func (s *FieldEntryService) calculateAndStoreGrossDetails(
+	ctx context.Context,
+	clinicID uuid.UUID,
+	formVersionID uuid.UUID,
+	entryID uuid.UUID,
+	calculationsJSON json.RawMessage,
+	fieldValueResponses []domain.EntryFieldValueResponse,
+	deductionsJSON json.RawMessage,
+	fields []domain.CustomFormField, // Passed from CreateEntry to avoid re-fetching
+	gstSettings struct {
+		Rate float64
+		Type string
+	}, // Passed from CreateEntry to avoid re-fetching
+	formCalc *domain.CustomFormCalculation, // Passed from CreateEntry to avoid re-fetching
+	now time.Time,
+) error {
+	// Step 1: Parse deductions to get service facility fee percent and outwork settings
+	serviceFacilityFeePercentFromDeductions, outworkEnabled, _, err := calculation.ParseGrossDeductions(deductionsJSON)
+	if err != nil {
+		return err
+	}
+
+	// Step 2: Determine service facility fee percent (deductions > formCalc > default)
+	var serviceFacilityFeePercent float64 = 60.0 // Default 60%
+	if serviceFacilityFeePercentFromDeductions != nil {
+		serviceFacilityFeePercent = *serviceFacilityFeePercentFromDeductions
+	} else if formCalc != nil && formCalc.ServiceFacilityFeePercent != nil {
+		serviceFacilityFeePercent = *formCalc.ServiceFacilityFeePercent
+	}
+
+	// Use outwork settings from form calculation if not in deductions
+	if !outworkEnabled && formCalc != nil {
+		outworkEnabled = formCalc.OutworkEnabled
+	}
+
+	// Step 3: Use GST settings passed as parameter (already fetched)
+	gstRate := gstSettings.Rate
+
+	// Step 5: Calculate net amount directly from field value responses
+	// netAmount = netIncome - netExpenses
+	// where netIncome and netExpenses are calculated based on GST type (inclusive/exclusive/manual)
+	netAmountResult := calculation.CalculateNetAmountFromFieldValues(fieldValueResponses, fields)
+
+	// Step 6: Parse gross calculation output to get field totals for reductions mapping
+	var grossCalcOutput struct {
+		FieldTotals []struct {
+			FieldID     string  `json:"fieldId"`
+			BaseAmount  float64 `json:"baseAmount"`
+			GstAmount   float64 `json:"gstAmount"`
+			TotalAmount float64 `json:"totalAmount"`
+		} `json:"fieldTotals"`
+	}
+	if err := json.Unmarshal(calculationsJSON, &grossCalcOutput); err != nil {
+		return err
+	}
+
+	// Create field section map for reductions mapping
+	fieldSectionMap := make(map[string]string)
+	for _, field := range fields {
+		fieldSectionMap[field.ID.String()] = strings.ToUpper(field.Section)
+	}
+
+	// Build field totals with section info for reductions mapping
+	fieldTotals := make([]calculation.FieldTotal, 0, len(grossCalcOutput.FieldTotals))
+	for _, ft := range grossCalcOutput.FieldTotals {
+		section := "INCOME" // Default
+		if s, ok := fieldSectionMap[ft.FieldID]; ok {
+			section = s
+		}
+		fieldTotals = append(fieldTotals, calculation.FieldTotal{
+			FieldID:     ft.FieldID,
+			Section:     section,
+			BaseAmount:  ft.BaseAmount,
+			GstAmount:   ft.GstAmount,
+			TotalAmount: ft.TotalAmount,
+		})
+	}
+
+	// Step 7: Run structured GROSS calculation
+	// Use calculated netAmount and incomeExclGST from field values
+	grossInput := calculation.GrossCalculationInput{
+		IncomeExclGST:             netAmountResult.IncomeExclGST,
+		NetAmount:                 netAmountResult.NetAmount,
+		ServiceFacilityFeePercent: serviceFacilityFeePercent,
+		OutworkEnabled:            outworkEnabled,
+		GSTRate:                  gstRate,
+		FieldTotals:              fieldTotals,
+	}
+	grossOutput := calculation.RunGrossCalculationStructured(grossInput)
+
+	// Step 7: Create and store gross details
+	grossDetails := &domain.EntryGrossDetails{
+		ID:                        uuid.New(),
+		EntryID:                   entryID,
+		ServiceFacilityFeePercent: grossOutput.ServiceFacilityFeePercent,
+		ServiceFeeBase:            grossOutput.ServiceFeeBase,
+		GstOnServiceFee:           grossOutput.GstOnServiceFee,
+		TotalServiceFee:           grossOutput.TotalServiceFee,
+		NetAmount:                 grossOutput.NetAmount,
+		CreatedAt:                 now,
+		UpdatedAt:                 now,
+	}
+
+	// Save gross details
+	if err := s.grossDetailsRepo.Create(ctx, grossDetails); err != nil {
+		return err
+	}
+
+	// Step 8: Map reductions (fields with section = "REDUCTION") - reuse fields already fetched
+	reductions := make([]*domain.EntryGrossReduction, 0)
+	for _, ft := range fieldTotals {
+		if ft.Section == "REDUCTION" {
+			fieldID, err := uuid.Parse(ft.FieldID)
+			if err != nil {
+				continue
+			}
+
+			reduction := &domain.EntryGrossReduction{
+				ID:             uuid.New(),
+				GrossDetailsID: grossDetails.ID,
+				EntryID:        entryID,
+				FieldID:        fieldID,
+				BaseAmount:     ft.BaseAmount,
+				GstAmount:      ft.GstAmount,
+				TotalAmount:    ft.TotalAmount,
+				CreatedAt:      now,
+			}
+			reductions = append(reductions, reduction)
+		}
+	}
+
+	// Save reductions if any
+	if len(reductions) > 0 {
+		if err := s.grossReductionRepo.CreateBatch(ctx, reductions); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

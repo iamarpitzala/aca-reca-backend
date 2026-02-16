@@ -79,6 +79,7 @@ type EntryGrossDetails struct {
 	ServiceFeeBase          float64   `db:"service_fee_base"`
 	GstOnServiceFee         float64   `db:"gst_on_service_fee"`
 	TotalServiceFee         float64   `db:"total_service_fee"`
+	NetAmount               float64   `db:"net_amount"`
 	CreatedAt               time.Time `db:"created_at"`
 	UpdatedAt               time.Time `db:"updated_at"`
 }

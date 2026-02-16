@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS tbl_entry_gross_details (
     service_fee_base NUMERIC(14,2) NOT NULL DEFAULT 0,
     gst_on_service_fee NUMERIC(14,2) NOT NULL DEFAULT 0,
     total_service_fee NUMERIC(14,2) NOT NULL DEFAULT 0,
+    net_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -22,3 +22,24 @@ type EntryNetDetailsRepository interface {
 	Update(ctx context.Context, netDetails *domain.EntryNetDetails) error
 	Delete(ctx context.Context, entryID uuid.UUID) error
 }
+
+type EntryGrossDetailsRepository interface {
+	Create(ctx context.Context, grossDetails *domain.EntryGrossDetails) error
+	GetByEntryID(ctx context.Context, entryID uuid.UUID) (*domain.EntryGrossDetails, error)
+	Update(ctx context.Context, grossDetails *domain.EntryGrossDetails) error
+	Delete(ctx context.Context, entryID uuid.UUID) error
+}
+
+type EntryGrossReductionRepository interface {
+	Create(ctx context.Context, reduction *domain.EntryGrossReduction) error
+	CreateBatch(ctx context.Context, reductions []*domain.EntryGrossReduction) error
+	GetByGrossDetailsID(ctx context.Context, grossDetailsID uuid.UUID) ([]domain.EntryGrossReduction, error)
+	DeleteByGrossDetailsID(ctx context.Context, grossDetailsID uuid.UUID) error
+}
+
+type EntryGrossReimbursementRepository interface {
+	Create(ctx context.Context, reimbursement *domain.EntryGrossReimbursement) error
+	CreateBatch(ctx context.Context, reimbursements []*domain.EntryGrossReimbursement) error
+	GetByGrossDetailsID(ctx context.Context, grossDetailsID uuid.UUID) ([]domain.EntryGrossReimbursement, error)
+	DeleteByGrossDetailsID(ctx context.Context, grossDetailsID uuid.UUID) error
+}

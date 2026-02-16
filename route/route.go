@@ -58,6 +58,9 @@ func InitRouter(e *gin.Engine) {
 	basSnapshotRepo := postgres.NewBASSnapshotRepository(sqlxDB)
 	fieldEntryRepo := postgres.NewFieldEntryRepository(sqlxDB)
 	entryNetDetailsRepo := postgres.NewEntryNetDetailsRepository(sqlxDB)
+	entryGrossDetailsRepo := postgres.NewEntryGrossDetailsRepository(sqlxDB)
+	entryGrossReductionRepo := postgres.NewEntryGrossReductionRepository(sqlxDB)
+	entryGrossReimbursementRepo := postgres.NewEntryGrossReimbursementRepository(sqlxDB)
 
 	// Calculation engine (decoupled for accounting accuracy)
 	calcEngine := calculation.NewEntryCalculationEngine()
@@ -74,7 +77,7 @@ func InitRouter(e *gin.Engine) {
 	transactionPostingUC := usecase.NewTransactionPostingService(fieldEntryRepo, customFormRepo, customFormFieldRepo, customFormVersionRepo, transactionRepo, clinicCOARepo, aocRepo, calcEngine)
 	clinicFinancialSettingsUC := usecase.NewClinicFinancialSettingsService(clinicFinancialSettingsRepo, clinicRepo)
 	basSnapshotUC := usecase.NewBASSnapshotService(basSnapshotRepo, clinicRepo)
-	fieldEntryUC := usecase.NewFieldEntryService(fieldEntryRepo, customFormRepo, customFormFieldRepo, clinicRepo, customFormCalculationRepo, entryNetDetailsRepo, clinicFinancialSettingsRepo, calcEngine)
+	fieldEntryUC := usecase.NewFieldEntryService(fieldEntryRepo, customFormRepo, customFormFieldRepo, clinicRepo, customFormCalculationRepo, entryNetDetailsRepo, entryGrossDetailsRepo, entryGrossReductionRepo, entryGrossReimbursementRepo, clinicFinancialSettingsRepo, calcEngine)
 	// HTTP handlers (driving adapters)
 	authHandler := httpHandler.NewAuthHandler(authUC, oauthService, cfg.OAuth.FrontendURL)
 	userHandler := httpHandler.NewUserHandler(authUC)

@@ -1116,29 +1116,10 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 
 	netAmountResult := calculation.CalculateNetAmountFromFieldValues(fieldValueResponses, fields, gstConfig)
 
-	// Create field section map for reductions mapping
-	fieldSectionMap := make(map[string]string)
-	for _, field := range fields {
-		fieldSectionMap[field.ID.String()] = strings.ToUpper(field.Section)
-	}
-
-	// Build field totals with section info for reductions mapping
-	fieldTotals := make([]calculation.FieldTotal, 0, len(fieldValueResponses))
-	for _, val := range fieldValueResponses {
-		fieldTotals = append(fieldTotals, calculation.FieldTotal{
-			FieldID:    val.FieldID,
-			Section:    fieldSectionMap[val.FieldID],
-			BaseAmount: val.Value,
-		})
-		if val.ManualGSTAmount != nil {
-			fieldTotals = append(fieldTotals, calculation.FieldTotal{
-				FieldID:     val.FieldID,
-				Section:     fieldSectionMap[val.FieldID],
-				BaseAmount:  val.Value - *val.ManualGSTAmount,
-				GstAmount:   *val.ManualGSTAmount,
-				TotalAmount: val.Value,
-			})
-		}
+	// Map field values by FieldID for correct lookup (gross reduction uses field-level GST type, same as calculation)
+	valueByFieldID := make(map[string]domain.EntryFieldValueResponse)
+	for _, v := range fieldValueResponses {
+		valueByFieldID[v.FieldID] = v
 	}
 
 	serviceFeeBase := netAmountResult.NetAmount * serviceFacilityFeePercent / 100
@@ -1161,21 +1142,30 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		return err
 	}
 
+	// Build reductions by iterating over reduction fields and matching via FieldID (same mapping as gross calculation)
 	reductions := make([]*domain.EntryGrossReduction, 0)
-	for i, ft := range fieldTotals {
-		if ft.Section == "REDUCTION" {
-			fieldValueResult := calculation.CalculateGSTOnFields(fieldValueResponses[i], fields, gstConfig)
-			reductions = append(reductions, &domain.EntryGrossReduction{
-				ID:             uuid.New(),
-				GrossDetailsID: grossDetails.ID,
-				EntryID:        entryID,
-				FieldID:        uuid.MustParse(fieldValueResult.FieldID),
-				BaseAmount:     fieldValueResult.BaseAmount,
-				GstAmount:      fieldValueResult.GSTAmount,
-				TotalAmount:    fieldValueResult.TotalAmount,
-				CreatedAt:      now,
-			})
+	for _, field := range fields {
+		if strings.ToUpper(field.Section) != "REDUCTION" {
+			continue
 		}
+		val, ok := valueByFieldID[field.ID.String()]
+		if !ok {
+			continue
+		}
+		fieldValueResult := calculation.CalculateGSTOnFields(val, fields, gstConfig)
+		if fieldValueResult == nil {
+			continue
+		}
+		reductions = append(reductions, &domain.EntryGrossReduction{
+			ID:             uuid.New(),
+			GrossDetailsID: grossDetails.ID,
+			EntryID:        entryID,
+			FieldID:        uuid.MustParse(fieldValueResult.FieldID),
+			BaseAmount:     fieldValueResult.BaseAmount,
+			GstAmount:      fieldValueResult.GSTAmount,
+			TotalAmount:    fieldValueResult.TotalAmount,
+			CreatedAt:      now,
+		})
 	}
 
 	if len(reductions) > 0 {

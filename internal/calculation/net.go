@@ -145,7 +145,24 @@ func CalculateNetAmountBySection(
 	}
 }
 
+// effectiveGSTConfig returns field-level GST config when field has GST enabled, else clinic fallback.
+func effectiveGSTConfig(f domain.CustomFormField, fallback domain.GSTConfig) (rate float64, gstType string) {
+	if !f.GSTConfig {
+		return fallback.Rate, fallback.Type
+	}
+	gstType = strings.ToLower(f.GSTType)
+	// if gstType == "" {
+	// 	gstType = "exclusive"
+	// }
+	rate = fallback.Rate
+	if f.GSTRate != nil {
+		rate = *f.GSTRate
+	}
+	return rate, gstType
+}
+
 // CalculateNetAmountFromFieldValues computes net income, net expenses, and net amount from field value responses.
+// Uses field-level GST type/rate when field has GSTConfig, else clinic-level gstConfig fallback.
 func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) NetAmountResult {
 	fieldByID := make(map[string]domain.CustomFormField)
 	for _, f := range fields {
@@ -161,10 +178,9 @@ func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldVa
 		}
 		sec := getSection(f.Section)
 		amount := 0.0
-		gstRate := gstConfig.Rate
-		gstType := gstConfig.Type
+		gstRate, gstType := effectiveGSTConfig(f, gstConfig)
 		if f.GSTConfig {
-			switch strings.ToLower(gstType) {
+			switch gstType {
 			case "inclusive":
 				amount = val.Value - (val.Value / (1 + gstRate/100))
 			case "exclusive":
@@ -200,10 +216,11 @@ func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldVa
 		NetAmount:     netAmount,
 	}
 }
-func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) *FieldValueResult {
 
-	fmt.Println("fieldValueResponse", fieldValueResponse)
-	// Create lookup map
+// CalculateGSTOnFields computes base, GST, and total for a single field value.
+// Uses field-level GST type/rate when field has GSTConfig, else clinic-level gstConfig fallback.
+// This aligns with gross calculation which uses f.GstConfig.Type per field.
+func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) *FieldValueResult {
 	fieldByID := make(map[string]domain.CustomFormField, len(fields))
 	for _, f := range fields {
 		fieldByID[f.ID.String()] = f
@@ -215,21 +232,21 @@ func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fie
 	}
 
 	value := fieldValueResponse.Value
-	gstRate := float64(gstConfig.Rate) / 100.0 // ensure float division
+	rate, gstType := effectiveGSTConfig(f, gstConfig)
+	gstRate := rate / 100.0 // ensure float division
 
 	var baseAmount float64
 	var gstAmount float64
 	var totalAmount float64
-	fmt.Println("gstConfig.Type", gstConfig.Type)
-	fmt.Println("f.GSTConfig", f.GSTConfig)
 	// If GST not enabled for this field
+	fmt.Println("type", gstType)
 	if !f.GSTConfig {
 		baseAmount = value
 		gstAmount = 0
 		totalAmount = value
 	} else {
 
-		switch strings.ToLower(gstConfig.Type) {
+		switch gstType {
 		case "inclusive":
 			// value already includes GST
 			if gstRate > 0 {
@@ -241,9 +258,6 @@ func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fie
 				gstAmount = 0
 				totalAmount = value
 			}
-			fmt.Println("gstAmount", gstAmount)
-			fmt.Println("baseAmount", baseAmount)
-			fmt.Println("totalAmount", totalAmount)
 		case "exclusive":
 			baseAmount = value
 			gstAmount = value * gstRate

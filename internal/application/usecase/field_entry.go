@@ -264,17 +264,15 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		Type string
 	}{Rate: gstRate, Type: gstType}
 
-	// Step 13: Calculate and store method-specific details
-	if calculationMethod == "NET" {
+	// Step 13: Calculate and store method-specific details (case-insensitive method check)
+	if strings.EqualFold(calculationMethod, "NET") {
 		if err := s.calculateAndStoreNetDetails(ctx, form.ClinicID, fieldEntries[0].ID, fieldValueResponses, req.Deductions, gstSettings, fields, now); err != nil {
-			// Log error but don't fail entry creation
 			_ = err
 		}
-	} else if calculationMethod == "GROSS" {
-		// Pass fields, gstSettings, and formCalc to avoid re-fetching
+	} else if strings.EqualFold(calculationMethod, "GROSS") {
+		// source_entry_id = first field entry ID (must exist in tbl_custom_form_entry)
 		if err := s.calculateAndStoreGrossDetails(ctx, form.ClinicID, formVersionID, fieldEntries[0].ID, calculationsJSON, fieldValueResponses, req.Deductions, fields, gstSettings, formCalc, now); err != nil {
-			// Log error but don't fail entry creation
-			_ = err
+			return nil, err // surface error so caller sees why tbl_entry_gross_details was not stored
 		}
 	}
 

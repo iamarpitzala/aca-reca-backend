@@ -1,6 +1,7 @@
 package calculation
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -99,8 +100,8 @@ type FieldValueResult struct {
 
 // CalculateNetAmountBySection computes net amount for NET method (create entry side).
 // Uses section type already defined on each field: INCOME vs EXPENSE.
-// Loops over field values, sums amounts by section (amount = TotalAmount or Value already received),
-// then net amount = total income - total expenses.
+// Loops over field values, sums amounts by section. For GST manual fields: base = Value - ManualGSTAmount.
+// Else: amount = TotalAmount or Value. Net amount = total income - total expenses.
 func CalculateNetAmountBySection(
 	fieldValueResponses []domain.EntryFieldValueResponse,
 	fields []domain.CustomFormField,
@@ -119,7 +120,15 @@ func CalculateNetAmountBySection(
 		}
 		sec := getSection(f.Section)
 		amount := 0.0
-		if val.TotalAmount != nil {
+		// For INCOME with GST manual: base (excl GST) = Value - ManualGSTAmount (aligns with gross AggregateIncome).
+		// For expense manual: Value is already base (net), so use as-is.
+		if sec == "income" && f.GSTConfig && strings.EqualFold(f.GSTType, "manual") {
+			manualGst := 0.0
+			if val.ManualGSTAmount != nil {
+				manualGst = *val.ManualGSTAmount
+			}
+			amount = val.Value - manualGst
+		} else if val.TotalAmount != nil {
 			amount = *val.TotalAmount
 		} else {
 			amount = val.Value
@@ -145,60 +154,91 @@ func CalculateNetAmountBySection(
 }
 
 // CalculateNetAmountFromFieldValues computes net income, net expenses, and net amount from field value responses.
-// Uses field-level GST type/rate when field has GSTConfig, else clinic-level gstConfig fallback.
+// Uses field-level GST type/rate when field has GSTConfig enabled, else clinic-level gstConfig fallback.
+// Aligns with gross.go AggregateIncome/AggregateExpenses logic for base (excl GST) per field.
+func amountExclGST(value float64, field domain.CustomFormField, val domain.EntryFieldValueResponse, gstConfig domain.GSTConfig, section string) float64 {
+	if !field.GSTConfig {
+		return value
+	}
+
+	rate := gstConfig.Rate / 100
+
+	switch strings.ToLower(gstConfig.Type) {
+
+	case "inclusive":
+		return value / (1 + rate)
+
+	case "exclusive":
+		return value
+
+	case "manual":
+		if val.ManualGSTAmount != nil {
+			if section == "income" {
+				fmt.Println(*val.ManualGSTAmount)
+				return value - *val.ManualGSTAmount
+			} else {
+				return value
+			}
+		}
+		return value
+
+	default:
+		return value
+	}
+}
+
+func normalizeSection(section string) string {
+	switch strings.ToLower(section) {
+	case "income":
+		return "income"
+	case "expense":
+		return "expense"
+	default:
+		return ""
+	}
+}
+
 func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) NetAmountResult {
-	fieldByID := make(map[string]domain.CustomFormField)
+
+	fieldByID := make(map[string]domain.CustomFormField, len(fields))
 	for _, f := range fields {
 		fieldByID[f.ID.String()] = f
 	}
 
-	var totalIncomeCents, totalExpensesCents int64
+	var incomeCents, expenseCents int64
 
 	for _, val := range fieldValueResponses {
-		f, ok := fieldByID[val.FieldID]
+		field, ok := fieldByID[val.FieldID]
 		if !ok {
 			continue
 		}
-		sec := getSection(f.Section)
 
-		result := CalculateGSTOnFields(val, fields, gstConfig)
-		if result == nil {
-			// fallback: use original value
-			amount := 0.0
-			if val.TotalAmount != nil {
-				amount = *val.TotalAmount
-			} else {
-				amount = val.Value
-			}
-			amountCents := int64(math.Round(amount * 100))
-			switch sec {
-			case "income":
-				totalIncomeCents += amountCents
-			case "expense":
-				totalExpensesCents += amountCents
-			}
-			// GST unknown, skip GST sum
+		section := normalizeSection(field.Section)
+		if section == "" {
 			continue
 		}
 
-		baseCents := int64(math.Round(result.BaseAmount * 100))
+		exclGST := amountExclGST(val.Value, field, val, gstConfig, section)
+		fmt.Println("exclGST", exclGST)
+		cents := int64(math.Round(exclGST * 100))
 
-		switch sec {
+		if cents == 0 {
+			continue
+		}
+
+		switch section {
 		case "income":
-			totalIncomeCents += baseCents
+			incomeCents += cents
 		case "expense":
-			totalExpensesCents += baseCents
+			expenseCents += cents
 		}
 	}
 
-	netCents := totalIncomeCents - totalExpensesCents
-
-	totalIncome := float64(totalIncomeCents) / 100
-	netAmount := float64(netCents) / 100
+	netCents := incomeCents - expenseCents
 
 	return NetAmountResult{
-		IncomeExclGST: totalIncome,
-		NetAmount:     netAmount,
+		IncomeExclGST: float64(incomeCents) / 100,
+		NetAmount:     float64(netCents) / 100,
 	}
 }
 

@@ -1292,6 +1292,21 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 			// skip values without matching field definition
 			continue
 		}
+		if strings.EqualFold(f.Section, "INCOME") && f.GSTConfig {
+			incomeReimbursement := calculation.CalculateGSTOnFields(v, fields, gstConfig)
+			if incomeReimbursement != nil {
+				reimbursements = append(reimbursements, &domain.EntryGrossReimbursement{
+					ID:             uuid.New(),
+					GrossDetailsID: grossDetails.ID,
+					EntryID:        entryID,
+					FieldID:        uuid.MustParse(incomeReimbursement.FieldID),
+					BaseAmount:     0,
+					GstAmount:      incomeReimbursement.GSTAmount,
+					TotalAmount:    incomeReimbursement.GSTAmount,
+					CreatedAt:      now,
+				})
+			}
+		}
 		// Only process expense fields
 		if !strings.EqualFold(f.Section, "EXPENSE") {
 			continue
@@ -1340,6 +1355,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 			TotalAmount:    fieldValueResult.TotalAmount,
 			CreatedAt:      now,
 		})
+
 	}
 
 	// Store all reimbursements in batch if present

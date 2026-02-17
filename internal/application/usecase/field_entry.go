@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
@@ -1201,6 +1202,25 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 				CreatedAt:      now,
 			})
 		}
+		fmt.Println("f.Section", f.Section)
+		// Track GST on expenses for reduction
+		if strings.EqualFold(f.Section, "EXPENSE") {
+			expenseReduction := calculation.TrackAllGSTOnExpensesForRedection(v, fields, *gstCfg)
+			if expenseReduction != nil {
+				reductions = append(reductions, &domain.EntryGrossReduction{
+					ID:             uuid.New(),
+					GrossDetailsID: grossDetails.ID,
+					EntryID:        entryID,
+					FieldID:        uuid.MustParse(expenseReduction.FieldID),
+					BaseAmount:     expenseReduction.BaseAmount,
+					GstAmount:      expenseReduction.GSTAmount,
+					TotalAmount:    expenseReduction.TotalAmount,
+					CreatedAt:      now,
+				})
+			}
+			fmt.Println("expenseReduction", expenseReduction)
+		}
+		
 	}
 
 	// Store all reductions in batch if present

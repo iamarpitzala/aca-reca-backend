@@ -323,3 +323,22 @@ func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fie
 		BaseAmount:  baseAmount,
 	}
 }
+
+func TrackAllGSTOnExpensesForRedection(fieldValueResponse domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) *FieldValueResult {
+	calc := CalculateGSTOnFields(fieldValueResponse, fields, gstConfig)
+	if calc == nil {
+		return nil
+	}
+	if calc.Section != "EXPENSE" {
+		return nil
+	}
+	gstAmount := math.Round(calc.GSTAmount*100) / 100
+	return &FieldValueResult{
+		FieldID:     calc.FieldID,
+		Section:     calc.Section,
+		Value:       gstAmount, // GST is the value we track
+		GSTAmount:   gstAmount,
+		TotalAmount: gstAmount, // total = GST only
+		BaseAmount:  0,         // no base, only GST tracked for reimbursement
+	}
+}

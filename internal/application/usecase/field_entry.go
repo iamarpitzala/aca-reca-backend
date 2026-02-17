@@ -1245,8 +1245,8 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 			}
 		}
 		fmt.Println("f.Section", f.Section)
-		// Track GST on expenses for reduction
-		if strings.EqualFold(f.Section, "EXPENSE") {
+		// Track GST on expenses for reduction (only if GST is enabled)
+		if strings.EqualFold(f.Section, "EXPENSE") && f.GSTConfig {
 			expenseReduction := calculation.TrackAllGSTOnExpensesForRedection(v, fields, *gstCfg)
 			if expenseReduction != nil {
 				reductions = append(reductions, &domain.EntryGrossReduction{
@@ -1272,8 +1272,19 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		}
 	}
 
-	// Calculate reimbursements (expense entries paid by owner)
+	// Calculate reimbursements (expense entries paid by owner/dentist only)
 	reimbursements := make([]*domain.EntryGrossReimbursement, 0)
+
+	// Parse entry-level payment responsibility from deductions (entry-level override takes precedence)
+	var entryPaymentResp *string
+	if len(deductionsJSON) > 0 {
+		var deductionsMap map[string]interface{}
+		if err := json.Unmarshal(deductionsJSON, &deductionsMap); err == nil {
+			if val, ok := deductionsMap["entryPaymentResponsibility"].(string); ok && val != "" {
+				entryPaymentResp = &val
+			}
+		}
+	}
 
 	for _, v := range fieldValueResponses {
 		f, ok := fieldMap[v.FieldID]
@@ -1286,11 +1297,30 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 			continue
 		}
 
-		// Determine payment responsibility (entry-level override takes precedence)
-		paymentResp := util.PaymentResponsibilityOwner
+		// Determine payment responsibility (entry-level override takes precedence over field-level)
+		paymentResp := ""
+		
+		// First check entry-level payment responsibility
+		if entryPaymentResp != nil && *entryPaymentResp != "" {
+			paymentResp = strings.ToUpper(*entryPaymentResp)
+		} else {
+			// Then check field-level payment responsibility from metadata
+			var metadata map[string]interface{}
+			if len(f.Metadata) > 0 {
+				_ = json.Unmarshal(f.Metadata, &metadata)
+				if val, ok := metadata["paymentResponsibility"].(string); ok && val != "" {
+					paymentResp = strings.ToUpper(val)
+				}
+			}
+		}
+		
+		// Default to CLINIC if not specified
+		if paymentResp == "" {
+			paymentResp = util.PaymentResponsibilityClinic
+		}
 
-		// Only process if payment responsibility is OWNER
-		if strings.ToUpper(paymentResp) != util.PaymentResponsibilityOwner {
+		// Only process if payment responsibility is OWNER (pay by dentist)
+		if paymentResp != util.PaymentResponsibilityOwner {
 			continue
 		}
 

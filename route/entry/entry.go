@@ -11,6 +11,7 @@ func RegisterEntryRoutes(e *gin.RouterGroup, entryHandler *httpHandler.FieldEntr
 	entry := e.Group("/entry")
 	entry.Use(middleware.AuthMiddleware(tokenService))
 	entry.POST("", entryHandler.Create)
+	entry.GET("/:id/net-details", entryHandler.GetNetDetails)
 	entry.GET("/:id", entryHandler.GetByID)
 	entry.GET("/form/:formId", entryHandler.GetByFormID)
 	entry.GET("/clinic/:clinicId", entryHandler.GetByClinicID)

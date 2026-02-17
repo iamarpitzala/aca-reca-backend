@@ -92,6 +92,33 @@ func (h *FieldEntryHandler) GetByID(c *gin.Context) {
 	utils.JSONResponse(c, http.StatusOK, "field entry retrieved", resp, nil)
 }
 
+// GetNetDetails handles GET /entry/:id/net-details
+func (h *FieldEntryHandler) GetNetDetails(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		return
+	}
+
+	clinicID, err := h.entryUC.GetClinicIDFromEntry(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
+		return
+	}
+
+	resp, err := h.entryUC.GetNetDetails(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "net details not found for this entry"})
+		return
+	}
+
+	utils.JSONResponse(c, http.StatusOK, "net details retrieved", resp, nil)
+}
+
 // GetByFormID handles GET /field-entries/form/:formId
 func (h *FieldEntryHandler) GetByFormID(c *gin.Context) {
 	formID, err := uuid.Parse(c.Param("formId"))

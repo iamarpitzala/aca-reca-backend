@@ -487,7 +487,12 @@ func (s *FieldEntryService) GetByFormID(ctx context.Context, formID uuid.UUID) (
 		if calcErr != nil || len(calculationsJSON) == 0 {
 			// If calculation fails, use empty calculations
 			calculationsJSON = []byte(`{"fieldTotals":[],"totalBaseAmount":0,"totalGSTAmount":0,"totalAmount":0,"netPayable":0,"netReceivable":0,"basMapping":{"gstOnSales1A":0,"gstCredit1B":0,"totalSalesG1":0,"expensesG11":0}}`)
-		} else {
+		}
+
+		// For NET method with income: merge net amount from tbl_entry_net_details if available
+		calculationsJSON = s.mergeNetAmountIntoCalculations(ctx, form, firstEntry.ID, calculationsJSON)
+
+		if len(calculationsJSON) > 0 {
 			// Update field values with calculated amounts
 			var calcResult struct {
 				FieldTotals []struct {
@@ -645,7 +650,12 @@ func (s *FieldEntryService) GetByClinicID(ctx context.Context, clinicID uuid.UUI
 		calculationsJSON, _ := s.calculateEntryTotals(ctx, form, firstEntry.FormVersionID, fieldValueResponses, nil, nil)
 		if len(calculationsJSON) == 0 {
 			calculationsJSON = []byte(`{"fieldTotals":[],"totalBaseAmount":0,"totalGSTAmount":0,"totalAmount":0,"netPayable":0,"netReceivable":0,"basMapping":{"gstOnSales1A":0,"gstCredit1B":0,"totalSalesG1":0,"expensesG11":0}}`)
-		} else {
+		}
+
+		// For NET method with income: merge net amount from tbl_entry_net_details if available
+		calculationsJSON = s.mergeNetAmountIntoCalculations(ctx, form, firstEntry.ID, calculationsJSON)
+
+		if len(calculationsJSON) > 0 {
 			// Update field values with calculated amounts
 			var calcResult struct {
 				FieldTotals []struct {
@@ -741,6 +751,16 @@ func (s *FieldEntryService) Delete(ctx context.Context, id uuid.UUID) error {
 	// Verify entry exists before deletion
 	_ = entry
 	return s.repo.Delete(ctx, id)
+}
+
+// GetNetDetails retrieves NET method details for an entry by ID.
+// Returns nil if the entry has no net details (e.g. gross method or not yet calculated).
+func (s *FieldEntryService) GetNetDetails(ctx context.Context, entryID uuid.UUID) (*domain.NetDetailsResponse, error) {
+	netDetails, err := s.netDetailsRepo.GetByEntryID(ctx, entryID)
+	if err != nil {
+		return nil, err
+	}
+	return netDetails.ToResponse(), nil
 }
 
 // GetClinicIDFromEntry retrieves the clinic ID for a field entry via its form
@@ -926,6 +946,40 @@ func (s *FieldEntryService) calculateEntryTotals(ctx context.Context, form *doma
 	}
 
 	return calculationsJSON, nil
+}
+
+// mergeNetAmountIntoCalculations injects net amount from tbl_entry_net_details into the
+// calculations JSON when the form uses NET method and INCOME/BOTH. Returns the original
+// calculationsJSON unchanged if the merge is not applicable or fails.
+func (s *FieldEntryService) mergeNetAmountIntoCalculations(
+	ctx context.Context,
+	form *domain.CustomForm,
+	entryID uuid.UUID,
+	calculationsJSON []byte,
+) []byte {
+	isNetIncome := strings.EqualFold(form.CalculationMethod, "NET") &&
+		(form.FormType == "INCOME" || form.FormType == "BOTH")
+	if !isNetIncome {
+		return calculationsJSON
+	}
+
+	netDetails, err := s.netDetailsRepo.GetByEntryID(ctx, entryID)
+	if err != nil || netDetails == nil {
+		return calculationsJSON
+	}
+
+	var calcMap map[string]interface{}
+	if err := json.Unmarshal(calculationsJSON, &calcMap); err != nil {
+		return calculationsJSON
+	}
+
+	calcMap["netFee"] = netDetails.NetAmount
+	merged, err := json.Marshal(calcMap)
+	if err != nil {
+		return calculationsJSON
+	}
+
+	return merged
 }
 
 // calculateAndStoreNetDetails calculates NET method details and stores them in tbl_entry_net_details

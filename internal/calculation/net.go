@@ -146,6 +146,7 @@ func CalculateNetAmountBySection(
 }
 
 // CalculateNetAmountFromFieldValues computes net income, net expenses, and net amount from field value responses.
+// Uses field-level GST type/rate when field has GSTConfig, else clinic-level gstConfig fallback.
 func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) NetAmountResult {
 	fieldByID := make(map[string]domain.CustomFormField)
 	for _, f := range fields {
@@ -271,11 +272,6 @@ func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fie
 	var gstAmount float64
 	var totalAmount float64
 
-	// If GST not enabled for this field
-	fmt.Println("gstConfig.Enabled", gstEnabled)
-	fmt.Println("gstType", gstType)
-	fmt.Println("gstRate", gstRate)
-	fmt.Println("value", value)
 	if !gstEnabled {
 		baseAmount = value
 		gstAmount = 0

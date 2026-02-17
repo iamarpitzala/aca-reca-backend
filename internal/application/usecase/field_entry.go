@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
@@ -1158,12 +1158,12 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		outworkEnabled = formCalc.OutworkEnabled
 	}
 
-	gstCfg := domain.GetGSTConfig(gstConfig)
+	// gstCfg := domain.GetGSTConfig(gstConfig)
 
 	// gstRate := gstCfg.Rate
 
 	// Calculate netAmountResult for GROSS method (accounting for GST config)
-	netAmountResult := calculation.CalculateNetAmountFromFieldValues(fieldValueResponses, fields, *gstCfg)
+	netAmountResult := calculation.CalculateNetAmountFromFieldValues(fieldValueResponses, fields, gstConfig)
 
 	// Service Facility Fee base, GST, and total
 	// Service fee is on the net amount
@@ -1206,7 +1206,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 
 		// Process REDUCTION section fields
 		if strings.EqualFold(f.Section, "REDUCTION") {
-			fieldValueResult := calculation.CalculateGSTOnFields(v, fields, *gstCfg)
+			fieldValueResult := calculation.CalculateGSTOnFields(v, fields, gstConfig)
 			if fieldValueResult == nil {
 				continue
 			}
@@ -1223,31 +1223,31 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 			continue
 		}
 
-		// Process EXPENSE fields paid by CLINIC
-		if strings.EqualFold(f.Section, "EXPENSE") {
-			paymentResp := util.PaymentResponsibilityClinic
-			// Only process if payment responsibility is CLINIC
-			if strings.ToUpper(paymentResp) == util.PaymentResponsibilityClinic && f.GSTConfig {
-				fieldValueResult := calculation.CalculateGSTOnFields(v, fields, *gstCfg)
-				if fieldValueResult == nil {
-					continue
-				}
-				reductions = append(reductions, &domain.EntryGrossReduction{
-					ID:             uuid.New(),
-					GrossDetailsID: grossDetails.ID,
-					EntryID:        entryID,
-					FieldID:        uuid.MustParse(fieldValueResult.FieldID),
-					BaseAmount:     0,
-					GstAmount:      fieldValueResult.GSTAmount,
-					TotalAmount:    fieldValueResult.GSTAmount,
-					CreatedAt:      now,
-				})
-			}
-		}
-		fmt.Println("f.Section", f.Section)
+		// // Process EXPENSE fields paid by CLINIC
+		// if strings.EqualFold(f.Section, "EXPENSE") {
+		// 	paymentResp := util.PaymentResponsibilityClinic
+		// 	// Only process if payment responsibility is CLINIC
+		// 	if strings.ToUpper(paymentResp) == util.PaymentResponsibilityClinic && f.GSTConfig {
+		// 		fieldValueResult := calculation.CalculateGSTOnFields(v, fields, *gstCfg)
+		// 		if fieldValueResult == nil {
+		// 			continue
+		// 		}
+		// 		reductions = append(reductions, &domain.EntryGrossReduction{
+		// 			ID:             uuid.New(),
+		// 			GrossDetailsID: grossDetails.ID,
+		// 			EntryID:        entryID,
+		// 			FieldID:        uuid.MustParse(fieldValueResult.FieldID),
+		// 			BaseAmount:     0,
+		// 			GstAmount:      fieldValueResult.GSTAmount,
+		// 			TotalAmount:    fieldValueResult.GSTAmount,
+		// 			CreatedAt:      now,
+		// 		})
+		// 	}
+		// }
+		// fmt.Println("f.Section", f.Section)
 		// Track GST on expenses for reduction (only if GST is enabled)
 		if strings.EqualFold(f.Section, "EXPENSE") && f.GSTConfig {
-			expenseReduction := calculation.TrackAllGSTOnExpensesForRedection(v, fields, *gstCfg)
+			expenseReduction := calculation.TrackAllGSTOnExpensesForRedection(v, fields, gstConfig)
 			if expenseReduction != nil {
 				reductions = append(reductions, &domain.EntryGrossReduction{
 					ID:             uuid.New(),
@@ -1262,7 +1262,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 			}
 			fmt.Println("expenseReduction", expenseReduction)
 		}
-		
+
 	}
 
 	// Store all reductions in batch if present
@@ -1299,7 +1299,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 
 		// Determine payment responsibility (entry-level override takes precedence over field-level)
 		paymentResp := ""
-		
+
 		// First check entry-level payment responsibility
 		if entryPaymentResp != nil && *entryPaymentResp != "" {
 			paymentResp = strings.ToUpper(*entryPaymentResp)
@@ -1313,7 +1313,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 				}
 			}
 		}
-		
+
 		// Default to CLINIC if not specified
 		if paymentResp == "" {
 			paymentResp = util.PaymentResponsibilityClinic
@@ -1325,7 +1325,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		}
 
 		// Calculate GST for this expense field
-		fieldValueResult := calculation.CalculateGSTOnFields(v, fields, *gstCfg)
+		fieldValueResult := calculation.CalculateGSTOnFields(v, fields, gstConfig)
 		if fieldValueResult == nil {
 			continue
 		}

@@ -184,14 +184,14 @@ func (f *FieldEntry) ToResponse() *FieldEntryResponse {
 	}
 }
 
-func GetGSTConfig(gstConfig GSTConfig) *GSTConfig {
-	if !gstConfig.Enabled {
-		return &GSTConfig{
-			Enabled: false,
-			Rate:    0,
-			Type:    "",
-		}
-	}
+// func GetGSTConfig(gstConfig GSTConfig) *GSTConfig {
+// 	if !gstConfig.Enabled {
+// 		return &GSTConfig{
+// 			Enabled: false,
+// 			Rate:    0,
+// 			Type:    "",
+// 		}
+// 	}
 
-	return &gstConfig
-}
+// 	return &gstConfig
+// }

@@ -1,7 +1,6 @@
 package calculation
 
 import (
-	"fmt"
 	"math"
 	"strings"
 
@@ -153,58 +152,20 @@ func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldVa
 		fieldByID[f.ID.String()] = f
 	}
 
-	gstCfg := domain.GetGSTConfig(gstConfig)
+	// gstCfg := domain.GetGSTConfig(gstConfig)
 
-	fmt.Println("gstConfig", gstConfig)
-	// Sum in integer cents to avoid float drift (e.g. 33.33+33.33+33.34 must equal 100.00)
 	var totalIncomeCents, totalExpensesCents int64
 	for _, val := range fieldValueResponses {
-		fmt.Println("val", val)
 		f, ok := fieldByID[val.FieldID]
 		if !ok {
 			continue
 		}
 		sec := getSection(f.Section)
+
+		// Determine which amount field to use
 		amount := 0.0
-
-		// Use field-specific GST config if available, otherwise fall back to global config
-		var gstRate float64
-		var gstType string
-		var fieldGSTEnabled bool
-
-		if f.GSTConfig {
-			fieldGSTEnabled = true
-			if f.GSTRate != nil {
-				gstRate = *f.GSTRate
-			} else {
-				gstRate = gstCfg.Rate
-			}
-			if f.GSTType != "" {
-				gstType = strings.ToLower(f.GSTType)
-			} else {
-				gstType = strings.ToLower(gstCfg.Type)
-			}
-		} else {
-			fieldGSTEnabled = gstCfg.Enabled
-			gstRate = gstCfg.Rate
-			gstType = strings.ToLower(gstCfg.Type)
-		}
-
-		if fieldGSTEnabled {
-			switch gstType {
-			case "inclusive":
-				amount = val.Value - (val.Value / (1 + gstRate/100))
-			case "exclusive":
-				amount = val.Value
-			case "manual":
-				manualGst := 0.0
-				if val.ManualGSTAmount != nil {
-					manualGst = *val.ManualGSTAmount
-				}
-				amount = val.Value - manualGst
-			default:
-				amount = val.Value
-			}
+		if val.TotalAmount != nil {
+			amount = *val.TotalAmount
 		} else {
 			amount = val.Value
 		}
@@ -219,9 +180,9 @@ func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldVa
 	}
 
 	netCents := totalIncomeCents - totalExpensesCents
-	// Convert back to dollars with exact 2-decimal values (no float drift)
 	totalIncome := float64(totalIncomeCents) / 100
 	netAmount := float64(netCents) / 100
+
 	return NetAmountResult{
 		IncomeExclGST: totalIncome,
 		NetAmount:     netAmount,
@@ -241,13 +202,11 @@ func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fie
 
 	value := fieldValueResponse.Value
 
-	// Use field-specific GST config if available, otherwise fall back to global config
 	var gstEnabled bool
 	var rate float64
 	var gstType string
 
 	if f.GSTConfig {
-		// Field has its own GST configuration
 		gstEnabled = true
 		if f.GSTRate != nil {
 			rate = *f.GSTRate
@@ -260,10 +219,9 @@ func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fie
 			gstType = strings.ToLower(gstConfig.Type)
 		}
 	} else {
-		// Use global GST config
-		gstEnabled = gstConfig.Enabled
-		rate = gstConfig.Rate
-		gstType = strings.ToLower(gstConfig.Type)
+		gstEnabled = false
+		rate = 0
+		gstType = ""
 	}
 
 	gstRate := rate / 100.0 // ensure float division

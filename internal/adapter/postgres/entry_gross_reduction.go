@@ -35,6 +35,13 @@ func (r *entryGrossReductionRepo) CreateBatch(ctx context.Context, reductions []
 		return nil
 	}
 
+	// Use transaction for batch insert to ensure all or nothing
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
 	q := `INSERT INTO tbl_entry_gross_reduction (
 		id, gross_details_id, source_entry_id, tbl_custom_form_field_id,
 		base_amount, gst_amount, total_amount, created_at
@@ -43,10 +50,18 @@ func (r *entryGrossReductionRepo) CreateBatch(ctx context.Context, reductions []
 		:base_amount, :gst_amount, :total_amount, :created_at
 	)`
 
-	_, err := r.db.NamedExecContext(ctx, q, reductions)
-	if err != nil {
-		return fmt.Errorf("failed to create batch reductions: %w", err)
+	// Insert each reduction individually within the transaction
+	for _, reduction := range reductions {
+		_, err := tx.NamedExecContext(ctx, q, reduction)
+		if err != nil {
+			return fmt.Errorf("failed to create reduction: %w", err)
+		}
 	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	return nil
 }
 

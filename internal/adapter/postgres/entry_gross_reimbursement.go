@@ -35,6 +35,13 @@ func (r *entryGrossReimbursementRepo) CreateBatch(ctx context.Context, reimburse
 		return nil
 	}
 
+	// Use transaction for batch insert to ensure all or nothing
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
 	q := `INSERT INTO tbl_entry_gross_reimbursement (
 		id, gross_details_id, source_entry_id, tbl_custom_form_field_id,
 		base_amount, gst_amount, total_amount, created_at
@@ -43,10 +50,18 @@ func (r *entryGrossReimbursementRepo) CreateBatch(ctx context.Context, reimburse
 		:base_amount, :gst_amount, :total_amount, :created_at
 	)`
 
-	_, err := r.db.NamedExecContext(ctx, q, reimbursements)
-	if err != nil {
-		return fmt.Errorf("failed to create batch reimbursements: %w", err)
+	// Insert each reimbursement individually within the transaction
+	for _, reimbursement := range reimbursements {
+		_, err := tx.NamedExecContext(ctx, q, reimbursement)
+		if err != nil {
+			return fmt.Errorf("failed to create reimbursement: %w", err)
+		}
 	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	return nil
 }
 

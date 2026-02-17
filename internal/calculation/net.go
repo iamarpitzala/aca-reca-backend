@@ -152,9 +152,8 @@ func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldVa
 		fieldByID[f.ID.String()] = f
 	}
 
-	// gstCfg := domain.GetGSTConfig(gstConfig)
-
 	var totalIncomeCents, totalExpensesCents int64
+
 	for _, val := range fieldValueResponses {
 		f, ok := fieldByID[val.FieldID]
 		if !ok {
@@ -162,24 +161,38 @@ func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldVa
 		}
 		sec := getSection(f.Section)
 
-		// Determine which amount field to use
-		amount := 0.0
-		if val.TotalAmount != nil {
-			amount = *val.TotalAmount
-		} else {
-			amount = val.Value
+		result := CalculateGSTOnFields(val, fields, gstConfig)
+		if result == nil {
+			// fallback: use original value
+			amount := 0.0
+			if val.TotalAmount != nil {
+				amount = *val.TotalAmount
+			} else {
+				amount = val.Value
+			}
+			amountCents := int64(math.Round(amount * 100))
+			switch sec {
+			case "income":
+				totalIncomeCents += amountCents
+			case "expense":
+				totalExpensesCents += amountCents
+			}
+			// GST unknown, skip GST sum
+			continue
 		}
-		amountCents := int64(math.Round(amount * 100))
+
+		baseCents := int64(math.Round(result.BaseAmount * 100))
 
 		switch sec {
 		case "income":
-			totalIncomeCents += amountCents
+			totalIncomeCents += baseCents
 		case "expense":
-			totalExpensesCents += amountCents
+			totalExpensesCents += baseCents
 		}
 	}
 
 	netCents := totalIncomeCents - totalExpensesCents
+
 	totalIncome := float64(totalIncomeCents) / 100
 	netAmount := float64(netCents) / 100
 

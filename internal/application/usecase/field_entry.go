@@ -13,6 +13,7 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/calculation"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type FieldEntryService struct {
@@ -1206,6 +1207,65 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 	// Store all reductions in batch if present
 	if len(reductions) > 0 {
 		if err := s.grossReductionRepo.CreateBatch(ctx, reductions); err != nil {
+			return err
+		}
+	}
+
+	// // Parse entry-level payment responsibility from deductions (can override field-level)
+	// var entryPaymentResponsibility *string
+	// if len(deductionsJSON) > 0 {
+	// 	var deductionsMap map[string]interface{}
+	// 	if err := json.Unmarshal(deductionsJSON, &deductionsMap); err == nil {
+	// 		if val, ok := deductionsMap["entryPaymentResponsibility"].(string); ok {
+	// 			entryPaymentResponsibility = &val
+	// 		}
+	// 	}
+	// }
+
+	// Calculate reimbursements (expense entries paid by owner)
+	reimbursements := make([]*domain.EntryGrossReimbursement, 0)
+
+	for _, v := range fieldValueResponses {
+		f, ok := fieldMap[v.FieldID]
+		if !ok {
+			// skip values without matching field definition
+			continue
+		}
+		// Only process expense fields
+		if !strings.EqualFold(f.Section, "EXPENSE") {
+			continue
+		}
+
+		// Determine payment responsibility (entry-level override takes precedence)
+		paymentResp := ""
+		paymentResp = util.PaymentResponsibilityOwner
+
+		// Only process if payment responsibility is OWNER
+		if strings.ToUpper(paymentResp) != util.PaymentResponsibilityOwner {
+			continue
+		}
+
+		// Calculate GST for this expense field
+		fieldValueResult := calculation.CalculateGSTOnFields(v, fields, *gstCfg)
+		if fieldValueResult == nil {
+			continue
+		}
+
+		reimbursements = append(reimbursements, &domain.EntryGrossReimbursement{
+			ID:             uuid.New(),
+			GrossDetailsID: grossDetails.ID,
+			EntryID:        entryID,
+			FieldID:        uuid.MustParse(fieldValueResult.FieldID),
+			BaseAmount:     fieldValueResult.BaseAmount,
+			GstAmount:      fieldValueResult.GSTAmount,
+			TotalAmount:    fieldValueResult.TotalAmount,
+			CreatedAt:      now,
+		})
+	}
+
+	// Store all reimbursements in batch if present
+	if len(reimbursements) > 0 {
+		if err := s.grossReimbursementRepo.CreateBatch(ctx, reimbursements); err != nil {
 			return err
 		}
 	}

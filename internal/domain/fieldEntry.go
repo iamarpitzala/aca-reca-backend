@@ -8,6 +8,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type GSTConfig struct {
+	Enabled bool    `json:"enabled"`
+	Rate    float64 `json:"rate"`
+	Type    string  `json:"type"`
+}
+
 // DB model for field entry -- matches tbl_custom_form_entry schema
 type FieldEntry struct {
 	ID                uuid.UUID  `db:"id"`
@@ -112,13 +118,14 @@ type FieldEntryResponse struct {
 
 // Entry field value response (matches frontend EntryFieldValue)
 type EntryFieldValueResponse struct {
-	FieldID         string   `json:"fieldId"`
-	FieldName       string   `json:"fieldName"`
-	Value           float64  `json:"value"`
-	BaseAmount      *float64 `json:"baseAmount,omitempty"`
-	GSTAmount       *float64 `json:"gstAmount,omitempty"`
-	TotalAmount     *float64 `json:"totalAmount,omitempty"`
-	ManualGSTAmount *float64 `json:"manualGstAmount,omitempty"`
+	FieldID         string     `json:"fieldId"`
+	FieldName       string     `json:"fieldName"`
+	Value           float64    `json:"value"`
+	BaseAmount      *float64   `json:"baseAmount,omitempty"`
+	GSTAmount       *float64   `json:"gstAmount,omitempty"`
+	TotalAmount     *float64   `json:"totalAmount,omitempty"`
+	ManualGSTAmount *float64   `json:"manualGstAmount,omitempty"`
+	GSTConfig       *GSTConfig `json:"gstConfig,omitempty"`
 }
 
 // Full entry response (matches frontend ApiEntry/CustomFormEntry)

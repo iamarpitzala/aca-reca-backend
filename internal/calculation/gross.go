@@ -524,42 +524,42 @@ type GrossCalculationStructuredOutput struct {
 	NetAmount                 float64
 }
 
-// RunGrossCalculationStructured computes service fee details from pre-computed income, net amount, and field totals.
-func RunGrossCalculationStructured(input GrossCalculationInput) GrossCalculationStructuredOutput {
-	serviceFeePct := &input.ServiceFacilityFeePercent
-	if input.ServiceFacilityFeePercent == 0 {
-		serviceFeePct = nil // use default 60% in CalculateServiceFee
-	}
+// // RunGrossCalculationStructured computes service fee details from pre-computed income, net amount, and field totals.
+// func RunGrossCalculationStructured(input GrossCalculationInput) GrossCalculationStructuredOutput {
+// 	serviceFeePct := &input.ServiceFacilityFeePercent
+// 	if input.ServiceFacilityFeePercent == 0 {
+// 		serviceFeePct = nil // use default 60% in CalculateServiceFee
+// 	}
 
-	var totalNetExpenses, totalExpensesGST float64
-	for _, ft := range input.FieldTotals {
-		if strings.ToUpper(ft.Section) == util.FormTypeExpense {
-			totalNetExpenses += ft.BaseAmount
-			totalExpensesGST += ft.GstAmount
-		}
-	}
+// 	var totalNetExpenses, totalExpensesGST float64
+// 	for _, ft := range input.FieldTotals {
+// 		if strings.ToUpper(ft.Section) == util.FormTypeExpense {
+// 			totalNetExpenses += ft.BaseAmount
+// 			totalExpensesGST += ft.GstAmount
+// 		}
+// 	}
 
-	serviceFeeCalc := CalculateServiceFee(
-		input.IncomeExclGST,
-		input.NetAmount,
-		totalNetExpenses,
-		totalExpensesGST,
-		input.OutworkEnabled,
-		serviceFeePct,
-	)
+// 	serviceFeeCalc := CalculateServiceFee(
+// 		input.IncomeExclGST,
+// 		input.NetAmount,
+// 		totalNetExpenses,
+// 		totalExpensesGST,
+// 		input.OutworkEnabled,
+// 		serviceFeePct,
+// 	)
 
-	out := GrossCalculationStructuredOutput{
-		ServiceFacilityFeePercent: input.ServiceFacilityFeePercent,
-		NetAmount:                 input.NetAmount,
-	}
-	if input.OutworkEnabled {
-		out.ServiceFeeBase = round2(serviceFeeCalc.ServiceAndFacilityFee)
-		out.GstOnServiceFee = round2(serviceFeeCalc.GSTOnServiceFee)
-		out.TotalServiceFee = round2(serviceFeeCalc.TotalServiceAndFacilityIncGST)
-	} else {
-		out.ServiceFeeBase = round2(serviceFeeCalc.ServiceAndFacilityFee)
-		out.GstOnServiceFee = round2(serviceFeeCalc.GSTOnServiceFee)
-		out.TotalServiceFee = round2(serviceFeeCalc.TotalServiceAndFacilityFee)
-	}
-	return out
-}
+// 	out := GrossCalculationStructuredOutput{
+// 		ServiceFacilityFeePercent: input.ServiceFacilityFeePercent,
+// 		NetAmount:                 input.NetAmount,
+// 	}
+// 	if input.OutworkEnabled {
+// 		out.ServiceFeeBase = round2(serviceFeeCalc.ServiceAndFacilityFee)
+// 		out.GstOnServiceFee = round2(serviceFeeCalc.GSTOnServiceFee)
+// 		out.TotalServiceFee = round2(serviceFeeCalc.TotalServiceAndFacilityIncGST)
+// 	} else {
+// 		out.ServiceFeeBase = round2(serviceFeeCalc.ServiceAndFacilityFee)
+// 		out.GstOnServiceFee = round2(serviceFeeCalc.GSTOnServiceFee)
+// 		out.TotalServiceFee = round2(serviceFeeCalc.TotalServiceAndFacilityFee)
+// 	}
+// 	return out
+// }

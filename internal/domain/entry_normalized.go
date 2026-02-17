@@ -104,39 +104,60 @@ func (e *EntryNetDetails) ToResponse() *NetDetailsResponse {
 
 // EntryGrossDetails represents tbl_entry_gross_details
 type EntryGrossDetails struct {
-	ID                      uuid.UUID `db:"id"`
-	EntryID                 uuid.UUID `db:"source_entry_id"`
-	ServiceFacilityFeePercent float64  `db:"service_facility_fee_percent"`
-	ServiceFeeBase          float64   `db:"service_fee_base"`
-	GstOnServiceFee         float64   `db:"gst_on_service_fee"`
-	TotalServiceFee         float64   `db:"total_service_fee"`
-	NetAmount               float64   `db:"net_amount"`
-	CreatedAt               time.Time `db:"created_at"`
-	UpdatedAt               time.Time `db:"updated_at"`
+	ID                        uuid.UUID `db:"id"`
+	EntryID                   uuid.UUID `db:"source_entry_id"`
+	ServiceFacilityFeePercent float64   `db:"service_facility_fee_percent"`
+	ServiceFeeBase            float64   `db:"service_fee_base"`
+	GstOnServiceFee           float64   `db:"gst_on_service_fee"`
+	TotalServiceFee           float64   `db:"total_service_fee"`
+	NetAmount                 float64   `db:"net_amount"`
+	CreatedAt                 time.Time `db:"created_at"`
+	UpdatedAt                 time.Time `db:"updated_at"`
 }
 
 // EntryGrossReduction represents tbl_entry_gross_reduction
 type EntryGrossReduction struct {
-	ID              uuid.UUID `db:"id"`
-	GrossDetailsID  uuid.UUID `db:"gross_details_id"`
-	EntryID         uuid.UUID `db:"source_entry_id"`
-	FieldID         uuid.UUID `db:"tbl_custom_form_field_id"`
-	BaseAmount      float64   `db:"base_amount"`
-	GstAmount       float64   `db:"gst_amount"`
-	TotalAmount     float64   `db:"total_amount"`
-	CreatedAt       time.Time `db:"created_at"`
+	ID             uuid.UUID `db:"id"`
+	GrossDetailsID uuid.UUID `db:"gross_details_id"`
+	EntryID        uuid.UUID `db:"source_entry_id"`
+	FieldID        uuid.UUID `db:"tbl_custom_form_field_id"`
+	BaseAmount     float64   `db:"base_amount"`
+	GstAmount      float64   `db:"gst_amount"`
+	TotalAmount    float64   `db:"total_amount"`
+	CreatedAt      time.Time `db:"created_at"`
 }
 
 // EntryGrossReimbursement represents tbl_entry_gross_reimbursement
 type EntryGrossReimbursement struct {
-	ID              uuid.UUID `db:"id"`
-	GrossDetailsID  uuid.UUID `db:"gross_details_id"`
-	EntryID         uuid.UUID `db:"source_entry_id"`
-	FieldID         uuid.UUID `db:"tbl_custom_form_field_id"`
-	BaseAmount      float64   `db:"base_amount"`
-	GstAmount       float64   `db:"gst_amount"`
-	TotalAmount     float64   `db:"total_amount"`
-	CreatedAt       time.Time `db:"created_at"`
+	ID             uuid.UUID `db:"id"`
+	GrossDetailsID uuid.UUID `db:"gross_details_id"`
+	EntryID        uuid.UUID `db:"source_entry_id"`
+	FieldID        uuid.UUID `db:"tbl_custom_form_field_id"`
+	BaseAmount     float64   `db:"base_amount"`
+	GstAmount      float64   `db:"gst_amount"`
+	TotalAmount    float64   `db:"total_amount"`
+	CreatedAt      time.Time `db:"created_at"`
+}
+
+// GrossDetailsFieldItem is a reduction or reimbursement line item with field name
+type GrossDetailsFieldItem struct {
+	FieldID     string  `json:"fieldId"`
+	FieldName   string  `json:"fieldName"`
+	BaseAmount  float64 `json:"baseAmount"`
+	GstAmount   float64 `json:"gstAmount"`
+	TotalAmount float64 `json:"totalAmount"`
+}
+
+// GrossDetailsResponse is the API response for GET /entry/:id/gross-details
+type GrossDetailsResponse struct {
+	NetFee                    float64                 `json:"netFee"`
+	ServiceFacilityFeePercent float64                 `json:"serviceFacilityFeePercent"`
+	ServiceFeeBase            float64                 `json:"serviceFeeBase"`
+	GstOnServiceFee           float64                 `json:"gstOnServiceFee"`
+	TotalServiceFee           float64                 `json:"totalServiceFee"`
+	RemittedAmount            float64                 `json:"remittedAmount"`
+	ReductionBreakdown        []GrossDetailsFieldItem `json:"reductionBreakdown,omitempty"`
+	ReimbursementBreakdown    []GrossDetailsFieldItem `json:"reimbursementBreakdown,omitempty"`
 }
 
 // NormalizedEntry represents a complete normalized entry with all related data

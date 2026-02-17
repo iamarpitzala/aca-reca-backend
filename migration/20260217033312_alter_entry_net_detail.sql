@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 
 ALTER TABLE tbl_entry_net_details
-ADD COLUMN IF NOT EXISTS net_amount NUMERIC(14,2) NOT NULL DEFAULT 0 AFTER source_entry_id;
+ADD COLUMN IF NOT EXISTS net_amount NUMERIC(14,2) NOT NULL DEFAULT 0;
 
 -- +goose StatementEnd
 

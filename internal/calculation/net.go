@@ -1,6 +1,7 @@
 package calculation
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -88,6 +89,15 @@ type NetAmountResult struct {
 	NetAmount     float64
 }
 
+type FieldValueResult struct {
+	FieldID     string
+	Section     string
+	Value       float64
+	GSTAmount   float64
+	TotalAmount float64
+	BaseAmount  float64
+}
+
 // CalculateNetAmountBySection computes net amount for NET method (create entry side).
 // Uses section type already defined on each field: INCOME vs EXPENSE.
 // Loops over field values, sums amounts by section (amount = TotalAmount or Value already received),
@@ -136,10 +146,7 @@ func CalculateNetAmountBySection(
 }
 
 // CalculateNetAmountFromFieldValues computes net income, net expenses, and net amount from field value responses.
-func CalculateNetAmountFromFieldValues(
-	fieldValueResponses []domain.EntryFieldValueResponse,
-	fields []domain.CustomFormField,
-) NetAmountResult {
+func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) NetAmountResult {
 	fieldByID := make(map[string]domain.CustomFormField)
 	for _, f := range fields {
 		fieldByID[f.ID.String()] = f
@@ -154,15 +161,12 @@ func CalculateNetAmountFromFieldValues(
 		}
 		sec := getSection(f.Section)
 		amount := 0.0
-		gstRate := 0.0
-		if f.GSTRate != nil {
-			gstRate = *f.GSTRate
-		}
+		gstRate := gstConfig.Rate
+		gstType := gstConfig.Type
 		if f.GSTConfig {
-			switch strings.ToLower(f.GSTType) {
+			switch strings.ToLower(gstType) {
 			case "inclusive":
 				amount = val.Value - (val.Value / (1 + gstRate/100))
-				amount = val.Value - amount
 			case "exclusive":
 				amount = val.Value
 			case "manual":
@@ -194,5 +198,83 @@ func CalculateNetAmountFromFieldValues(
 	return NetAmountResult{
 		IncomeExclGST: totalIncome,
 		NetAmount:     netAmount,
+	}
+}
+func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) *FieldValueResult {
+
+	fmt.Println("fieldValueResponse", fieldValueResponse)
+	// Create lookup map
+	fieldByID := make(map[string]domain.CustomFormField, len(fields))
+	for _, f := range fields {
+		fieldByID[f.ID.String()] = f
+	}
+
+	f, ok := fieldByID[fieldValueResponse.FieldID]
+	if !ok {
+		return nil
+	}
+
+	value := fieldValueResponse.Value
+	gstRate := float64(gstConfig.Rate) / 100.0 // ensure float division
+
+	var baseAmount float64
+	var gstAmount float64
+	var totalAmount float64
+	fmt.Println("gstConfig.Type", gstConfig.Type)
+	fmt.Println("f.GSTConfig", f.GSTConfig)
+	// If GST not enabled for this field
+	if !f.GSTConfig {
+		baseAmount = value
+		gstAmount = 0
+		totalAmount = value
+	} else {
+
+		switch strings.ToLower(gstConfig.Type) {
+		case "inclusive":
+			// value already includes GST
+			if gstRate > 0 {
+				gstAmount = value * gstRate / (1 + gstRate)
+				baseAmount = value - gstAmount
+				totalAmount = baseAmount + gstAmount
+			} else {
+				baseAmount = value
+				gstAmount = 0
+				totalAmount = value
+			}
+			fmt.Println("gstAmount", gstAmount)
+			fmt.Println("baseAmount", baseAmount)
+			fmt.Println("totalAmount", totalAmount)
+		case "exclusive":
+			baseAmount = value
+			gstAmount = value * gstRate
+			totalAmount = baseAmount + gstAmount
+		case "manual":
+			manualGST := 0.0
+			if fieldValueResponse.ManualGSTAmount != nil {
+				manualGST = *fieldValueResponse.ManualGSTAmount
+			}
+			baseAmount = value - manualGST
+			gstAmount = manualGST
+			totalAmount = value
+
+		default:
+			baseAmount = value
+			gstAmount = 0
+			totalAmount = value
+		}
+	}
+
+	// Round to 2 decimal places (important for accounting)
+	baseAmount = math.Round(baseAmount*100) / 100
+	gstAmount = math.Round(gstAmount*100) / 100
+	totalAmount = math.Round(totalAmount*100) / 100
+
+	return &FieldValueResult{
+		FieldID:     fieldValueResponse.FieldID,
+		Section:     f.Section,
+		Value:       baseAmount, // exclusive amount
+		GSTAmount:   gstAmount,
+		TotalAmount: totalAmount, // inclusive amount
+		BaseAmount:  baseAmount,
 	}
 }

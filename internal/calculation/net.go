@@ -1,19 +1,17 @@
 package calculation
 
 import (
-	"encoding/json"
 	"math"
 	"strings"
 
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 // NetCalculationInput holds input for NET method calculation.
 // NetAmount is computed first (income - expenses by section); CommissionPercent is owner %.
 type NetCalculationInput struct {
-	NetAmount             float64  // from CalculateNetAmountBySection
-	CommissionPercent     float64  // owner %
+	NetAmount             float64 // from CalculateNetAmountBySection
+	CommissionPercent     float64 // owner %
 	SuperHoldingEnabled   bool
 	SuperComponentPercent *float64
 	GSTRate               float64
@@ -22,15 +20,15 @@ type NetCalculationInput struct {
 
 // NetCalculationOutput holds output from RunNetCalculation.
 type NetCalculationOutput struct {
-	CommissionPercent       float64
-	Commission              float64
-	GSTOnCommission         float64
-	TotalPaymentReceived    float64
-	SuperHoldingEnabled     bool
-	SuperComponentPercent   *float64
-	CommissionComponent     *float64
-	SuperComponent          *float64
-	TotalForReconciliation  *float64
+	CommissionPercent      float64
+	Commission             float64
+	GSTOnCommission        float64
+	TotalPaymentReceived   float64
+	SuperHoldingEnabled    bool
+	SuperComponentPercent  *float64
+	CommissionComponent    *float64
+	SuperComponent         *float64
+	TotalForReconciliation *float64
 }
 
 const gstRateOnCommission = 0.1 // 10% GST on commission
@@ -147,82 +145,54 @@ func CalculateNetAmountFromFieldValues(
 		fieldByID[f.ID.String()] = f
 	}
 
-	// Parse metadata for includeInTotal and gstConfig
-	fieldMeta := make(map[string]struct {
-		IncludeInTotal bool
-		GSTEnabled     bool
-		GSTRate        float64
-		GSTType        string
-	})
-	for _, f := range fields {
-		enabled := f.GSTConfig
-		rate := 0.0
-		if f.GSTRate != nil {
-			rate = *f.GSTRate
-		}
-		gstType := strings.ToLower(f.GSTType)
-		if gstType == "" {
-			gstType = util.GSTTypeExclusive
-		}
-		includeInTotal := false
-		if len(f.Metadata) > 0 {
-			var meta map[string]interface{}
-			_ = json.Unmarshal(f.Metadata, &meta)
-			if meta != nil {
-				if it, ok := meta["includeInTotal"].(bool); ok {
-					includeInTotal = it
-				}
-			}
-		}
-		fieldMeta[f.ID.String()] = struct {
-			IncludeInTotal bool
-			GSTEnabled     bool
-			GSTRate        float64
-			GSTType        string
-		}{IncludeInTotal: includeInTotal, GSTEnabled: enabled, GSTRate: rate, GSTType: gstType}
-	}
-
-	var totalNetIncome, totalNetExpenses float64
+	// Sum in integer cents to avoid float drift (e.g. 33.33+33.33+33.34 must equal 100.00)
+	var totalIncomeCents, totalExpensesCents int64
 	for _, val := range fieldValueResponses {
 		f, ok := fieldByID[val.FieldID]
 		if !ok {
 			continue
 		}
-		meta := fieldMeta[val.FieldID]
-		if !meta.IncludeInTotal {
-			continue
-		}
 		sec := getSection(f.Section)
-
-		amount := val.Value
-		if val.TotalAmount != nil {
-			amount = *val.TotalAmount
+		amount := 0.0
+		gstRate := 0.0
+		if f.GSTRate != nil {
+			gstRate = *f.GSTRate
 		}
-
-		var net float64
-		if meta.GSTEnabled && meta.GSTType == util.GSTTypeManual {
-			manualGst := 0.0
-			if val.ManualGSTAmount != nil {
-				manualGst = *val.ManualGSTAmount
+		if f.GSTConfig {
+			switch strings.ToLower(f.GSTType) {
+			case "inclusive":
+				amount = val.Value - (val.Value / (1 + gstRate/100))
+				amount = val.Value - amount
+			case "exclusive":
+				amount = val.Value
+			case "manual":
+				manualGst := 0.0
+				if val.ManualGSTAmount != nil {
+					manualGst = *val.ManualGSTAmount
+				}
+				amount = val.Value - manualGst
+			default:
+				amount = val.Value
 			}
-			net = amount - manualGst
-		} else if meta.GSTEnabled && meta.GSTType == util.GSTTypeInclusive {
-			gst := amount / (1 + meta.GSTRate/100)
-			net = amount - gst
 		} else {
-			net = amount
+			amount = val.Value
 		}
+		amountCents := int64(math.Round(amount * 100))
 
 		switch sec {
-		case util.FormTypeIncome:
-			totalNetIncome += net
-		case util.FormTypeExpense:
-			totalNetExpenses += net
+		case "income":
+			totalIncomeCents += amountCents
+		case "expense":
+			totalExpensesCents += amountCents
 		}
 	}
 
+	netCents := totalIncomeCents - totalExpensesCents
+	// Convert back to dollars with exact 2-decimal values (no float drift)
+	totalIncome := float64(totalIncomeCents) / 100
+	netAmount := float64(netCents) / 100
 	return NetAmountResult{
-		IncomeExclGST: round2(totalNetIncome),
-		NetAmount:     round2(totalNetIncome - totalNetExpenses),
+		IncomeExclGST: totalIncome,
+		NetAmount:     netAmount,
 	}
 }

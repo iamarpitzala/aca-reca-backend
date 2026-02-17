@@ -191,6 +191,7 @@ func (s *CustomFormService) UpdateByRequest(ctx context.Context, id uuid.UUID, r
 	if err != nil {
 		return nil, err
 	}
+
 	applyUpdateToForm(form, req)
 	form.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, form); err != nil {

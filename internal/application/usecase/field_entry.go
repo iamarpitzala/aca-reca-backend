@@ -1159,7 +1159,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 
 	gstCfg := domain.GetGSTConfig(gstConfig)
 
-	gstRate := gstCfg.Rate
+	// gstRate := gstCfg.Rate
 
 	// Calculate netAmountResult for GROSS method (accounting for GST config)
 	netAmountResult := calculation.CalculateNetAmountFromFieldValues(fieldValueResponses, fields, *gstCfg)
@@ -1167,7 +1167,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 	// Service Facility Fee base, GST, and total
 	// Service fee is on the net amount
 	serviceFeeBase := netAmountResult.NetAmount * serviceFacilityFeePercent / 100.0
-	gstOnServiceFee := serviceFeeBase * gstRate / 100.0
+	gstOnServiceFee := serviceFeeBase * 0.1
 	totalServiceFee := serviceFeeBase + gstOnServiceFee
 
 	// Store gross detail row

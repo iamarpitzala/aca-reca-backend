@@ -200,6 +200,21 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 			manualGSTAmount = req.Values[valIndex].ManualGSTAmount
 		}
 
+		var gstConfig domain.GSTConfig
+		if field.GSTConfig {
+			gstConfig = domain.GSTConfig{
+				Enabled: field.GSTConfig,
+				Rate:    *field.GSTRate,
+				Type:    field.GSTType,
+			}
+		} else {
+			gstConfig = domain.GSTConfig{
+				Enabled: false,
+				Rate:    0,
+				Type:    "",
+			}
+		}
+
 		fieldValueResponses[i] = domain.EntryFieldValueResponse{
 			FieldID:         entry.CustomFormFieldID.String(),
 			FieldName:       field.Label, // Use field label from DB
@@ -208,6 +223,7 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 			GSTAmount:       nil, // Will be populated by calculation
 			TotalAmount:     nil, // Will be populated by calculation
 			ManualGSTAmount: manualGSTAmount,
+			GSTConfig:       &gstConfig,
 		}
 	}
 
@@ -1171,14 +1187,14 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		return err
 	}
 
-	// Calculate reductions (GST-calculated Reductions)
-	reductions := make([]*domain.EntryGrossReduction, 0)
-
 	// Build map of fieldID->field so section can be determined correctly and avoid out-of-bounds errors
 	fieldMap := make(map[string]domain.CustomFormField, len(fields))
 	for _, f := range fields {
 		fieldMap[f.ID.String()] = f
 	}
+
+	// Calculate reductions (REDUCTION section fields + EXPENSE fields paid by CLINIC)
+	reductions := make([]*domain.EntryGrossReduction, 0)
 
 	for _, v := range fieldValueResponses {
 		f, ok := fieldMap[v.FieldID]
@@ -1186,6 +1202,8 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 			// skip values without matching field definition
 			continue
 		}
+
+		// Process REDUCTION section fields
 		if strings.EqualFold(f.Section, "REDUCTION") {
 			fieldValueResult := calculation.CalculateGSTOnFields(v, fields, *gstCfg)
 			if fieldValueResult == nil {
@@ -1201,6 +1219,29 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 				TotalAmount:    fieldValueResult.TotalAmount,
 				CreatedAt:      now,
 			})
+			continue
+		}
+
+		// Process EXPENSE fields paid by CLINIC
+		if strings.EqualFold(f.Section, "EXPENSE") {
+			paymentResp := util.PaymentResponsibilityClinic
+			// Only process if payment responsibility is CLINIC
+			if strings.ToUpper(paymentResp) == util.PaymentResponsibilityClinic && f.GSTConfig {
+				fieldValueResult := calculation.CalculateGSTOnFields(v, fields, *gstCfg)
+				if fieldValueResult == nil {
+					continue
+				}
+				reductions = append(reductions, &domain.EntryGrossReduction{
+					ID:             uuid.New(),
+					GrossDetailsID: grossDetails.ID,
+					EntryID:        entryID,
+					FieldID:        uuid.MustParse(fieldValueResult.FieldID),
+					BaseAmount:     0,
+					GstAmount:      fieldValueResult.GSTAmount,
+					TotalAmount:    fieldValueResult.GSTAmount,
+					CreatedAt:      now,
+				})
+			}
 		}
 	}
 
@@ -1210,17 +1251,6 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 			return err
 		}
 	}
-
-	// // Parse entry-level payment responsibility from deductions (can override field-level)
-	// var entryPaymentResponsibility *string
-	// if len(deductionsJSON) > 0 {
-	// 	var deductionsMap map[string]interface{}
-	// 	if err := json.Unmarshal(deductionsJSON, &deductionsMap); err == nil {
-	// 		if val, ok := deductionsMap["entryPaymentResponsibility"].(string); ok {
-	// 			entryPaymentResponsibility = &val
-	// 		}
-	// 	}
-	// }
 
 	// Calculate reimbursements (expense entries paid by owner)
 	reimbursements := make([]*domain.EntryGrossReimbursement, 0)
@@ -1237,8 +1267,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		}
 
 		// Determine payment responsibility (entry-level override takes precedence)
-		paymentResp := ""
-		paymentResp = util.PaymentResponsibilityOwner
+		paymentResp := util.PaymentResponsibilityOwner
 
 		// Only process if payment responsibility is OWNER
 		if strings.ToUpper(paymentResp) != util.PaymentResponsibilityOwner {

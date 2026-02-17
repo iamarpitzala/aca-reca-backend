@@ -13,11 +13,11 @@ import (
 )
 
 type CustomFormService struct {
-	repo         port.CustomFormRepository
-	fieldRepo    port.CustomFormFieldRepository
-	versionRepo  port.CustomFormVersionRepository
-	clinicRepo   port.ClinicRepository
-	calcEngine   port.EntryCalculationEngine
+	repo        port.CustomFormRepository
+	fieldRepo   port.CustomFormFieldRepository
+	versionRepo port.CustomFormVersionRepository
+	clinicRepo  port.ClinicRepository
+	calcEngine  port.EntryCalculationEngine
 }
 
 func NewCustomFormService(
@@ -116,7 +116,7 @@ func (s *CustomFormService) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Get latest version
 	version, err := s.versionRepo.GetLatestByFormID(ctx, id)
 	if err != nil {
@@ -370,7 +370,7 @@ func (s *CustomFormService) Unpublish(ctx context.Context, id uuid.UUID) (*domai
 	}
 	form.Status = util.FormStatusDraft
 	form.UpdatedAt = time.Now()
-	
+
 	// Fetch fields for response
 	version, _ := s.versionRepo.GetLatestByFormID(ctx, id)
 	var fieldResponses []domain.CustomFormFieldResponse
@@ -394,7 +394,7 @@ func (s *CustomFormService) Archive(ctx context.Context, id uuid.UUID) (*domain.
 	}
 	form.Status = util.FormStatusArchived
 	form.UpdatedAt = time.Now()
-	
+
 	// Fetch fields for response
 	version, _ := s.versionRepo.GetLatestByFormID(ctx, id)
 	var fieldResponses []domain.CustomFormFieldResponse
@@ -490,18 +490,3 @@ func (s *CustomFormService) Duplicate(ctx context.Context, id uuid.UUID, userID 
 
 	return newForm.ToResponse(fieldResponses), nil
 }
-
-// NOTE: Entry-related methods have been removed as the domain model has been refactored.
-// Entry functionality should be implemented using the FieldEntry domain model and FieldEntryRepository.
-// The following methods need to be reimplemented based on the new architecture:
-// - CreateEntryFromRequest
-// - GetEntryByID
-// - GetEntryResponseByID
-// - GetEntriesByFormID
-// - GetEntriesByClinicID
-// - GetEntriesByQuarter
-// - UpdateEntryFromRequest
-// - UpdateEntry
-// - DeleteEntry
-// - RecalculateEntry
-// - PreviewCalculations

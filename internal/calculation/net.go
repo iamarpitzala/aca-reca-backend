@@ -152,19 +152,45 @@ func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldVa
 		fieldByID[f.ID.String()] = f
 	}
 
+	gstCfg := domain.GetGSTConfig(gstConfig)
+
+	fmt.Println("gstConfig", gstConfig)
 	// Sum in integer cents to avoid float drift (e.g. 33.33+33.33+33.34 must equal 100.00)
 	var totalIncomeCents, totalExpensesCents int64
 	for _, val := range fieldValueResponses {
+		fmt.Println("val", val)
 		f, ok := fieldByID[val.FieldID]
 		if !ok {
 			continue
 		}
 		sec := getSection(f.Section)
 		amount := 0.0
-		gstRate := gstConfig.Rate
-		gstType := gstConfig.Type
+
+		// Use field-specific GST config if available, otherwise fall back to global config
+		var gstRate float64
+		var gstType string
+		var fieldGSTEnabled bool
+
 		if f.GSTConfig {
-			switch strings.ToLower(gstType) {
+			fieldGSTEnabled = true
+			if f.GSTRate != nil {
+				gstRate = *f.GSTRate
+			} else {
+				gstRate = gstCfg.Rate
+			}
+			if f.GSTType != "" {
+				gstType = strings.ToLower(f.GSTType)
+			} else {
+				gstType = strings.ToLower(gstCfg.Type)
+			}
+		} else {
+			fieldGSTEnabled = gstCfg.Enabled
+			gstRate = gstCfg.Rate
+			gstType = strings.ToLower(gstCfg.Type)
+		}
+
+		if fieldGSTEnabled {
+			switch gstType {
 			case "inclusive":
 				amount = val.Value - (val.Value / (1 + gstRate/100))
 			case "exclusive":
@@ -200,10 +226,8 @@ func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldVa
 		NetAmount:     netAmount,
 	}
 }
-func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) *FieldValueResult {
 
-	fmt.Println("fieldValueResponse", fieldValueResponse)
-	// Create lookup map
+func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fields []domain.CustomFormField, gstConfig domain.GSTConfig) *FieldValueResult {
 	fieldByID := make(map[string]domain.CustomFormField, len(fields))
 	for _, f := range fields {
 		fieldByID[f.ID.String()] = f
@@ -215,21 +239,50 @@ func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fie
 	}
 
 	value := fieldValueResponse.Value
-	gstRate := float64(gstConfig.Rate) / 100.0 // ensure float division
+
+	// Use field-specific GST config if available, otherwise fall back to global config
+	var gstEnabled bool
+	var rate float64
+	var gstType string
+
+	if f.GSTConfig {
+		// Field has its own GST configuration
+		gstEnabled = true
+		if f.GSTRate != nil {
+			rate = *f.GSTRate
+		} else {
+			rate = gstConfig.Rate
+		}
+		if f.GSTType != "" {
+			gstType = strings.ToLower(f.GSTType)
+		} else {
+			gstType = strings.ToLower(gstConfig.Type)
+		}
+	} else {
+		// Use global GST config
+		gstEnabled = gstConfig.Enabled
+		rate = gstConfig.Rate
+		gstType = strings.ToLower(gstConfig.Type)
+	}
+
+	gstRate := rate / 100.0 // ensure float division
 
 	var baseAmount float64
 	var gstAmount float64
 	var totalAmount float64
-	fmt.Println("gstConfig.Type", gstConfig.Type)
-	fmt.Println("f.GSTConfig", f.GSTConfig)
+
 	// If GST not enabled for this field
-	if !f.GSTConfig {
+	fmt.Println("gstConfig.Enabled", gstEnabled)
+	fmt.Println("gstType", gstType)
+	fmt.Println("gstRate", gstRate)
+	fmt.Println("value", value)
+	if !gstEnabled {
 		baseAmount = value
 		gstAmount = 0
 		totalAmount = value
 	} else {
 
-		switch strings.ToLower(gstConfig.Type) {
+		switch gstType {
 		case "inclusive":
 			// value already includes GST
 			if gstRate > 0 {
@@ -241,9 +294,6 @@ func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fie
 				gstAmount = 0
 				totalAmount = value
 			}
-			fmt.Println("gstAmount", gstAmount)
-			fmt.Println("baseAmount", baseAmount)
-			fmt.Println("totalAmount", totalAmount)
 		case "exclusive":
 			baseAmount = value
 			gstAmount = value * gstRate
@@ -253,10 +303,9 @@ func CalculateGSTOnFields(fieldValueResponse domain.EntryFieldValueResponse, fie
 			if fieldValueResponse.ManualGSTAmount != nil {
 				manualGST = *fieldValueResponse.ManualGSTAmount
 			}
-			baseAmount = value - manualGST
+			baseAmount = value
 			gstAmount = manualGST
-			totalAmount = value
-
+			totalAmount = value + manualGST
 		default:
 			baseAmount = value
 			gstAmount = 0

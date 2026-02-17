@@ -183,3 +183,15 @@ func (f *FieldEntry) ToResponse() *FieldEntryResponse {
 		DeletedAt:         f.DeletedAt,
 	}
 }
+
+func GetGSTConfig(gstConfig GSTConfig) *GSTConfig {
+	if !gstConfig.Enabled {
+		return &GSTConfig{
+			Enabled: false,
+			Rate:    0,
+			Type:    "",
+		}
+	}
+
+	return &gstConfig
+}

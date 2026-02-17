@@ -158,6 +158,12 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 			return nil, errors.New("field not found: " + fieldID.String())
 		}
 
+		// When GST is disabled and field type is EXCLUSIVE, do not store any value
+		// gstType := strings.TrimSpace(strings.ToUpper(field.GSTType))
+		// if !field.GSTConfig && gstType == "EXCLUSIVE" {
+		// 	continue
+		// }
+
 		fieldEntry := &domain.FieldEntry{
 			ID:                uuid.New(),
 			FormID:            formID,
@@ -172,7 +178,11 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		fieldEntries = append(fieldEntries, fieldEntry)
 	}
 
-	// Step 7: Save all field entries
+	// Step 7: Save all field entries (if any - GST-disabled EXCLUSIVE fields are skipped)
+	if len(fieldEntries) == 0 {
+		return nil, errors.New("no field values to store: all provided values are for GST-disabled EXCLUSIVE fields which are not persisted")
+	}
+
 	for _, entry := range fieldEntries {
 		if err := s.repo.Create(ctx, entry); err != nil {
 			return nil, err
@@ -257,9 +267,23 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		}
 	}
 
-	// Step 12: Get GST settings ONCE (will be reused in method-specific calculations)
-	gstRate, gstType := s.getGSTSettings(ctx, form.ClinicID)
-	gstConfig := domain.GSTConfig{Enabled: true, Rate: gstRate, Type: gstType}
+	// Step 12: Get GST from form fields (first field with GST enabled)
+	gstRate := 0.0
+	gstType := "exclusive"
+	gstEnabled := false
+	for _, field := range fields {
+		if field.GSTConfig {
+			gstEnabled = true
+			if field.GSTRate != nil {
+				gstRate = *field.GSTRate
+			}
+			if field.GSTType != "" {
+				gstType = strings.ToLower(field.GSTType)
+			}
+			break // Use first field with GST enabled
+		}
+	}
+	gstConfig := domain.GSTConfig{Enabled: gstEnabled, Rate: gstRate, Type: gstType}
 
 	// Step 13: Calculate and store method-specific details (case-insensitive method check)
 	if strings.EqualFold(calculationMethod, "NET") {
@@ -268,7 +292,7 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		}
 	} else if strings.EqualFold(calculationMethod, "GROSS") {
 		// source_entry_id = first field entry ID (must exist in tbl_custom_form_entry)
-		if err := s.calculateAndStoreGrossDetails(ctx, form.ClinicID, formVersionID, fieldEntries[0].ID, calculationsJSON, fieldValueResponses, req.Deductions, fields, gstConfig, formCalc, now); err != nil {
+		if err := s.calculateAndStoreGrossDetails(ctx, form.ClinicID, fieldEntries[0].ID, fieldValueResponses, req.Deductions, gstConfig, fields, formCalc, now); err != nil {
 			return nil, err // surface error so caller sees why tbl_entry_gross_details was not stored
 		}
 	}
@@ -1095,56 +1119,41 @@ func (s *FieldEntryService) calculateAndStoreNetDetails(ctx context.Context, cli
 }
 
 // calculateAndStoreGrossDetails calculates GROSS method details and stores them (similar to NET method)
-func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, clinicID uuid.UUID, formVersionID uuid.UUID, entryID uuid.UUID, calculationsJSON json.RawMessage, fieldValueResponses []domain.EntryFieldValueResponse, deductionsJSON json.RawMessage, fields []domain.CustomFormField, gstConfig domain.GSTConfig, formCalc *domain.CustomFormCalculation, now time.Time) error {
-	serviceFacilityFeePercentFromDeductions, outworkEnabled, _, err := calculation.ParseGrossDeductions(deductionsJSON)
+func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, clinicID uuid.UUID, entryID uuid.UUID, fieldValueResponses []domain.EntryFieldValueResponse, deductionsJSON json.RawMessage, gstConfig domain.GSTConfig, fields []domain.CustomFormField, formCalc *domain.CustomFormCalculation, now time.Time) error {
+	// Parse deductions for service fee percent and outwork enabled
+	serviceFacilityFeePercentFromDeductions, outworkEnabledFromDeductions, _, err := calculation.ParseGrossDeductions(deductionsJSON)
 	if err != nil {
 		return err
 	}
 
-	var serviceFacilityFeePercent float64 = 60.0 // Default 60%
+	// Calculate the correct Service Facility Fee Percent (priority: deductions, then formCalc, then default)
+	var serviceFacilityFeePercent float64 = 60.0 // default value
 	if serviceFacilityFeePercentFromDeductions != nil {
 		serviceFacilityFeePercent = *serviceFacilityFeePercentFromDeductions
 	} else if formCalc != nil && formCalc.ServiceFacilityFeePercent != nil {
 		serviceFacilityFeePercent = *formCalc.ServiceFacilityFeePercent
 	}
 
+	// Properly determine outworkEnabled (priority: deductions, then formCalc)
+	outworkEnabled := outworkEnabledFromDeductions
 	if !outworkEnabled && formCalc != nil {
 		outworkEnabled = formCalc.OutworkEnabled
 	}
 
-	gstRate := gstConfig.Rate
+	gstCfg := domain.GetGSTConfig(gstConfig)
 
-	netAmountResult := calculation.CalculateNetAmountFromFieldValues(fieldValueResponses, fields, gstConfig)
+	gstRate := gstCfg.Rate
 
-	// Create field section map for reductions mapping
-	fieldSectionMap := make(map[string]string)
-	for _, field := range fields {
-		fieldSectionMap[field.ID.String()] = strings.ToUpper(field.Section)
-	}
+	// Calculate netAmountResult for GROSS method (accounting for GST config)
+	netAmountResult := calculation.CalculateNetAmountFromFieldValues(fieldValueResponses, fields, *gstCfg)
 
-	// Build field totals with section info for reductions mapping
-	fieldTotals := make([]calculation.FieldTotal, 0, len(fieldValueResponses))
-	for _, val := range fieldValueResponses {
-		fieldTotals = append(fieldTotals, calculation.FieldTotal{
-			FieldID:    val.FieldID,
-			Section:    fieldSectionMap[val.FieldID],
-			BaseAmount: val.Value,
-		})
-		if val.ManualGSTAmount != nil {
-			fieldTotals = append(fieldTotals, calculation.FieldTotal{
-				FieldID:     val.FieldID,
-				Section:     fieldSectionMap[val.FieldID],
-				BaseAmount:  val.Value - *val.ManualGSTAmount,
-				GstAmount:   *val.ManualGSTAmount,
-				TotalAmount: val.Value,
-			})
-		}
-	}
-
-	serviceFeeBase := netAmountResult.NetAmount * serviceFacilityFeePercent / 100
-	gstOnServiceFee := serviceFeeBase * gstRate / 100
+	// Service Facility Fee base, GST, and total
+	// Service fee is on the net amount
+	serviceFeeBase := netAmountResult.NetAmount * serviceFacilityFeePercent / 100.0
+	gstOnServiceFee := serviceFeeBase * gstRate / 100.0
 	totalServiceFee := serviceFeeBase + gstOnServiceFee
 
+	// Store gross detail row
 	grossDetails := &domain.EntryGrossDetails{
 		ID:                        uuid.New(),
 		EntryID:                   entryID,
@@ -1161,10 +1170,26 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		return err
 	}
 
+	// Calculate reductions (GST-calculated Reductions)
 	reductions := make([]*domain.EntryGrossReduction, 0)
-	for i, ft := range fieldTotals {
-		if ft.Section == "REDUCTION" {
-			fieldValueResult := calculation.CalculateGSTOnFields(fieldValueResponses[i], fields, gstConfig)
+
+	// Build map of fieldID->field so section can be determined correctly and avoid out-of-bounds errors
+	fieldMap := make(map[string]domain.CustomFormField, len(fields))
+	for _, f := range fields {
+		fieldMap[f.ID.String()] = f
+	}
+
+	for _, v := range fieldValueResponses {
+		f, ok := fieldMap[v.FieldID]
+		if !ok {
+			// skip values without matching field definition
+			continue
+		}
+		if strings.EqualFold(f.Section, "REDUCTION") {
+			fieldValueResult := calculation.CalculateGSTOnFields(v, fields, *gstCfg)
+			if fieldValueResult == nil {
+				continue
+			}
 			reductions = append(reductions, &domain.EntryGrossReduction{
 				ID:             uuid.New(),
 				GrossDetailsID: grossDetails.ID,
@@ -1178,6 +1203,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		}
 	}
 
+	// Store all reductions in batch if present
 	if len(reductions) > 0 {
 		if err := s.grossReductionRepo.CreateBatch(ctx, reductions); err != nil {
 			return err

@@ -78,18 +78,26 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 		return nil, err
 	}
 
-	// Save fields if provided
+	// Save fields if provided (deduplicate by field_key to prevent duplicate entries)
 	if len(req.Fields) > 0 {
 		fields := make([]*domain.CustomFormField, 0, len(req.Fields))
+		seenKeys := make(map[string]bool)
 		for _, fieldInput := range req.Fields {
+			key := strings.TrimSpace(strings.ToLower(fieldInput.Name))
+			if key == "" || seenKeys[key] {
+				continue
+			}
+			seenKeys[key] = true
 			field, err := fieldInput.ToDBModel(form.ID, formVersion.ID, userID)
 			if err != nil {
 				return nil, err
 			}
 			fields = append(fields, field)
 		}
-		if err := s.fieldRepo.CreateBatch(ctx, fields); err != nil {
-			return nil, err
+		if len(fields) > 0 {
+			if err := s.fieldRepo.CreateBatch(ctx, fields); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -190,7 +198,7 @@ func (s *CustomFormService) UpdateByRequest(ctx context.Context, id uuid.UUID, r
 	}
 
 	// Update fields if provided
-	if req.Fields != nil && len(req.Fields) > 0 {
+	if len(req.Fields) > 0 {
 		// Get or create latest version
 		version, err := s.versionRepo.GetLatestByFormID(ctx, id)
 		if err != nil {
@@ -213,17 +221,25 @@ func (s *CustomFormService) UpdateByRequest(ctx context.Context, id uuid.UUID, r
 			return nil, err
 		}
 
-		// Create new fields
+		// Create new fields (deduplicate by field_key to prevent duplicate entries)
 		fields := make([]*domain.CustomFormField, 0, len(req.Fields))
+		seenKeys := make(map[string]bool)
 		for _, fieldInput := range req.Fields {
+			key := strings.TrimSpace(strings.ToLower(fieldInput.Name))
+			if key == "" || seenKeys[key] {
+				continue
+			}
+			seenKeys[key] = true
 			field, err := fieldInput.ToDBModel(id, version.ID, userID)
 			if err != nil {
 				return nil, err
 			}
 			fields = append(fields, field)
 		}
-		if err := s.fieldRepo.CreateBatch(ctx, fields); err != nil {
-			return nil, err
+		if len(fields) > 0 {
+			if err := s.fieldRepo.CreateBatch(ctx, fields); err != nil {
+				return nil, err
+			}
 		}
 	}
 

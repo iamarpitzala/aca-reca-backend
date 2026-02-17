@@ -43,7 +43,7 @@ CREATE TABLE tbl_custom_form_field (
     field_order INTEGER NOT NULL,
     gst_config BOOLEAN NOT NULL DEFAULT FALSE,
     gst_rate NUMERIC(5,2),
-    gst_type VARCHAR(50) NOT NULL CHECK (gst_type IN ('INCLUSIVE', 'EXCLUSIVE', 'MANUAL')),
+    gst_type VARCHAR(50) NULL CHECK (gst_type IN ('INCLUSIVE', 'EXCLUSIVE', 'MANUAL')),
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (form_version_id, field_key)

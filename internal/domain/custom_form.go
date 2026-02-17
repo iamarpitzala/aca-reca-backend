@@ -268,9 +268,7 @@ func (input *CustomFormFieldInput) ToDBModel(formID uuid.UUID, formVersionID uui
 	section = strings.ToUpper(section)
 
 	// Determine GST type
-	gstType := "EXCLUSIVE"
 	if gstConfig.Type != "" {
-		gstType = strings.ToUpper(gstConfig.Type)
 	}
 
 	// Determine field type
@@ -292,7 +290,7 @@ func (input *CustomFormFieldInput) ToDBModel(formID uuid.UUID, formVersionID uui
 		FieldOrder:    input.Order,
 		GSTConfig:     gstConfig.Enabled,
 		GSTRate:       gstConfig.Rate,
-		GSTType:       gstType,
+		GSTType:       gstConfig.Type,
 		Metadata:      metadataJSON,
 	}, nil
 }

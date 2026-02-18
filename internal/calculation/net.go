@@ -1,6 +1,7 @@
 package calculation
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -99,8 +100,8 @@ type FieldValueResult struct {
 
 // CalculateNetAmountBySection computes net amount for NET method (create entry side).
 // Uses section type already defined on each field: INCOME vs EXPENSE.
-// Loops over field values, sums amounts by section (amount = TotalAmount or Value already received),
-// then net amount = total income - total expenses.
+// Loops over field values, sums amounts by section. For GST manual fields: base = Value - ManualGSTAmount.
+// Else: amount = TotalAmount or Value. Net amount = total income - total expenses.
 func CalculateNetAmountBySection(
 	fieldValueResponses []domain.EntryFieldValueResponse,
 	fields []domain.CustomFormField,
@@ -119,7 +120,15 @@ func CalculateNetAmountBySection(
 		}
 		sec := getSection(f.Section)
 		amount := 0.0
-		if val.TotalAmount != nil {
+		// For INCOME with GST manual: base (excl GST) = Value - ManualGSTAmount (aligns with gross AggregateIncome).
+		// For expense manual: Value is already base (net), so use as-is.
+		if sec == "income" && f.GSTConfig && strings.EqualFold(f.GSTType, "manual") {
+			manualGst := 0.0
+			if val.ManualGSTAmount != nil {
+				manualGst = *val.ManualGSTAmount
+			}
+			amount = val.Value - manualGst
+		} else if val.TotalAmount != nil {
 			amount = *val.TotalAmount
 		} else {
 			amount = val.Value
@@ -144,7 +153,10 @@ func CalculateNetAmountBySection(
 	}
 }
 
-func amountExclGST(value float64, field domain.CustomFormField, val domain.EntryFieldValueResponse, gstConfig domain.GSTConfig) float64 {
+// CalculateNetAmountFromFieldValues computes net income, net expenses, and net amount from field value responses.
+// Uses field-level GST type/rate when field has GSTConfig enabled, else clinic-level gstConfig fallback.
+// Aligns with gross.go AggregateIncome/AggregateExpenses logic for base (excl GST) per field.
+func amountExclGST(value float64, field domain.CustomFormField, val domain.EntryFieldValueResponse, gstConfig domain.GSTConfig, section string) float64 {
 	if !field.GSTConfig {
 		return value
 	}
@@ -161,7 +173,12 @@ func amountExclGST(value float64, field domain.CustomFormField, val domain.Entry
 
 	case "manual":
 		if val.ManualGSTAmount != nil {
-			return value - *val.ManualGSTAmount
+			if section == "income" {
+				fmt.Println(*val.ManualGSTAmount)
+				return value - *val.ManualGSTAmount
+			} else {
+				return value
+			}
 		}
 		return value
 
@@ -201,7 +218,8 @@ func CalculateNetAmountFromFieldValues(fieldValueResponses []domain.EntryFieldVa
 			continue
 		}
 
-		exclGST := amountExclGST(val.Value, field, val, gstConfig)
+		exclGST := amountExclGST(val.Value, field, val, gstConfig, section)
+		fmt.Println("exclGST", exclGST)
 		cents := int64(math.Round(exclGST * 100))
 
 		if cents == 0 {

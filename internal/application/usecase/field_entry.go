@@ -1422,7 +1422,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		}
 	}
 
-	// Calculate reimbursements (expense entries paid by owner/dentist only)
+	// Calculate reimbursements (fields paid by owner/dentist only)
 	reimbursements := make([]*domain.EntryGrossReimbursement, 0)
 
 	// Parse entry-level payment responsibility from deductions (entry-level override takes precedence)
@@ -1440,25 +1440,6 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 		f, ok := fieldMap[v.FieldID]
 		if !ok {
 			// skip values without matching field definition
-			continue
-		}
-		if strings.EqualFold(f.Section, "INCOME") && f.GSTConfig {
-			incomeReimbursement := calculation.CalculateGSTOnFields(v, fields, gstConfig)
-			if incomeReimbursement != nil {
-				reimbursements = append(reimbursements, &domain.EntryGrossReimbursement{
-					ID:             uuid.New(),
-					GrossDetailsID: grossDetails.ID,
-					EntryID:        entryID,
-					FieldID:        uuid.MustParse(incomeReimbursement.FieldID),
-					BaseAmount:     0,
-					GstAmount:      incomeReimbursement.GSTAmount,
-					TotalAmount:    incomeReimbursement.GSTAmount,
-					CreatedAt:      now,
-				})
-			}
-		}
-		// Only process expense fields
-		if !strings.EqualFold(f.Section, "EXPENSE") {
 			continue
 		}
 
@@ -1486,6 +1467,29 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 
 		// Only process if payment responsibility is OWNER (pay by dentist)
 		if paymentResp != util.PaymentResponsibilityOwner {
+			continue
+		}
+
+		// Process INCOME fields with GST (for reimbursements)
+		if strings.EqualFold(f.Section, "INCOME") && f.GSTConfig {
+			incomeReimbursement := calculation.CalculateGSTOnFields(v, fields, gstConfig)
+			if incomeReimbursement != nil {
+				reimbursements = append(reimbursements, &domain.EntryGrossReimbursement{
+					ID:             uuid.New(),
+					GrossDetailsID: grossDetails.ID,
+					EntryID:        entryID,
+					FieldID:        uuid.MustParse(incomeReimbursement.FieldID),
+					BaseAmount:     0,
+					GstAmount:      incomeReimbursement.GSTAmount,
+					TotalAmount:    incomeReimbursement.GSTAmount,
+					CreatedAt:      now,
+				})
+			}
+			continue
+		}
+
+		// Process EXPENSE fields paid by owner
+		if !strings.EqualFold(f.Section, "EXPENSE") {
 			continue
 		}
 

@@ -8,17 +8,10 @@ const (
 	RoleViewer = "VIEWER"
 )
 
-// Period / reporting frequency (clinic_financial_settings, bas_snapshot)
+// Period / reporting frequency (clinic_financial_settings)
 const (
 	PeriodQuarterly = "QUARTERLY"
 	PeriodAnnually  = "ANNUALLY"
-)
-
-// BAS snapshot status
-const (
-	BASStatusDraft     = "DRAFT"
-	BASStatusFinalised = "FINALISED"
-	BASStatusLocked    = "LOCKED"
 )
 
 // Financial year start
@@ -68,4 +61,30 @@ const (
 	GSTTypeInclusive = "INCLUSIVE"
 	GSTTypeExclusive = "EXCLUSIVE"
 	GSTTypeManual    = "MANUAL"
+)
+
+// Date formats
+const (
+	DateFormatRFC3339     = "2006-01-02T15:04:05Z07:00"
+	DateFormatDate        = "2006-01-02"
+	DateFormatYYYYMMDD   = "YYYY-MM-DD"
+)
+
+// OAuth error codes (used in redirect URLs)
+const (
+	OAuthErrorMissingCode      = "missing_code"
+	OAuthErrorExchangeFailed   = "exchange_failed"
+	OAuthErrorUserInfoFailed   = "user_info_failed"
+	OAuthErrorLookupFailed     = "lookup_failed"
+	OAuthErrorCreateUserFailed = "create_user_failed"
+	OAuthErrorLoginFailed      = "login_failed"
+)
+
+// OAuth query parameters
+const (
+	OAuthParamAccessToken  = "access_token"
+	OAuthParamRefreshToken = "refresh_token"
+	OAuthParamTokenType    = "token_type"
+	OAuthParamError        = "error"
+	OAuthParamCode         = "code"
 )

@@ -6,138 +6,90 @@ import (
 	"github.com/google/uuid"
 )
 
-// Transaction status constants are in util (TransactionStatusPosted, etc.).
-
-// Tax category (matches frontend)
-const (
-	TaxCategoryGSTFreeIncome   = "gst_free_income"
-	TaxCategoryGSTOnIncome     = "gst_on_income"
-	TaxCategoryGSTOnExpenses   = "gst_on_expenses"
-	TaxCategoryGSTFreeExpenses = "gst_free_expenses"
-	TaxCategoryBASExcluded     = "bas_excluded"
-)
-
-// TaxNameToCategory maps tbl_account_tax.name to frontend tax category.
-func TaxNameToCategory(name string) string {
-	switch name {
-	case "GST on Income":
-		return TaxCategoryGSTOnIncome
-	case "GST Free Income":
-		return TaxCategoryGSTFreeIncome
-	case "GST on Expenses":
-		return TaxCategoryGSTOnExpenses
-	case "GST Free Expenses":
-		return TaxCategoryGSTFreeExpenses
-	case "BAS Excluded":
-		return TaxCategoryBASExcluded
-	default:
-		return TaxCategoryBASExcluded
-	}
-}
-
-// Transaction DB model (header table)
+// Transaction represents tbl_transaction (header)
 type Transaction struct {
-	ID            uuid.UUID `db:"id"`
-	ClinicID      uuid.UUID `db:"clinic_id"`
-	SourceEntryID uuid.UUID `db:"source_entry_id"`
-	CreatedAt     time.Time `db:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at"`
+	ID              uuid.UUID  `db:"id" json:"id"`
+	ClinicID        uuid.UUID  `db:"clinic_id" json:"clinicId"`
+	SourceEntryID   *uuid.UUID `db:"source_entry_id" json:"sourceEntryId,omitempty"`
+	ReferenceNumber *string    `db:"reference_number" json:"referenceNumber,omitempty"`
+	Description     *string    `db:"description" json:"description,omitempty"`
+	TransactionDate time.Time  `db:"transaction_date" json:"transactionDate"`
+	Status          string     `db:"status" json:"status"`
+	CreatedBy       uuid.UUID  `db:"created_by" json:"createdBy"`
+	PostedAt        *time.Time `db:"posted_at" json:"postedAt,omitempty"`
+	VoidedAt        *time.Time `db:"voided_at" json:"voidedAt,omitempty"`
+	VoidReason      *string    `db:"void_reason" json:"voidReason,omitempty"`
+	CreatedAt       time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt       time.Time  `db:"updated_at" json:"updatedAt"`
+	DeletedAt       *time.Time `db:"deleted_at" json:"deletedAt,omitempty"`
 }
 
-// TransactionLedger DB model (detail table with all transaction data)
+// TransactionLedger represents tbl_transaction_ledger (line item)
 type TransactionLedger struct {
-	ID              uuid.UUID `db:"id"`
-	TransactionID   uuid.UUID `db:"transaction_id"`
-	COAID           uuid.UUID `db:"coa_id"`
-	AccountCode     string    `db:"account_code"`
-	AccountName     string    `db:"account_name"`
-	TaxCategory     string    `db:"tax_category"`
-	TransactionDate time.Time `db:"transaction_date"`
-	Reference       string    `db:"reference"`
-	Details         string    `db:"details"`
-	GrossAmount     float64   `db:"gross_amount"`
-	GSTAmount       float64   `db:"gst_amount"`
-	NetAmount       float64   `db:"net_amount"`
-	CreatedAt       time.Time `db:"created_at"`
-	UpdatedAt       time.Time `db:"updated_at"`
+	ID              uuid.UUID `db:"id" json:"id"`
+	TransactionID   uuid.UUID `db:"transaction_id" json:"transactionId"`
+	COAID           uuid.UUID `db:"coa_id" json:"coaId"`
+	EntryType       string    `db:"entry_type" json:"entryType"`
+	Amount          float64   `db:"amount" json:"amount"`
+	GSTAmount       float64   `db:"gst_amount" json:"gstAmount"`
+	NetAmount       float64   `db:"net_amount" json:"netAmount"`
+	TransactionDate time.Time `db:"transaction_date" json:"transactionDate"`
+	Description     *string   `db:"description" json:"description,omitempty"`
+	CreatedAt       time.Time `db:"created_at" json:"createdAt"`
 }
 
-// TransactionWithLedger combines transaction header with ledger details
+// TransactionWithLedger combines header + line items for API responses
 type TransactionWithLedger struct {
-	Transaction
-	SourceFormID    uuid.UUID
-	FieldID         *string
-	COAID           uuid.UUID
-	AccountCode     string
-	AccountName     string
-	TaxCategory     string
-	TransactionDate time.Time
-	Reference       string
-	Details         string
-	GrossAmount     float64
-	GSTAmount       float64
-	NetAmount       float64
-	Status          string
+	Transaction Transaction         `json:"transaction"`
+	Ledger      []TransactionLedger `json:"ledger"`
 }
 
-// TransactionResponse API response
+// ---- Request DTOs ----
+
+// LedgerLineRequest represents a single ledger line in a create/update request
+type LedgerLineRequest struct {
+	COAID       uuid.UUID `json:"coaId" validate:"required"`
+	EntryType   string    `json:"entryType" validate:"required,oneof=DEBIT CREDIT"`
+	Amount      float64   `json:"amount" validate:"required,gte=0"`
+	GSTAmount   float64   `json:"gstAmount" validate:"gte=0"`
+	NetAmount   float64   `json:"netAmount"`
+	Description *string   `json:"description" validate:"omitempty,max=500"`
+}
+
+// CreateTransactionRequest is the request body for POST /transaction
+type CreateTransactionRequest struct {
+	ClinicID        uuid.UUID           `json:"clinicId" validate:"required"`
+	SourceEntryID   *uuid.UUID          `json:"sourceEntryId" validate:"omitempty"`
+	ReferenceNumber *string             `json:"referenceNumber" validate:"omitempty,max=50"`
+	Description     *string             `json:"description" validate:"omitempty,max=500"`
+	TransactionDate string              `json:"transactionDate" validate:"required"`
+	Status          string              `json:"status" validate:"omitempty,oneof=DRAFT POSTED"`
+	Ledger          []LedgerLineRequest `json:"ledger" validate:"required,min=1,dive"`
+}
+
+// UpdateTransactionRequest is the request body for PUT /transaction/:id
+type UpdateTransactionRequest struct {
+	ReferenceNumber *string             `json:"referenceNumber" validate:"omitempty,max=50"`
+	Description     *string             `json:"description" validate:"omitempty,max=500"`
+	TransactionDate *string             `json:"transactionDate" validate:"omitempty"`
+	Ledger          []LedgerLineRequest `json:"ledger" validate:"omitempty,min=1,dive"`
+}
+
+// VoidTransactionRequest is the request body for POST /transaction/:id/void
+type VoidTransactionRequest struct {
+	Reason string `json:"reason" validate:"required,max=500"`
+}
+
+// ---- Response DTOs ----
+
+// TransactionResponse wraps the transaction + ledger for API output
 type TransactionResponse struct {
-	ID              string    `json:"id"`
-	TransactionID   string    `json:"transactionId"`
-	ClinicID        string    `json:"clinicId"`
-	SourceEntryID   string    `json:"sourceEntryId"`
-	SourceFormID    string    `json:"sourceFormId"`
-	FieldID         *string   `json:"fieldId,omitempty"`
-	COAID           string    `json:"coaId,omitempty"`
-	AccountCode     string    `json:"accountCode"`
-	AccountName     string    `json:"accountName"`
-	TaxCategory     string    `json:"taxCategory"`
-	Date            string    `json:"date"`
-	Reference       string    `json:"reference"`
-	Details         string    `json:"details"`
-	GrossAmount     float64   `json:"grossAmount"`
-	GSTAmount       float64   `json:"gstAmount"`
-	NetAmount       float64   `json:"netAmount"`
-	Status          string    `json:"status"`
-	CreatedAt       time.Time `json:"createdAt"`
-	UpdatedAt       time.Time `json:"updatedAt"`
+	Transaction Transaction         `json:"transaction"`
+	Ledger      []TransactionLedger `json:"ledger"`
 }
 
-// ListTransactionsFilters for listing
-type ListTransactionsFilters struct {
-	Search        string
-	TaxCategory   string
-	Status        string
-	COAID         string // filter by chart of account (uuid)
-	DateFrom      string
-	DateTo        string
-	SortField     string
-	SortDirection string
-	Page          int
-	Limit         int
-}
-
-// ListTransactionsResponse paginated response
-type ListTransactionsResponse struct {
-	Transactions []TransactionResponse `json:"transactions"`
-	Total        int                   `json:"total"`
-	Page         int                   `json:"page"`
-	Limit        int                   `json:"limit"`
-	HasMore      bool                  `json:"hasMore"`
-}
-
-// FormFieldCOAMappingItem for GET form field COA mapping
-type FormFieldCOAMappingItem struct {
-	FieldID               string  `json:"fieldId"`
-	FieldName             string  `json:"fieldName"`
-	AccountID             *string `json:"accountId,omitempty"`
-	AmountInterpretation  string  `json:"amountInterpretation,omitempty"` // "net" | "tax_only"
-}
-
-// FormFieldCOAMappingResponse form fields with COA and clinic COA list
-type FormFieldCOAMappingResponse struct {
-	FormID     string                   `json:"formId"`
-	FormName   string                   `json:"formName"`
-	Fields     []FormFieldCOAMappingItem `json:"fields"`
-	ClinicCOAs []AOCResponse            `json:"clinicCoas"`
+// TransactionListResponse wraps a list of transactions for API output
+type TransactionListResponse struct {
+	Transactions []TransactionWithLedger `json:"transactions"`
+	Total        int                     `json:"total"`
 }

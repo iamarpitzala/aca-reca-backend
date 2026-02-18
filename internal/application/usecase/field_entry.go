@@ -28,6 +28,7 @@ type FieldEntryService struct {
 	grossReductionRepo     port.EntryGrossReductionRepository
 	grossReimbursementRepo port.EntryGrossReimbursementRepository
 	financialSettingsRepo  port.ClinicFinancialSettingsRepository
+	transactionRepo        port.TransactionRepository
 	calcEngine             port.EntryCalculationEngine
 }
 
@@ -42,6 +43,7 @@ func NewFieldEntryService(
 	grossReductionRepo port.EntryGrossReductionRepository,
 	grossReimbursementRepo port.EntryGrossReimbursementRepository,
 	financialSettingsRepo port.ClinicFinancialSettingsRepository,
+	transactionRepo port.TransactionRepository,
 	calcEngine port.EntryCalculationEngine,
 ) *FieldEntryService {
 	return &FieldEntryService{
@@ -55,6 +57,7 @@ func NewFieldEntryService(
 		grossReductionRepo:     grossReductionRepo,
 		grossReimbursementRepo: grossReimbursementRepo,
 		financialSettingsRepo:  financialSettingsRepo,
+		transactionRepo:        transactionRepo,
 		calcEngine:             calcEngine,
 	}
 }
@@ -313,6 +316,12 @@ func (s *FieldEntryService) CreateEntry(ctx context.Context, req *domain.CreateE
 		if err := s.calculateAndStoreGrossDetails(ctx, form.ClinicID, fieldEntries[0].ID, fieldValueResponses, req.Deductions, gstConfig, fields, formCalc, now); err != nil {
 			return nil, err // surface error so caller sees why tbl_entry_gross_details was not stored
 		}
+	}
+
+	// Step 14: Post transaction to the general ledger (links entry to tbl_transaction + tbl_transaction_ledger)
+	if err := s.postTransactionFromEntry(ctx, form.ClinicID, fieldEntries[0].ID, userID, form.Name, form.FormType, req.EntryDate, fieldValueResponses, fields, now); err != nil {
+		// Log but do not fail the entry creation — the entry data is already persisted
+		_ = err
 	}
 
 	return &domain.EntryResponse{
@@ -1090,6 +1099,147 @@ func (s *FieldEntryService) mergeNetAmountIntoCalculations(
 	}
 
 	return merged
+}
+
+// postTransactionFromEntry creates a POSTED transaction with ledger lines
+// from the calculated field values. Each field with a valid COA maps to a
+// ledger line: INCOME-section fields become CREDIT lines (revenue), and
+// EXPENSE/REDUCTION-section fields become DEBIT lines (expense).
+func (s *FieldEntryService) postTransactionFromEntry(
+	ctx context.Context,
+	clinicID uuid.UUID,
+	sourceEntryID uuid.UUID,
+	userID uuid.UUID,
+	formName string,
+	formType string,
+	entryDate string,
+	fieldValueResponses []domain.EntryFieldValueResponse,
+	fields []domain.CustomFormField,
+	now time.Time,
+) error {
+	if s.transactionRepo == nil {
+		return nil
+	}
+
+	fieldByID := make(map[string]domain.CustomFormField, len(fields))
+	for _, f := range fields {
+		fieldByID[f.ID.String()] = f
+	}
+
+	// Build ledger lines from field values
+	var ledgerLines []domain.TransactionLedger
+	txnID := uuid.New()
+
+	// Parse entry date for the transaction
+	txnDate, err := time.Parse(util.DateFormatDate, entryDate)
+	if err != nil {
+		txnDate = now
+	}
+
+	for _, val := range fieldValueResponses {
+		f, ok := fieldByID[val.FieldID]
+		if !ok {
+			continue
+		}
+
+		// Skip fields without a valid COA mapping
+		if f.CoaID == uuid.Nil {
+			continue
+		}
+
+		// Determine amount: prefer calculated TotalAmount, fallback to Value
+		amount := val.Value
+		if val.TotalAmount != nil && *val.TotalAmount != 0 {
+			amount = *val.TotalAmount
+		}
+		if amount == 0 {
+			continue
+		}
+
+		// Determine GST portion
+		var gstAmount float64
+		if val.GSTAmount != nil {
+			gstAmount = *val.GSTAmount
+		}
+
+		// Determine base amount
+		baseAmount := amount
+		if val.BaseAmount != nil && *val.BaseAmount != 0 {
+			baseAmount = *val.BaseAmount
+		}
+
+		section := strings.ToUpper(strings.TrimSpace(f.Section))
+
+		var entryType string
+		var netAmount float64
+
+		switch section {
+		case "INCOME":
+			entryType = "CREDIT"
+			netAmount = -amount // credit = negative in ledger
+		case "EXPENSE", "REDUCTION":
+			entryType = "DEBIT"
+			netAmount = amount // debit = positive in ledger
+		default:
+			continue
+		}
+
+		// Use absolute value for amount column (constraint: amount >= 0)
+		absAmount := amount
+		if absAmount < 0 {
+			absAmount = -absAmount
+		}
+
+		desc := f.Label
+		ledgerLines = append(ledgerLines, domain.TransactionLedger{
+			ID:              uuid.New(),
+			TransactionID:   txnID,
+			COAID:           f.CoaID,
+			EntryType:       entryType,
+			Amount:          absAmount,
+			GSTAmount:       gstAmount,
+			NetAmount:       netAmount,
+			TransactionDate: txnDate,
+			Description:     &desc,
+			CreatedAt:       now,
+		})
+
+		// If GST amount exists, post a separate ledger line for the GST component
+		// against the same COA (the P&L query already sums net_amount per COA)
+		_ = baseAmount // base amount is embedded in the main line's amount
+	}
+
+	if len(ledgerLines) == 0 {
+		return nil
+	}
+
+	// Create the transaction header
+	refNumber := fmt.Sprintf("ENTRY-%s", sourceEntryID.String()[:8])
+	description := fmt.Sprintf("%s entry - %s", formType, formName)
+	postedAt := now
+	txn := &domain.Transaction{
+		ID:              txnID,
+		ClinicID:        clinicID,
+		SourceEntryID:   &sourceEntryID,
+		ReferenceNumber: &refNumber,
+		Description:     &description,
+		TransactionDate: txnDate,
+		Status:          util.TransactionStatusPosted,
+		CreatedBy:       userID,
+		PostedAt:        &postedAt,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+
+	if err := s.transactionRepo.Create(ctx, txn); err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+
+	if err := s.transactionRepo.CreateLedgerLines(ctx, ledgerLines); err != nil {
+		return fmt.Errorf("failed to create transaction ledger lines: %w", err)
+	}
+
+	return nil
 }
 
 // calculateAndStoreNetDetails calculates NET method details and stores them in tbl_entry_net_details

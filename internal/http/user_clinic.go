@@ -46,22 +46,22 @@ func (h *UserClinicHandler) AssociateUserWithClinic(c *gin.Context) {
 
 	authUserID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": util.ErrUserNotAuthenticated})
 		return
 	}
 	authUserUUID, ok := authUserID.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": util.ErrUserNotAuthenticated})
 		return
 	}
 
 	role, err := h.userClinicUC.UserRoleInClinic(c.Request.Context(), authUserUUID, req.ClinicID)
 	if err != nil || role == "" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
+		c.JSON(http.StatusForbidden, gin.H{"error": util.ErrAccessDenied})
 		return
 	}
 	if !strings.EqualFold(role, util.RoleOwner) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: only the clinic owner can add users"})
+		c.JSON(http.StatusForbidden, gin.H{"error": util.ErrAccessDeniedOwnerCanAddUsers})
 		return
 	}
 
@@ -71,7 +71,7 @@ func (h *UserClinicHandler) AssociateUserWithClinic(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "user associated with clinic successfully", "userClinic": userClinic})
+	c.JSON(http.StatusCreated, gin.H{"message": util.MsgUserAssociatedWithClinic, "userClinic": userClinic})
 }
 
 // GetUserClinics retrieves all clinics for a user
@@ -91,7 +91,7 @@ func (h *UserClinicHandler) GetUserClinics(c *gin.Context) {
 	userIDStr := c.Param("userId")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": util.ErrInvalidUserID})
 		return
 	}
 
@@ -103,7 +103,7 @@ func (h *UserClinicHandler) GetUserClinics(c *gin.Context) {
 	}
 	authUserUUID, ok := authUserID.(uuid.UUID)
 	if !ok || authUserUUID != userID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you can only view your own clinics"})
+		c.JSON(http.StatusForbidden, gin.H{"error": util.ErrAccessDeniedOwnClinicsOnly})
 		return
 	}
 
@@ -113,7 +113,7 @@ func (h *UserClinicHandler) GetUserClinics(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "user clinics retrieved successfully", "userClinics": userClinics})
+	c.JSON(http.StatusOK, gin.H{"message": util.MsgUserClinicsRetrievedSuccessfully, "userClinics": userClinics})
 }
 
 // GetClinicUsers retrieves all users for a clinic. Requester must have access to the clinic.
@@ -133,24 +133,24 @@ func (h *UserClinicHandler) GetClinicUsers(c *gin.Context) {
 	clinicIDStr := c.Param("clinicId")
 	clinicID, err := uuid.Parse(clinicIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": util.ErrInvalidClinicID})
 		return
 	}
 
 	authUserID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": util.ErrUserNotAuthenticated})
 		return
 	}
 	authUserUUID, ok := authUserID.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": util.ErrUserNotAuthenticated})
 		return
 	}
 
 	hasAccess, err := h.userClinicUC.UserHasAccessToClinic(c.Request.Context(), authUserUUID, clinicID)
 	if err != nil || !hasAccess {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
+		c.JSON(http.StatusForbidden, gin.H{"error": util.ErrAccessDenied})
 		return
 	}
 
@@ -160,7 +160,7 @@ func (h *UserClinicHandler) GetClinicUsers(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "clinic users retrieved successfully", "clinicUsers": clinicUsers})
+	c.JSON(http.StatusOK, gin.H{"message": util.MsgClinicUsersRetrievedSuccessfully, "clinicUsers": clinicUsers})
 }
 
 // RemoveUserFromClinic removes a user-clinic association. Only the clinic owner can remove users.
@@ -181,34 +181,34 @@ func (h *UserClinicHandler) RemoveUserFromClinic(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid association ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": util.ErrInvalidAssociationID})
 		return
 	}
 
 	authUserID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": util.ErrUserNotAuthenticated})
 		return
 	}
 	authUserUUID, ok := authUserID.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": util.ErrUserNotAuthenticated})
 		return
 	}
 
 	assoc, err := h.userClinicUC.GetByID(c.Request.Context(), id)
 	if err != nil || assoc == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user-clinic association not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": util.ErrUserClinicAssociationNotFound})
 		return
 	}
 
 	role, err := h.userClinicUC.UserRoleInClinic(c.Request.Context(), authUserUUID, assoc.ClinicID)
 	if err != nil || role == "" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: you do not have access to this clinic"})
+		c.JSON(http.StatusForbidden, gin.H{"error": util.ErrAccessDenied})
 		return
 	}
 	if !strings.EqualFold(role, util.RoleOwner) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: only the clinic owner can remove users"})
+		c.JSON(http.StatusForbidden, gin.H{"error": util.ErrAccessDeniedOwnerCanRemoveUsers})
 		return
 	}
 
@@ -218,5 +218,5 @@ func (h *UserClinicHandler) RemoveUserFromClinic(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "user removed from clinic successfully", "id": id})
+	c.JSON(http.StatusOK, gin.H{"message": util.MsgUserRemovedFromClinic, "id": id})
 }

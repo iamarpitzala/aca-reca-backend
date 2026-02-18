@@ -40,7 +40,7 @@ func (h *FieldEntryHandler) Create(c *gin.Context) {
 	// Validate form ID
 	formID, err := uuid.Parse(req.FormID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid form ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidFormID})
 		return
 	}
 
@@ -61,14 +61,14 @@ func (h *FieldEntryHandler) Create(c *gin.Context) {
 		return
 	}
 
-	utils.JSONResponse(c, http.StatusCreated, "entry created", resp, nil)
+	utils.JSONResponse(c, http.StatusCreated, utils.MsgEntryCreated, resp, nil)
 }
 
 // GetByID handles GET /field-entries/:id
 func (h *FieldEntryHandler) GetByID(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidEntryID})
 		return
 	}
 
@@ -89,14 +89,14 @@ func (h *FieldEntryHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	utils.JSONResponse(c, http.StatusOK, "field entry retrieved", resp, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntryRetrieved, resp, nil)
 }
 
 // GetNetDetails handles GET /entry/:id/net-details
 func (h *FieldEntryHandler) GetNetDetails(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidEntryID})
 		return
 	}
 
@@ -112,18 +112,18 @@ func (h *FieldEntryHandler) GetNetDetails(c *gin.Context) {
 
 	resp, err := h.entryUC.GetNetDetails(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "net details not found for this entry"})
+		c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrNetDetailsNotFound})
 		return
 	}
 
-	utils.JSONResponse(c, http.StatusOK, "net details retrieved", resp, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgNetDetailsRetrieved, resp, nil)
 }
 
 // GetGrossDetails handles GET /entry/:id/gross-details
 func (h *FieldEntryHandler) GetGrossDetails(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidEntryID})
 		return
 	}
 
@@ -139,18 +139,18 @@ func (h *FieldEntryHandler) GetGrossDetails(c *gin.Context) {
 
 	resp, err := h.entryUC.GetGrossDetails(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "gross details not found for this entry"})
+		c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrGrossDetailsNotFound})
 		return
 	}
 
-	utils.JSONResponse(c, http.StatusOK, "gross details retrieved", resp, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgGrossDetailsRetrieved, resp, nil)
 }
 
 // GetByFormID handles GET /field-entries/form/:formId
 func (h *FieldEntryHandler) GetByFormID(c *gin.Context) {
 	formID, err := uuid.Parse(c.Param("formId"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid form ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidFormID})
 		return
 	}
 
@@ -171,14 +171,14 @@ func (h *FieldEntryHandler) GetByFormID(c *gin.Context) {
 		return
 	}
 
-	utils.JSONResponse(c, http.StatusOK, "field entries retrieved", list, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntriesRetrieved, list, nil)
 }
 
 // GetByClinicID handles GET /field-entries/clinic/:clinicId
 func (h *FieldEntryHandler) GetByClinicID(c *gin.Context) {
 	clinicID, err := uuid.Parse(c.Param("clinicId"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
 		return
 	}
 
@@ -192,14 +192,14 @@ func (h *FieldEntryHandler) GetByClinicID(c *gin.Context) {
 		return
 	}
 
-	utils.JSONResponse(c, http.StatusOK, "field entries retrieved", list, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntriesRetrieved, list, nil)
 }
 
 // Update handles PUT /field-entries/:id
 func (h *FieldEntryHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidEntryID})
 		return
 	}
 
@@ -228,14 +228,14 @@ func (h *FieldEntryHandler) Update(c *gin.Context) {
 		return
 	}
 
-	utils.JSONResponse(c, http.StatusOK, "field entry updated", resp, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntryUpdated, resp, nil)
 }
 
 // Delete handles DELETE /field-entries/:id
 func (h *FieldEntryHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entry ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidEntryID})
 		return
 	}
 
@@ -255,5 +255,5 @@ func (h *FieldEntryHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	utils.JSONResponse(c, http.StatusOK, "field entry deleted", nil, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntryDeleted, nil, nil)
 }

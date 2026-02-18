@@ -33,7 +33,7 @@ func (h *PayslipHandler) ExportExcelIncome(c *gin.Context) {
 	var data []domain.ExportIncome
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid JSON data",
+			"error": utils.ErrInvalidJSONData,
 		})
 		return
 	}
@@ -67,7 +67,7 @@ func (h *PayslipHandler) ExportExcelExpanses(c *gin.Context) {
 	var data []domain.ExportExpenses
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid JSON data",
+			"error": utils.ErrInvalidJSONData,
 		})
 		return
 	}

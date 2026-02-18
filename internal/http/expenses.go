@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type ExpensesHandler struct {
@@ -42,12 +43,12 @@ func (h *ExpensesHandler) CreateExpenseType(c *gin.Context) {
 	// Get user ID from context
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUserNotAuthenticated})
 		return
 	}
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserID})
 		return
 	}
 
@@ -86,12 +87,12 @@ func (h *ExpensesHandler) CreateExpenseCategory(c *gin.Context) {
 	// Get user ID from context
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUserNotAuthenticated})
 		return
 	}
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserID})
 		return
 	}
 
@@ -130,12 +131,12 @@ func (h *ExpensesHandler) CreateExpenseCategoryType(c *gin.Context) {
 	// Get user ID from context
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUserNotAuthenticated})
 		return
 	}
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserID})
 		return
 	}
 
@@ -174,12 +175,12 @@ func (h *ExpensesHandler) CreateExpenseEntry(c *gin.Context) {
 	// Get user ID from context
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUserNotAuthenticated})
 		return
 	}
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserID})
 		return
 	}
 
@@ -401,12 +402,12 @@ func (h *ExpensesHandler) DeleteExpenseCategory(c *gin.Context) {
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUserNotAuthenticated})
 		return
 	}
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserID})
 		return
 	}
 

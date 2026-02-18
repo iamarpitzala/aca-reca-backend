@@ -14,13 +14,13 @@ var ErrFinancialSettingsNotFound = errors.New("financial settings not found")
 var ErrFinancialSettingsLocked = errors.New("cannot modify financial settings: financial year start is locked once transactions exist")
 
 type ClinicFinancialSettingsService struct {
-	repo port.ClinicFinancialSettingsRepository
+	repo       port.ClinicFinancialSettingsRepository
 	clinicRepo port.ClinicRepository
 }
 
 func NewClinicFinancialSettingsService(repo port.ClinicFinancialSettingsRepository, clinicRepo port.ClinicRepository) *ClinicFinancialSettingsService {
 	return &ClinicFinancialSettingsService{
-		repo:      repo,
+		repo:       repo,
 		clinicRepo: clinicRepo,
 	}
 }
@@ -32,7 +32,7 @@ func (s *ClinicFinancialSettingsService) GetByClinicID(ctx context.Context, clin
 	if err != nil {
 		return nil, err
 	}
-	
+
 	settings, err := s.repo.GetByClinicID(ctx, clinicID)
 	if err != nil {
 		// If not found, return defaults (caller can create if needed)
@@ -51,12 +51,12 @@ func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, cli
 	if err != nil {
 		return nil, err
 	}
-	
+
 	existing, err := s.repo.GetByClinicID(ctx, clinicID)
 	if err != nil && err.Error() != "financial settings not found" {
 		return nil, err
 	}
-	
+
 	if existing == nil {
 		// Create new settings
 		settings, err := req.ToClinicFinancialSettings(clinicID)
@@ -68,7 +68,7 @@ func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, cli
 		}
 		return settings, nil
 	}
-	
+
 	// Update existing settings
 	// Check if financial_year_start can be changed (should be locked if transactions exist)
 	// For now, we'll allow updates but this should be checked against transaction table
@@ -95,7 +95,7 @@ func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, cli
 			return nil, err
 		}
 	}
-	
+
 	if err := s.repo.Update(ctx, existing); err != nil {
 		return nil, err
 	}
@@ -110,13 +110,13 @@ func (s *ClinicFinancialSettingsService) getDefaultSettings(clinicID uuid.UUID) 
 	if now.Month() >= 7 {
 		lockDate = time.Date(now.Year(), 6, 30, 0, 0, 0, 0, now.Location())
 	}
-	
+
 	gstDefaults := map[string]string{
 		"patient_fees": "GST_FREE",
-		"service_fees":  "GST_10",
-		"lab_fees":      "GST_FREE",
+		"service_fees": "GST_10",
+		"lab_fees":     "GST_FREE",
 	}
-	
+
 	settings := &domain.ClinicFinancialSettings{
 		ClinicID:              clinicID,
 		FinancialYearStart:    domain.FinancialYearStartJuly,
@@ -127,6 +127,6 @@ func (s *ClinicFinancialSettingsService) getDefaultSettings(clinicID uuid.UUID) 
 		LockDate:              &lockDate,
 	}
 	settings.SetGSTDefaultsMap(gstDefaults)
-	
+
 	return settings
 }

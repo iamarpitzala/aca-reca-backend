@@ -1,12 +1,15 @@
 package constants
 
-const (
-	INCLUSIVE = "INCLUSIVE"
-	EXCLUSIVE = "EXCLUSIVE"
-	Manual    = "MANUAL"
+import "github.com/iamarpitzala/aca-reca-backend/util"
 
-	PERCENTAGE = "PERCENTAGE"
-	FIXED      = "FIXED"
+// Re-export from util for backward compatibility. Prefer using util directly.
+const (
+	INCLUSIVE = util.GSTTypeInclusive
+	EXCLUSIVE = util.GSTTypeExclusive
+	MANUAL    = util.GSTTypeManual
+
+	PERCENTAGE = util.ShareTypePercentage
+	FIXED      = util.ShareTypeFixed
 
 	PAID_BY_CLINIC = "PAID_BY_CLINIC"
 	PAID_BY_OWNER  = "PAID_BY_OWNER"

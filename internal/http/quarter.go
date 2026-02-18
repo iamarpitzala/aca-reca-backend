@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
+	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type QuarterHandler struct {
@@ -37,7 +38,7 @@ func (h *QuarterHandler) CalculateForClinic(c *gin.Context) {
 	clinicIDStr := c.Param("id")
 	clinicID, err := uuid.Parse(clinicIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
 		return
 	}
 
@@ -46,7 +47,7 @@ func (h *QuarterHandler) CalculateForClinic(c *gin.Context) {
 	if yearsBackStr := c.Query("yearsBack"); yearsBackStr != "" {
 		yearsBack, err = strconv.Atoi(yearsBackStr)
 		if err != nil || yearsBack < 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid yearsBack parameter"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidYearsBack})
 			return
 		}
 	}
@@ -55,7 +56,7 @@ func (h *QuarterHandler) CalculateForClinic(c *gin.Context) {
 	if yearsForwardStr := c.Query("yearsForward"); yearsForwardStr != "" {
 		yearsForward, err = strconv.Atoi(yearsForwardStr)
 		if err != nil || yearsForward < 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid yearsForward parameter"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidYearsForward})
 			return
 		}
 	}
@@ -93,22 +94,22 @@ func (h *QuarterHandler) GetQuarterForDate(c *gin.Context) {
 	clinicIDStr := c.Param("id")
 	clinicID, err := uuid.Parse(clinicIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
 		return
 	}
 
 	dateStr := c.Query("date")
 	if dateStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "date parameter is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrDateRequired})
 		return
 	}
 
 	date, err := time.Parse(time.RFC3339, dateStr)
 	if err != nil {
 		// Try parsing as date only
-		date, err = time.Parse("2006-01-02", dateStr)
+		date, err = time.Parse(utils.DateFormatDate, dateStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format. Use RFC3339 (2006-01-02T15:04:05Z07:00) or date (2006-01-02)"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidDateFormat})
 			return
 		}
 	}

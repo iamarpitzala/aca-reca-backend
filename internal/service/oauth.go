@@ -9,21 +9,20 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/config"
+	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	"github.com/iamarpitzala/aca-reca-backend/internal/repository"
-	"github.com/jmoiron/sqlx"
 	"golang.org/x/oauth2"
 )
 
 type OAuthService struct {
-	config    config.OAuthConfig
-	db        *sqlx.DB
-	providers map[string]*oauth2.Config
+	config       config.OAuthConfig
+	providerRepo port.OAuthProviderRepository
+	userRepo     port.UserRepository
+	providers    map[string]*oauth2.Config
 }
 
-func NewOAuthService(cfg config.OAuthConfig, db *sqlx.DB) *OAuthService {
+func NewOAuthService(cfg config.OAuthConfig, providerRepo port.OAuthProviderRepository, userRepo port.UserRepository) *OAuthService {
 	providers := make(map[string]*oauth2.Config)
-
 	for name, providerCfg := range cfg.Providers {
 		if providerCfg.ClientID != "" && providerCfg.ClientSecret != "" {
 			providers[name] = &oauth2.Config{
@@ -38,11 +37,11 @@ func NewOAuthService(cfg config.OAuthConfig, db *sqlx.DB) *OAuthService {
 			}
 		}
 	}
-
 	return &OAuthService{
-		config:    cfg,
-		db:        db,
-		providers: providers,
+		config:       cfg,
+		providerRepo: providerRepo,
+		userRepo:     userRepo,
+		providers:    providers,
 	}
 }
 
@@ -51,17 +50,14 @@ func (os *OAuthService) GetAuthURL(provider string, state string) (string, error
 	if !ok {
 		return "", fmt.Errorf("oauth provider %s not configured", provider)
 	}
-
 	return oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline), nil
 }
 
-// GetRedirectURI returns the configured redirect URI for a provider
 func (os *OAuthService) GetRedirectURI(provider string) (string, error) {
 	oauthConfig, ok := os.providers[provider]
 	if !ok {
 		return "", fmt.Errorf("oauth provider %s not configured", provider)
 	}
-
 	return oauthConfig.RedirectURL, nil
 }
 
@@ -70,12 +66,10 @@ func (os *OAuthService) ExchangeCode(ctx context.Context, provider string, code 
 	if !ok {
 		return nil, fmt.Errorf("oauth provider %s not configured", provider)
 	}
-
 	token, err := oauthConfig.Exchange(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("failed to exchange code for token: %w", err)
 	}
-
 	return token, nil
 }
 
@@ -84,19 +78,16 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 	if !ok {
 		return nil, fmt.Errorf("oauth provider %s not configured", provider)
 	}
-
 	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
 	resp, err := client.Get(providerCfg.UserInfoURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 	defer resp.Body.Close()
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read user info response: %w", err)
 	}
-
 	var userInfo domain.OAuthUserInfo
 	switch provider {
 	case "google":
@@ -140,39 +131,30 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 			Email:         email,
 			FirstName:     msUser.GivenName,
 			LastName:      msUser.Surname,
-			EmailVerified: true, // Microsoft accounts are typically verified
+			EmailVerified: true,
 		}
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", provider)
 	}
-
 	return &userInfo, nil
 }
 
 func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, provider string, providerUserID string, providerEmail string, token *oauth2.Token) error {
 	var oauthProvider domain.OAuthProvider
-
-	// Check if provider link already exists and update it
-	exists, err := repository.UpdateOrCreateOAuthProvider(ctx, os.db, &oauthProvider, provider, providerUserID, userID, token)
+	existed, err := os.providerRepo.UpdateOrCreate(ctx, &oauthProvider, provider, providerUserID, userID, token)
 	if err != nil {
 		return fmt.Errorf("failed to update OAuth provider: %w", err)
 	}
-
-	// If provider already exists and was updated, update email if needed
-	if exists {
+	if existed {
 		if providerEmail != "" && oauthProvider.ProviderEmail != providerEmail {
 			oauthProvider.ProviderEmail = providerEmail
-			_, err = os.db.ExecContext(ctx,
-				"UPDATE tbl_auth_provider SET provider_email = $1, updated_at = $2 WHERE id = $3",
-				providerEmail, time.Now(), oauthProvider.ID)
-			if err != nil {
+			oauthProvider.UpdatedAt = time.Now()
+			if err := os.providerRepo.Update(ctx, &oauthProvider); err != nil {
 				return fmt.Errorf("failed to update provider email: %w", err)
 			}
 		}
 		return nil
 	}
-
-	// Create new link
 	expiresAt := token.Expiry
 	oauthProvider = domain.OAuthProvider{
 		ID:             uuid.New(),
@@ -186,27 +168,21 @@ func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, prov
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
-
-	// Create new OAuth provider link
-	err = repository.CreateOAuthProvider(ctx, os.db, &oauthProvider)
-	if err != nil {
+	if err := os.providerRepo.Create(ctx, &oauthProvider); err != nil {
 		return fmt.Errorf("failed to create OAuth provider: %w", err)
 	}
 	return nil
 }
 
 func (os *OAuthService) FindUserByProvider(ctx context.Context, provider string, providerUserID string) (*domain.User, error) {
-	oauthProvider, err := repository.GetOAuthProvider(ctx, os.db, provider, providerUserID)
+	oauthProvider, err := os.providerRepo.GetByProviderAndProviderUserID(ctx, provider, providerUserID)
 	if err != nil {
 		return nil, err
 	}
-
-	user, err := repository.GetUserByID(ctx, os.db, oauthProvider.UserID)
-	if err != nil {
-		return nil, err
+	if oauthProvider == nil {
+		return nil, nil
 	}
-
-	return user, nil
+	return os.userRepo.GetByID(ctx, oauthProvider.UserID)
 }
 
 func (os *OAuthService) CreateUserFromOAuth(ctx context.Context, userInfo *domain.OAuthUserInfo) (*domain.User, error) {
@@ -220,11 +196,8 @@ func (os *OAuthService) CreateUserFromOAuth(ctx context.Context, userInfo *domai
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
-
-	err := repository.CreateUser(ctx, os.db, &user)
-	if err != nil {
+	if err := os.userRepo.Create(ctx, &user); err != nil {
 		return nil, err
 	}
-
 	return &user, nil
 }

@@ -41,6 +41,13 @@ func (r *oauthProviderRepo) Create(ctx context.Context, provider *domain.OAuthPr
 	return err
 }
 
+func (r *oauthProviderRepo) Update(ctx context.Context, provider *domain.OAuthProvider) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE tbl_auth_provider SET provider_email = $1, updated_at = $2 WHERE id = $3`,
+		provider.ProviderEmail, time.Now(), provider.ID)
+	return err
+}
+
 func (r *oauthProviderRepo) UpdateOrCreate(ctx context.Context, provider *domain.OAuthProvider, providerName, providerUserID string, userID uuid.UUID, token *oauth2.Token) (bool, error) {
 	err := r.db.GetContext(ctx, provider,
 		`SELECT id, user_id, provider, provider_user_id, provider_email, access_token, refresh_token, token_expires_at, created_at, updated_at FROM tbl_auth_provider WHERE provider = $1 AND provider_user_id = $2 AND deleted_at IS NULL`,

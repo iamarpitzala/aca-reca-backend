@@ -7,27 +7,23 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
-func RegisterBASSnapshotRoutes(e *gin.RouterGroup, handler *httpHandler.BASSnapshotHandler, tokenService *service.TokenService) {
-	// Clinic-specific routes (more specific routes first)
-	clinicBAS := e.Group("/clinic/:id/bas-snapshots")
+func RegisterBASSnapshotRoutes(e *gin.RouterGroup, basHandler *httpHandler.BASSnapshotHandler, tokenService *service.TokenService) {
+	// Clinic-scoped routes: use full path with :id to match existing clinic wildcard
+	clinicBAS := e.Group("/clinic/:id/bas-snapshot")
 	clinicBAS.Use(middleware.AuthMiddleware(tokenService))
-	clinicBAS.GET("", handler.GetBASSnapshotsByClinic)
-	
-	clinicBASCreate := e.Group("/clinic/:id/bas-snapshot")
-	clinicBASCreate.Use(middleware.AuthMiddleware(tokenService))
-	clinicBASCreate.POST("", handler.CreateBASSnapshot)
-	
-	// BAS snapshot routes
+	clinicBAS.POST("", basHandler.Create)
+	clinicBAS.POST("/generate", basHandler.Generate)
+
+	clinicBASList := e.Group("/clinic/:id/bas-snapshots")
+	clinicBASList.Use(middleware.AuthMiddleware(tokenService))
+	clinicBASList.GET("", basHandler.GetByClinicID)
+
+	// Snapshot-scoped routes
 	bas := e.Group("/bas-snapshot")
 	bas.Use(middleware.AuthMiddleware(tokenService))
-	
-	bas.GET("/:id", handler.GetBASSnapshot)
-	bas.PUT("/:id", handler.UpdateBASSnapshot)
-	bas.POST("/:id/finalise", handler.FinaliseBAS)
-	bas.POST("/:id/lock", handler.LockBAS)
-	
-	// Consolidated GST Summary (management view)
-	reports := e.Group("/reports")
-	reports.Use(middleware.AuthMiddleware(tokenService))
-	reports.POST("/consolidated-gst-summary", handler.GetConsolidatedGSTSummary)
+	bas.GET("/:id", basHandler.GetByID)
+	bas.PUT("/:id", basHandler.Update)
+	bas.POST("/:id/finalise", basHandler.Finalise)
+	bas.POST("/:id/lock", basHandler.Lock)
+	bas.DELETE("/:id", basHandler.Delete)
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/pkg/cloudinary"
+	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 // Allowed image and document types for upload validation.
@@ -17,7 +18,7 @@ var (
 		"image/gif": true, "image/webp": true,
 	}
 	allowedDocumentTypes = map[string]bool{
-		"application/pdf": true,
+		"application/pdf":    true,
 		"application/msword": true, "application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
 	}
 )
@@ -46,23 +47,23 @@ func NewUploadHandler(svc *cloudinary.Service) *UploadHandler {
 // @Router /upload/image [post]
 func (h *UploadHandler) UploadImage(c *gin.Context) {
 	if h.svc == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "upload service is not configured"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": utils.ErrUploadServiceNotConfigured})
 		return
 	}
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing or invalid file: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrMissingOrInvalidFile + err.Error()})
 		return
 	}
 	defer file.Close()
 
 	if header.Size > cloudinary.MaxImageSizeBytes {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "image must be at most 10 MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": utils.ErrImageTooLarge})
 		return
 	}
 	contentType := header.Header.Get("Content-Type")
 	if !allowedImageTypes[contentType] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid image type; allowed: JPEG, PNG, GIF, WebP"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidImageType})
 		return
 	}
 
@@ -73,7 +74,7 @@ func (h *UploadHandler) UploadImage(c *gin.Context) {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "upload failed: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": utils.ErrUploadFailed + err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"url": result.URL, "public_id": result.PublicID})
@@ -93,23 +94,23 @@ func (h *UploadHandler) UploadImage(c *gin.Context) {
 // @Router /upload/document [post]
 func (h *UploadHandler) UploadDocument(c *gin.Context) {
 	if h.svc == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "upload service is not configured"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": utils.ErrUploadServiceNotConfigured})
 		return
 	}
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing or invalid file: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrMissingOrInvalidFile + err.Error()})
 		return
 	}
 	defer file.Close()
 
 	if header.Size > cloudinary.MaxDocumentSizeBytes {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "document must be at most 20 MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": utils.ErrDocumentTooLarge})
 		return
 	}
 	contentType := header.Header.Get("Content-Type")
 	if !allowedDocumentTypes[contentType] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid document type; allowed: PDF, DOC, DOCX"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidDocumentType})
 		return
 	}
 
@@ -120,7 +121,7 @@ func (h *UploadHandler) UploadDocument(c *gin.Context) {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "upload failed: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": utils.ErrUploadFailed + err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"url": result.URL, "public_id": result.PublicID})

@@ -4,15 +4,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 	"github.com/samber/lo"
 )
 
 type FormStatus string
 
 const (
-	FormStatusDraft     FormStatus = "DRAFT"
-	FormStatusPublished FormStatus = "PUBLISHED"
-	FormStatusArchived  FormStatus = "ARCHIVED"
+	FormStatusDraft     FormStatus = FormStatus(util.FormStatusDraft)
+	FormStatusPublished FormStatus = FormStatus(util.FormStatusPublished)
+	FormStatusArchived  FormStatus = FormStatus(util.FormStatusArchived)
 )
 
 type FormRequest struct {

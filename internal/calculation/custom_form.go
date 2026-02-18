@@ -2,142 +2,10 @@ package calculation
 
 import (
 	"encoding/json"
-	"math"
-	"strconv"
 	"strings"
+
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
-
-// Field definitions for parsing form.Fields JSONB (subset needed for calculation)
-type calcField struct {
-	ID             string  `json:"id"`
-	Name           string  `json:"name"`
-	Type           string  `json:"type"`
-	Section        string  `json:"section"`
-	IncludeInTotal bool    `json:"includeInTotal"`
-	GstConfig      *gstCfg `json:"gstConfig"`
-	PaymentResp    string  `json:"paymentResponsibility"`
-}
-type gstCfg struct {
-	Enabled bool    `json:"enabled"`
-	Rate    float64 `json:"rate"`
-	Type    string  `json:"type"` // inclusive, exclusive, manual
-}
-
-// Value from client: fieldId, value, optional manualGstAmount
-type entryValue struct {
-	FieldID         string      `json:"fieldId"`
-	FieldName       string      `json:"fieldName"`
-	Value           interface{} `json:"value"`
-	ManualGstAmount *float64    `json:"manualGstAmount"`
-}
-
-// Deductions from request (for service fee % and override; entry-level payment responsibility overrides per-field when set)
-type deductionsInput struct {
-	ServiceFacilityFeePercent  *float64 `json:"serviceFacilityFeePercent"`
-	ServiceFeeOverride         *float64 `json:"serviceFeeOverride"`
-	EntryPaymentResponsibility *string  `json:"entryPaymentResponsibility"`
-	// Commission calculations (for independent contractors)
-	CommissionPercent     *float64 `json:"commissionPercent"`
-	SuperHoldingEnabled   *bool    `json:"superHoldingEnabled"`
-	SuperComponentPercent *float64 `json:"superComponentPercent"`
-}
-
-// Output structures (match frontend EntryCalculations)
-type fieldCalc struct {
-	FieldID     string  `json:"fieldId"`
-	FieldName   string  `json:"fieldName"`
-	BaseAmount  float64 `json:"baseAmount"`
-	GstAmount   float64 `json:"gstAmount"`
-	TotalAmount float64 `json:"totalAmount"`
-	GstRate     float64 `json:"gstRate"`
-	GstType     string  `json:"gstType"`
-}
-type basMapping struct {
-	GstOnSales1A float64 `json:"gstOnSales1A"`
-	GstCredit1B  float64 `json:"gstCredit1B"`
-	TotalSalesG1 float64 `json:"totalSalesG1"`
-	ExpensesG11  float64 `json:"expensesG11"`
-}
-type calculationsOutput struct {
-	FieldTotals             []fieldCalc `json:"fieldTotals"`
-	TotalBaseAmount         float64     `json:"totalBaseAmount"`
-	TotalGSTAmount          float64     `json:"totalGSTAmount"`
-	TotalAmount             float64     `json:"totalAmount"`
-	NetPayable              float64     `json:"netPayable"`
-	NetReceivable           float64     `json:"netReceivable"`
-	BasMapping              basMapping  `json:"basMapping"`
-	NetFee                  *float64    `json:"netFee,omitempty"`
-	ServiceFeeBase          *float64    `json:"serviceFeeBase,omitempty"`
-	GstOnServiceFee         *float64    `json:"gstOnServiceFee,omitempty"`
-	TotalServiceFee         *float64    `json:"totalServiceFee,omitempty"`
-	TotalReductions         *float64    `json:"totalReductions,omitempty"`
-	TotalReimbursements     *float64    `json:"totalReimbursements,omitempty"`
-	ReductionBreakdown      []fieldCalc `json:"reductionBreakdown,omitempty"`
-	ReimbursementBreakdown  []fieldCalc `json:"reimbursementBreakdown,omitempty"`
-	SubtotalAfterDeductions *float64    `json:"subtotalAfterDeductions,omitempty"`
-	RemittedAmount          *float64    `json:"remittedAmount,omitempty"`
-	OutworkChargeBase       *float64    `json:"outworkChargeBase,omitempty"`
-	OutworkChargeGst        *float64    `json:"outworkChargeGst,omitempty"`
-	OutworkChargeTotal      *float64    `json:"outworkChargeTotal,omitempty"`
-	// Commission calculations (for independent contractors)
-	Commission             *float64 `json:"commission,omitempty"`
-	GstOnCommission        *float64 `json:"gstOnCommission,omitempty"`
-	CommissionComponent    *float64 `json:"commissionComponent,omitempty"`
-	SuperComponent         *float64 `json:"superComponent,omitempty"`
-	TotalForReconciliation *float64 `json:"totalForReconciliation,omitempty"`
-	TotalPaymentReceived   *float64 `json:"totalPaymentReceived,omitempty"`
-}
-
-func round2(n float64) float64 { return math.Round(n*100) / 100 }
-
-// parseFloat parses a numeric value from JSON (number or string).
-func parseFloat(v interface{}) float64 {
-	switch x := v.(type) {
-	case float64:
-		return x
-	case int:
-		return float64(x)
-	case int64:
-		return float64(x)
-	case string:
-		f, _ := strconv.ParseFloat(x, 64)
-		return f
-	}
-	return 0
-}
-
-func calcGST(amount, rate float64, gstType string, manualGst *float64) (base, gst, total float64) {
-	if gstType == "manual" {
-		m := 0.0
-		if manualGst != nil {
-			m = *manualGst
-		}
-		return round2(amount), round2(m), round2(amount + m)
-	}
-	if rate == 0 {
-		return amount, 0, amount
-	}
-	rateDec := rate / 100
-	if gstType == "inclusive" {
-		gst = amount - (amount / (1 + rateDec))
-		base = amount - gst
-		return round2(base), round2(gst), amount
-	}
-	gst = amount * rateDec
-	total = amount + gst
-	return amount, round2(gst), round2(total)
-}
-
-// getSection returns "expense" if section starts with "expense" (e.g. expense, expenses, Expenses 1), else "income"
-func getSection(s string) string {
-	lower := strings.ToLower(s)
-	if strings.HasPrefix(lower, "expense") {
-		return "expense"
-	}
-	return "income"
-}
-
-const defaultServiceFeePct = 50.0
 
 // RunEntryCalculation computes field totals, NET FEE, and deductions from form definition and raw values.
 // formFieldsJSON and valuesJSON are the raw JSONB from DB; formType, formServiceFeePct from form row.
@@ -153,6 +21,17 @@ func RunEntryCalculation(
 	valuesJSON []byte,
 	deductionsJSON []byte,
 ) ([]byte, error) {
+	// Route to gross calculation if method is GROSS
+	if formCalculationMethod == util.MethodTypeGross {
+		return RunGrossCalculation(
+			formFieldsJSON,
+			formServiceFeePct,
+			formOutworkEnabled,
+			formOutworkRatePercent,
+			valuesJSON,
+			deductionsJSON,
+		)
+	}
 	var fields []calcField
 	if err := json.Unmarshal(formFieldsJSON, &fields); err != nil {
 		return nil, err
@@ -175,9 +54,13 @@ func RunEntryCalculation(
 	var expenseBase, expenseGst, expenseTotal float64
 
 	valueByID := make(map[string]entryValue)
+	valueByName := make(map[string]entryValue)
 	for _, v := range values {
 		if v.FieldID != "" {
 			valueByID[v.FieldID] = v
+		} else if v.FieldName != "" {
+			key := strings.TrimSpace(strings.ToLower(v.FieldName))
+			valueByName[key] = v
 		}
 	}
 
@@ -189,6 +72,9 @@ func RunEntryCalculation(
 			continue
 		}
 		v, ok := valueByID[f.ID]
+		if !ok {
+			v, ok = valueByName[strings.TrimSpace(strings.ToLower(f.Name))]
+		}
 		if !ok {
 			continue
 		}
@@ -221,13 +107,16 @@ func RunEntryCalculation(
 			GstRate:     rate,
 			GstType:     gstType,
 		})
-		if formType == "both" {
+		if formType == util.FormTypeBoth {
 			sec := getSection(f.Section)
-			if sec == "expense" {
+			switch sec {
+			case "expense":
 				expenseBase += base
 				expenseGst += gst
 				expenseTotal += total
-			} else {
+			case "reduction":
+				// additional_reduction / REDUCTION: exclude from NET FEE (income − expense)
+			default:
 				incomeBase += base
 				incomeGst += gst
 				incomeTotal += total
@@ -239,26 +128,13 @@ func RunEntryCalculation(
 		}
 	}
 
-	if formType == "both" {
+	if formType == util.FormTypeBoth {
 		totalBase = incomeBase - expenseBase
 		totalGst = incomeGst - expenseGst
 		totalAmount = incomeTotal - expenseTotal
 	}
 
-	var bas basMapping
-	switch formType {
-	case "income":
-		bas = basMapping{GstOnSales1A: totalGst, TotalSalesG1: totalAmount}
-	case "expense":
-		bas = basMapping{GstCredit1B: totalGst, ExpensesG11: totalBase}
-	default:
-		bas = basMapping{
-			GstOnSales1A: round2(incomeGst),
-			GstCredit1B:  round2(expenseGst),
-			TotalSalesG1: round2(incomeTotal),
-			ExpensesG11:  round2(expenseBase),
-		}
-	}
+	bas := buildBASMapping(formType, totalBase, totalGst, totalAmount, incomeBase, incomeGst, incomeTotal, expenseBase, expenseGst, expenseTotal)
 
 	out := calculationsOutput{
 		FieldTotals:     fieldTotals,
@@ -269,207 +145,15 @@ func RunEntryCalculation(
 		NetReceivable:   0,
 		BasMapping:      bas,
 	}
-	if formType == "expense" {
+	if formType == util.FormTypeExpense {
 		out.NetPayable = round2(totalAmount)
 	}
-	if formType == "income" {
+	if formType == util.FormTypeIncome {
 		out.NetReceivable = round2(totalAmount)
 	}
-	if formType == "income" || formType == "both" {
+	if formType == util.FormTypeIncome || formType == util.FormTypeBoth {
 		nf := round2(totalBase)
 		out.NetFee = &nf
-	}
-
-	// Determine calculation method: net (commission) vs gross (service fee)
-	hasIncome := formType == "income" || formType == "both"
-	isNetMethod := false
-	isGrossMethod := false
-
-	// First check form's calculation method (case-insensitive)
-	calcMethodLower := strings.ToLower(formCalculationMethod)
-	switch calcMethodLower {
-	case "net":
-		isNetMethod = true
-	case "gross":
-		isGrossMethod = true
-	}
-
-	// Then check deductions to override or confirm
-	if deductions != nil {
-		if deductions.CommissionPercent != nil && *deductions.CommissionPercent > 0 {
-			isNetMethod = true
-			isGrossMethod = false // Net method takes precedence
-		}
-		if deductions.ServiceFacilityFeePercent != nil && *deductions.ServiceFacilityFeePercent > 0 {
-			if !isNetMethod { // Only set gross if not already net method
-				isGrossMethod = true
-			}
-		}
-	}
-
-	// If no explicit method in deductions or form, check form defaults
-	// Default to gross method if service fee percent is set, otherwise default to gross for income forms
-	if !isNetMethod && !isGrossMethod {
-		if formServiceFeePct != nil && *formServiceFeePct > 0 {
-			isGrossMethod = true
-		} else if hasIncome {
-			// Default to gross method for income forms if no explicit method is set
-			isGrossMethod = true
-		}
-	}
-
-	// Gross method calculations (service fee based) - ONLY populate gross fields
-	if hasIncome && isGrossMethod && !isNetMethod {
-		pct := defaultServiceFeePct
-		if deductions != nil && deductions.ServiceFacilityFeePercent != nil && *deductions.ServiceFacilityFeePercent > 0 {
-			pct = *deductions.ServiceFacilityFeePercent
-		} else if formServiceFeePct != nil && *formServiceFeePct > 0 {
-			pct = *formServiceFeePct
-		}
-		if pct > 0 {
-			netFee := out.TotalBaseAmount
-			serviceBase := netFee * (pct / 100.0)
-			if deductions != nil && deductions.ServiceFeeOverride != nil {
-				serviceBase = *deductions.ServiceFeeOverride
-			}
-			serviceBase = round2(serviceBase)
-			gstOnSvc := round2(serviceBase * 0.1)
-			totalSvc := round2(serviceBase + gstOnSvc)
-			out.ServiceFeeBase = &serviceBase
-			out.GstOnServiceFee = &gstOnSvc
-			out.TotalServiceFee = &totalSvc
-
-			// Additional Reductions: expense-section fields only (never income). Only the GST portion is shown and applied.
-			// When entryPaymentResponsibility is set in deductions, use it for all expense fields (so e.g. Lab Fee shows when entry is "Pay by clinic").
-			var totalRedGst, totalReimb float64
-			var redBreak, reimbBreak []fieldCalc
-			entryPayResp := ""
-			if deductions != nil && deductions.EntryPaymentResponsibility != nil {
-				entryPayResp = strings.ToLower(*deductions.EntryPaymentResponsibility)
-			}
-			for _, f := range fields {
-				sec := getSection(f.Section)
-				if sec != "expense" {
-					continue // only expenses, never income
-				}
-				var ft *fieldCalc
-				for i := range fieldTotals {
-					if fieldTotals[i].FieldID == f.ID {
-						ft = &fieldTotals[i]
-						break
-					}
-				}
-				if ft == nil {
-					continue
-				}
-				payResp := entryPayResp
-				if payResp == "" {
-					payResp = strings.ToLower(f.PaymentResp)
-				}
-				if payResp == "" {
-					payResp = "owner"
-				}
-				if payResp == "clinic" {
-					totalRedGst += ft.GstAmount
-					redBreak = append(redBreak, *ft)
-				} else {
-					totalReimb += ft.TotalAmount
-					reimbBreak = append(reimbBreak, *ft)
-				}
-			}
-			totalRedGst = round2(totalRedGst)
-			totalReimb = round2(totalReimb)
-			out.TotalReimbursements = &totalReimb
-			out.ReductionBreakdown = redBreak
-			out.ReimbursementBreakdown = reimbBreak
-
-			// Outwork charge: consolidate clinic-paid expense base into single charge at form rate
-			outworkRate := 0.0
-			if formOutworkEnabled && formOutworkRatePercent != nil && *formOutworkRatePercent > 0 {
-				outworkRate = *formOutworkRatePercent
-			}
-			var effectiveReductions float64
-			if outworkRate > 0 {
-				var totalOutworkCosts float64
-				for _, r := range redBreak {
-					totalOutworkCosts += r.BaseAmount
-				}
-				outworkChargeBase := round2(totalOutworkCosts * (outworkRate / 100.0))
-				outworkChargeGst := round2(outworkChargeBase * 0.1)
-				outworkChargeTotal := round2(outworkChargeBase + outworkChargeGst)
-				out.OutworkChargeBase = &outworkChargeBase
-				out.OutworkChargeGst = &outworkChargeGst
-				out.OutworkChargeTotal = &outworkChargeTotal
-				effectiveReductions = outworkChargeTotal
-			} else {
-				effectiveReductions = totalRedGst
-			}
-			out.TotalReductions = &effectiveReductions
-
-			sub := round2(netFee - serviceBase)
-			rem := round2(netFee - totalSvc + totalReimb - effectiveReductions)
-			out.SubtotalAfterDeductions = &sub
-			out.RemittedAmount = &rem
-		}
-	}
-
-	// Net method calculations (commission based - for independent contractors) - ONLY populate net fields
-	// commission = net fee * commissionPercent
-	// GST on Commission = commission * 10%
-	// Commission Component = commission / 1.12 (when super holding enabled)
-	// Super Component = commissionComponent * superComponentPercent/100 (when super holding enabled)
-	// Total for Reconciliation = superComponent + commissionComponent (when super holding enabled)
-	// Total Payment Received = Commission + GST on Commission
-	// Calculate commission if form is net method, even if CommissionPercent is 0 (will result in 0 commission)
-	if hasIncome && isNetMethod && !isGrossMethod {
-		commissionPercent := 0.0
-		if deductions != nil && deductions.CommissionPercent != nil {
-			commissionPercent = *deductions.CommissionPercent
-		}
-		netFee := out.TotalBaseAmount
-		if out.NetFee != nil {
-			netFee = *out.NetFee
-		}
-		commission := round2(netFee * (commissionPercent / 100.0))
-		out.Commission = &commission
-
-		// Check if super holding is enabled
-		superHoldingEnabled := false
-		superComponentPercent := 12.0 // default 12%
-		if deductions != nil {
-			if deductions.SuperHoldingEnabled != nil {
-				superHoldingEnabled = *deductions.SuperHoldingEnabled
-			}
-			if deductions.SuperComponentPercent != nil && *deductions.SuperComponentPercent > 0 {
-				superComponentPercent = *deductions.SuperComponentPercent
-			}
-		}
-
-		var commissionForGst float64
-		if superHoldingEnabled {
-			// Commission Component = commission / (1 + superComponentPercent/100)
-			superMultiplier := 1.0 + (superComponentPercent / 100.0)
-			commissionComponent := round2(commission / superMultiplier)
-			out.CommissionComponent = &commissionComponent
-			// Super Component = commissionComponent * superComponentPercent/100
-			superComponent := round2(commissionComponent * (superComponentPercent / 100.0))
-			out.SuperComponent = &superComponent
-			// Total for Reconciliation = superComponent + commissionComponent
-			totalForReconciliation := round2(superComponent + commissionComponent)
-			out.TotalForReconciliation = &totalForReconciliation
-			commissionForGst = commissionComponent
-		} else {
-			commissionForGst = commission
-		}
-
-		// GST on Commission = commissionForGst * 10%
-		gstOnCommission := round2(commissionForGst * 0.1)
-		out.GstOnCommission = &gstOnCommission
-
-		// Total Payment Received = Commission + GST on Commission
-		// When super holding: Total Payment Received = Commission Component + GST on Commission
-		totalPaymentReceived := round2(commissionForGst + gstOnCommission)
-		out.TotalPaymentReceived = &totalPaymentReceived
 	}
 
 	return json.Marshal(out)

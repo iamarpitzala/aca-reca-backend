@@ -12,9 +12,10 @@ func RegisterClinicRoutes(e *gin.RouterGroup, clinicHandler *httpHandler.ClinicH
 	clinic.Use(middleware.AuthMiddleware(tokenService))
 
 	clinic.POST("", clinicHandler.CreateClinic)
-	// More specific routes first so /:id/aoc is matched before /:id
+	// More specific routes first so /:id/aoc and /:id/coa are matched before /:id
 	clinic.GET("/:id/aoc", clinicHandler.ListClinicAOCs)
 	clinic.POST("/:id/aoc", clinicHandler.AddClinicAOC)
+	clinic.POST("/:id/coa", clinicHandler.CreateCOAForClinic)
 	clinic.DELETE("/:id/aoc/:associationId", clinicHandler.RemoveClinicAOC)
 	clinic.GET("/:id", clinicHandler.GetClinic)
 	clinic.PUT("/:id", clinicHandler.UpdateClinic)

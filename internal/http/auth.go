@@ -1,11 +1,10 @@
 package http
 
 import (
-	"encoding/base64"
-	"encoding/json"
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -15,17 +14,14 @@ import (
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
-// contains checks if a string contains a substring (case-insensitive)
-func contains(s, substr string) bool {
-	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
-}
-
+// AuthHandler handles auth HTTP endpoints (register, login, refresh, logout, OAuth).
 type AuthHandler struct {
-	authUC      *usecase.AuthService
+	authUC       *usecase.AuthService
 	oauthService *service.OAuthService
 	frontendURL  string
 }
 
+// NewAuthHandler returns a new AuthHandler.
 func NewAuthHandler(authUC *usecase.AuthService, oauthService *service.OAuthService, frontendURL string) *AuthHandler {
 	return &AuthHandler{
 		authUC:       authUC,
@@ -34,293 +30,175 @@ func NewAuthHandler(authUC *usecase.AuthService, oauthService *service.OAuthServ
 	}
 }
 
-// Register handles user registration
-// POST /api/v1/auth/register
-// @Summary Register a new user
-// @Description Register a new user with email and password
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param register_request body domain.RegisterRequest true "Register request"
-// @Success 201 {object} domain.AuthResponse
-// @Failure 400 {object} domain.H
-// @Failure 500 {object} domain.H
-// @Router /auth/register [post]
+// refreshTokenRequest is the body for POST /auth/refresh.
+type refreshTokenRequest struct {
+	RefreshToken string `json:"refreshToken" binding:"required"`
+}
+
+// Register handles POST /auth/register.
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req domain.RegisterRequest
 	if err := utils.BindAndValidate(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	response, err := h.authUC.Register(c.Request.Context(), &req)
+	resp, err := h.authUC.Register(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusOK, resp)
 }
 
-// Login handles user login
-// POST /api/v1/auth/login
-// @Summary Login a user
-// @Description Login a user with email and password
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param login_request body domain.LoginRequest true "Login request"
-// @Success 200 {object} domain.AuthResponse
-// @Failure 400 {object} domain.H
-// @Failure 500 {object} domain.H
-// @Router /auth/login [post]
+// Login handles POST /auth/login.
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req domain.LoginRequest
-
 	if err := utils.BindAndValidate(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	response, err := h.authUC.Login(c.Request.Context(), &req)
+	resp, err := h.authUC.Login(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, resp)
 }
 
-// RefreshToken handles token refresh
-// POST /api/v1/auth/refresh
-// @Summary Refresh a token
-// @Description Refresh a token with a refresh token
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param refreshToken body string true "Refresh token"
-// @Success 200 {object} domain.AuthResponse
-// @Failure 400 {object} domain.H
-// @Failure 500 {object} domain.H
-// @Router /auth/refresh [post]
+// RefreshToken handles POST /auth/refresh.
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	var req struct {
-		RefreshToken string `json:"refreshToken" validate:"required"`
-	}
-
-	if err := utils.BindAndValidate(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req refreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrRefreshTokenRequired})
 		return
 	}
-
-	tokenPair, err := h.authUC.RefreshToken(c.Request.Context(), req.RefreshToken)
+	resp, err := h.authUC.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusOK, tokenPair)
+	c.JSON(http.StatusOK, resp)
 }
 
-// Logout handles user logout
-// POST /api/v1/auth/logout
-// @Summary Logout a user
-// @Description Logout a user with a session ID
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param sessionId path string true "Session ID"
-// @Success 200 {object} domain.H
-// @Failure 400 {object} domain.H
-// @Failure 500 {object} domain.H
-// @Router /auth/logout/{sessionId} [post]
+// Logout handles POST /auth/logout/:sessionId.
 func (h *AuthHandler) Logout(c *gin.Context) {
-	sessionID := c.Param("sessionId")
-	sessionUUID, err := uuid.Parse(sessionID)
+	sessionIDStr := c.Param("sessionId")
+	sessionID, err := uuid.Parse(sessionIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidSessionID})
 		return
 	}
-
-	if err := h.authUC.Logout(c.Request.Context(), sessionUUID); err != nil {
+	if err := h.authUC.Logout(c.Request.Context(), sessionID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "logged out successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": utils.MsgLoggedOutSuccessfully})
 }
 
-// InitiateOAuth initiates OAuth flow
-// GET /api/v1/auth/oauth/:provider
-// @Summary Initiate OAuth flow
-// @Description Initiate OAuth flow with a provider
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param provider query string true "Provider"
-// @Param state query string true "State"
-// @Success 307 {string} string "Redirect to OAuth provider"
-// @Failure 400 {object} domain.H
-// @Failure 500 {object} domain.H
-// @Router /auth/oauth [get]
+// InitiateOAuth handles GET /auth/oauth/:provider - redirects to provider's authorization URL.
 func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
 	provider := c.Param("provider")
-
-	// Generate state token for CSRF protection
-	state := uuid.New().String()
-
-	// Store state in cookie; SameSite=Lax so cookie is sent when Google redirects back
-	secure := c.Request.URL.Scheme == "https" || c.Request.TLS != nil
-	cookie := &http.Cookie{
-		Name:     "oauth_state",
-		Value:    state,
-		Path:     "/",
-		MaxAge:   600,
-		HttpOnly: true,
-		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
+	if provider == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrProviderRequired})
+		return
 	}
-	http.SetCookie(c.Writer, cookie)
-
+	stateBytes := make([]byte, 16)
+	if _, err := rand.Read(stateBytes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": utils.ErrFailedToGenerateState})
+		return
+	}
+	state := hex.EncodeToString(stateBytes)
 	authURL, err := h.oauthService.GetAuthURL(provider, state)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-			"hint":  "Ensure OAuth provider is configured with CLIENT_ID and CLIENT_SECRET",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.Redirect(http.StatusTemporaryRedirect, authURL)
+	c.Redirect(http.StatusFound, authURL)
 }
 
-// OAuthCallback handles OAuth callback
-// GET /api/v1/auth/oauth/:provider/callback
-// @Summary OAuth callback
-// @Description OAuth callback with a provider
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param provider path string true "Provider"
-// @Success 200 {object} domain.AuthResponse
-// @Failure 400 {object} domain.H
-// @Failure 500 {object} domain.H
-// @Router /auth/oauth/{provider}/callback [get]
+// OAuthCallback handles GET /auth/oauth/:provider/callback - exchanges code for tokens and redirects to frontend.
 func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	provider := c.Param("provider")
-
-	// Verify state
-	stateCookie, err := c.Cookie("oauth_state")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing state cookie"})
+	if provider == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrProviderRequired})
 		return
 	}
-
-	state := c.Query("state")
-	if state != stateCookie {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid state parameter"})
-		return
-	}
-
-	code := c.Query("code")
+	code := c.Query(utils.OAuthParamCode)
 	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing authorization code"})
+		c.Redirect(http.StatusTemporaryRedirect, h.frontendURL+"?"+utils.OAuthParamError+"="+utils.OAuthErrorMissingCode)
 		return
 	}
-
-	// Exchange code for token
-	token, err := h.oauthService.ExchangeCode(c.Request.Context(), provider, code)
+	ctx := c.Request.Context()
+	token, err := h.oauthService.ExchangeCode(ctx, provider, code)
 	if err != nil {
-		// Provide helpful error message for redirect_uri_mismatch
-		errorMsg := err.Error()
-		if contains(errorMsg, "redirect_uri_mismatch") {
-			redirectURI, _ := h.oauthService.GetRedirectURI(provider)
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":                   "OAuth redirect URI mismatch",
-				"details":                 errorMsg,
-				"configured_redirect_uri": redirectURI,
-				"hint": "Ensure this exact redirect URI is added in your OAuth provider's console. " +
-					"For Google: https://console.cloud.google.com/apis/credentials",
-			})
-			return
-		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": errorMsg})
+		c.Redirect(http.StatusTemporaryRedirect, h.frontendURL+"?"+utils.OAuthParamError+"="+utils.OAuthErrorExchangeFailed)
 		return
 	}
-
-	// Get user info from provider
-	userInfo, err := h.oauthService.GetUserInfo(c.Request.Context(), provider, token)
+	userInfo, err := h.oauthService.GetUserInfo(ctx, provider, token)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user info from provider", "details": err.Error()})
+		c.Redirect(http.StatusTemporaryRedirect, h.frontendURL+"?"+utils.OAuthParamError+"="+utils.OAuthErrorUserInfoFailed)
 		return
 	}
-
-	// Find or create user
-	existingUser, err := h.oauthService.FindUserByProvider(c.Request.Context(), provider, userInfo.ID)
+	user, err := h.oauthService.FindUserByProvider(ctx, provider, userInfo.ID)
 	if err != nil {
-		// User doesn't exist, create new user
-		newUser, err := h.oauthService.CreateUserFromOAuth(c.Request.Context(), userInfo)
+		c.Redirect(http.StatusTemporaryRedirect, h.frontendURL+"?"+utils.OAuthParamError+"="+utils.OAuthErrorLookupFailed)
+		return
+	}
+	if user == nil {
+		user, err = h.oauthService.CreateUserFromOAuth(ctx, userInfo)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user", "details": err.Error()})
+			c.Redirect(http.StatusTemporaryRedirect, h.frontendURL+"?"+utils.OAuthParamError+"="+utils.OAuthErrorCreateUserFailed)
 			return
 		}
-
-		// Link OAuth provider
-		if err := h.oauthService.LinkProvider(c.Request.Context(), newUser.ID, provider, userInfo.ID, userInfo.Email, token); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to link provider", "details": err.Error()})
-			return
+		if err := h.authUC.EnsureDefaultClinicForUser(ctx, user.ID, user.FirstName); err != nil {
+			// non-fatal: user exists
 		}
-
-		// Generate tokens and create session
-		response, err := h.authUC.OAuthLogin(c.Request.Context(), newUser.ID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "details": err.Error()})
-			return
+	} else {
+		if err := h.oauthService.LinkProvider(ctx, user.ID, provider, userInfo.ID, userInfo.Email, token); err != nil {
+			// optional: link for future logins
 		}
-
-		h.redirectToFrontendWithTokens(c, response)
-		return
 	}
-
-	// User exists, link provider if not already linked
-	if err := h.oauthService.LinkProvider(c.Request.Context(), existingUser.ID, provider, userInfo.ID, userInfo.Email, token); err != nil {
-		// Provider might already be linked, log but continue
-		// In production, you might want to log this error
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to link provider", "details": err.Error()})
-		return
-	}
-
-	// Generate tokens and create session
-	response, err := h.authUC.OAuthLogin(c.Request.Context(), existingUser.ID)
+	authResp, err := h.authUC.OAuthLogin(ctx, user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "details": err.Error()})
+		c.Redirect(http.StatusTemporaryRedirect, h.frontendURL+"?"+utils.OAuthParamError+"="+utils.OAuthErrorLoginFailed)
 		return
 	}
-
-	h.redirectToFrontendWithTokens(c, response)
+	q := url.Values{}
+	q.Set(utils.OAuthParamAccessToken, authResp.AccessToken)
+	q.Set(utils.OAuthParamRefreshToken, authResp.RefreshToken)
+	q.Set(utils.OAuthParamTokenType, authResp.TokenType)
+	redirectURL := h.frontendURL + "?" + q.Encode()
+	c.Redirect(http.StatusFound, redirectURL)
 }
 
-// redirectToFrontendWithTokens redirects the browser to the frontend callback with tokens in the URL hash (not logged).
-func (h *AuthHandler) redirectToFrontendWithTokens(c *gin.Context, response *domain.AuthResponse) {
-	if h.frontendURL == "" {
-		c.JSON(http.StatusOK, response)
-		return
+// GetAuthUserID extracts the authenticated user ID from the request context (set by auth middleware).
+// If the user is not authenticated or the context value is invalid, it responds with 401 and returns (uuid.Nil, false).
+func GetAuthUserID(c *gin.Context) (uuid.UUID, bool) {
+	v, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUnauthorized})
+		return uuid.Nil, false
 	}
-	redirectURL, err := url.Parse(strings.TrimSuffix(h.frontendURL, "/") + "/auth/callback")
-	if err != nil {
-		c.JSON(http.StatusOK, response)
-		return
+	userID, ok := v.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserContext})
+		return uuid.Nil, false
 	}
-	q := redirectURL.Query()
-	q.Set("access_token", response.AccessToken)
-	q.Set("refresh_token", response.RefreshToken)
-	if response.User != nil {
-		userJSON, _ := json.Marshal(response.User)
-		q.Set("user", base64.URLEncoding.EncodeToString(userJSON))
+	return userID, true
+}
+
+// RequireClinicAccess verifies the authenticated user has access to the given clinic.
+// If the user is not authenticated or does not have access, it responds with 401/403 and returns false.
+// Callers should return immediately when RequireClinicAccess returns false (response already sent).
+func RequireClinicAccess(c *gin.Context, userClinicUC *usecase.UserClinicService, clinicID uuid.UUID) bool {
+	userID, ok := GetAuthUserID(c)
+	if !ok {
+		return false
 	}
-	redirectURL.RawQuery = q.Encode()
-	redirectURL.Fragment = redirectURL.RawQuery
-	redirectURL.RawQuery = ""
-	c.Redirect(http.StatusTemporaryRedirect, redirectURL.String())
+	hasAccess, err := userClinicUC.UserHasAccessToClinic(c.Request.Context(), userID, clinicID)
+	if err != nil || !hasAccess {
+		c.JSON(http.StatusForbidden, gin.H{"error": utils.ErrAccessDenied})
+		return false
+	}
+	return true
 }

@@ -108,7 +108,7 @@ func (h *AOCHandler) GetAOCByAccountTaxID(c *gin.Context) {
 	accountTaxId := c.Param("id")
 	accountTaxIdInt, ok := util.ToInt(accountTaxId)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account tax id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidAccountTaxID})
 		return
 	}
 	response, err := h.aocUC.GetAOCByAccountTaxID(c.Request.Context(), accountTaxIdInt)
@@ -139,18 +139,18 @@ var reservedPathSegments = map[string]bool{
 func (h *AOCHandler) GetAOCByID(c *gin.Context) {
 	id := c.Param("id")
 	if reservedPathSegments[id] {
-		c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrAOCNotFound})
 		return
 	}
 	idUUID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidID})
 		return
 	}
 	response, err := h.aocUC.GetAOCByID(c.Request.Context(), idUUID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrAOCNotFound})
 			return
 		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -176,7 +176,7 @@ func (h *AOCHandler) GetAOCByCode(c *gin.Context) {
 	response, err := h.aocUC.GetAOCByCode(c.Request.Context(), code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrAOCNotFound})
 			return
 		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -201,7 +201,7 @@ func (h *AOCHandler) GetAOCByAccountTypeID(c *gin.Context) {
 	accountTypeId := c.Param("id")
 	accountTypeIdInt, ok := util.ToInt(accountTypeId)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account type id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidAccountTypeID})
 		return
 	}
 	sortBy := c.DefaultQuery("sort", "code")
@@ -215,7 +215,7 @@ func (h *AOCHandler) GetAOCByAccountTypeID(c *gin.Context) {
 	response, err := h.aocUC.GetAOCByAccountTypeID(c.Request.Context(), accountTypeIdInt, sortBy, sortOrder)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "aoc not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrAOCNotFound})
 			return
 		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -267,7 +267,7 @@ func (h *AOCHandler) UpdateAOC(c *gin.Context) {
 	id := c.Param("id")
 	idUUID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidID})
 		return
 	}
 	var aoc domain.AOCRequest
@@ -300,18 +300,18 @@ func (h *AOCHandler) UpdateAOC(c *gin.Context) {
 func (h *AOCHandler) DeleteAOC(c *gin.Context) {
 	var req domain.BulkDeleteAOCRequest
 	if err := util.BindAndValidate(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: ids required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrIDsRequired})
 		return
 	}
 	if len(req.IDs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ids must not be empty"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrIDsMustNotBeEmpty})
 		return
 	}
 	ids := make([]uuid.UUID, 0, len(req.IDs))
 	for _, s := range req.IDs {
 		id, err := uuid.Parse(s)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + s})
+			c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidIDFormat + s})
 			return
 		}
 		ids = append(ids, id)
@@ -332,14 +332,14 @@ func (h *AOCHandler) BulkUpdateTax(c *gin.Context) {
 		return
 	}
 	if len(req.IDs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ids must not be empty"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrIDsMustNotBeEmpty})
 		return
 	}
 	ids := make([]uuid.UUID, 0, len(req.IDs))
 	for _, s := range req.IDs {
 		id, err := uuid.Parse(s)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + s})
+			c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidIDFormat + s})
 			return
 		}
 		ids = append(ids, id)
@@ -355,18 +355,18 @@ func (h *AOCHandler) BulkUpdateTax(c *gin.Context) {
 func (h *AOCHandler) ArchiveAOC(c *gin.Context) {
 	var req domain.BulkArchiveAOCRequest
 	if err := util.BindAndValidate(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: ids required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrIDsRequired})
 		return
 	}
 	if len(req.IDs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ids must not be empty"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrIDsMustNotBeEmpty})
 		return
 	}
 	ids := make([]uuid.UUID, 0, len(req.IDs))
 	for _, s := range req.IDs {
 		id, err := uuid.Parse(s)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + s})
+			c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidIDFormat + s})
 			return
 		}
 		ids = append(ids, id)

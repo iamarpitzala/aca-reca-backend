@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 // Australian states/territories
@@ -23,15 +24,15 @@ var ValidStates = []string{StateNSW, StateVIC, StateQLD, StateSA, StateWA, State
 type ShareType string
 
 const (
-	ShareTypePercentage ShareType = "PERCENTAGE"
-	ShareTypeFixed      ShareType = "FIXED"
+	ShareTypePercentage ShareType = ShareType(util.ShareTypePercentage)
+	ShareTypeFixed      ShareType = ShareType(util.ShareTypeFixed)
 )
 
 type MethodType string
 
 const (
-	MethodTypeNet   MethodType = "NET"
-	MethodTypeGross MethodType = "GROSS"
+	MethodTypeNet   MethodType = MethodType(util.MethodTypeNet)
+	MethodTypeGross MethodType = MethodType(util.MethodTypeGross)
 )
 
 type ClinicRequest struct {

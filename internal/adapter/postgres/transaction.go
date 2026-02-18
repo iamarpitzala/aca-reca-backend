@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
-	"fmt"
+	"database/sql"
+	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
@@ -14,122 +16,161 @@ type transactionRepo struct {
 	db *sqlx.DB
 }
 
-// NewTransactionRepository returns a Postgres implementation of TransactionRepository.
 func NewTransactionRepository(db *sqlx.DB) port.TransactionRepository {
 	return &transactionRepo{db: db}
 }
 
-func (r *transactionRepo) Create(ctx context.Context, t *domain.Transaction) error {
-	query := `INSERT INTO tbl_transaction (
-		id, clinic_id, source_entry_id, source_form_id, field_id, coa_id, account_code, account_name, tax_category,
-		transaction_date, reference, details, gross_amount, gst_amount, net_amount, status, created_at, updated_at
-	) VALUES (
-		:id, :clinic_id, :source_entry_id, :source_form_id, :field_id, :coa_id, :account_code, :account_name, :tax_category,
-		:transaction_date, :reference, :details, :gross_amount, :gst_amount, :net_amount, :status, :created_at, :updated_at
-	)`
-	_, err := r.db.NamedExecContext(ctx, query, t)
+func (r *transactionRepo) Create(ctx context.Context, txn *domain.Transaction) error {
+	q := `
+		INSERT INTO tbl_transaction (
+			id, clinic_id, source_entry_id, reference_number,
+			description, transaction_date, status, created_by,
+			posted_at, voided_at, void_reason,
+			created_at, updated_at
+		) VALUES (
+			:id, :clinic_id, :source_entry_id, :reference_number,
+			:description, :transaction_date, :status, :created_by,
+			:posted_at, :voided_at, :void_reason,
+			:created_at, :updated_at
+		)
+	`
+	_, err := r.db.NamedExecContext(ctx, q, txn)
 	return err
 }
 
-func (r *transactionRepo) ListByClinicID(ctx context.Context, clinicID uuid.UUID, f *domain.ListTransactionsFilters) ([]domain.Transaction, int, error) {
-	base := `FROM tbl_transaction WHERE clinic_id = $1`
-	args := []interface{}{clinicID}
-	argNum := 2
+func (r *transactionRepo) CreateLedgerLines(ctx context.Context, lines []domain.TransactionLedger) error {
+	if len(lines) == 0 {
+		return nil
+	}
+	q := `
+		INSERT INTO tbl_transaction_ledger (
+			id, transaction_id, coa_id, entry_type,
+			amount, gst_amount, net_amount,
+			transaction_date, description, created_at
+		) VALUES (
+			:id, :transaction_id, :coa_id, :entry_type,
+			:amount, :gst_amount, :net_amount,
+			:transaction_date, :description, :created_at
+		)
+	`
+	_, err := r.db.NamedExecContext(ctx, q, lines)
+	return err
+}
 
-	if f.Search != "" {
-		base += fmt.Sprintf(" AND (account_name ILIKE $%d OR reference ILIKE $%d OR details ILIKE $%d)", argNum, argNum, argNum)
-		args = append(args, "%"+f.Search+"%")
-		argNum++
-	}
-	if f.TaxCategory != "" {
-		base += fmt.Sprintf(" AND tax_category = $%d", argNum)
-		args = append(args, f.TaxCategory)
-		argNum++
-	}
-	if f.Status != "" {
-		base += fmt.Sprintf(" AND status = $%d", argNum)
-		args = append(args, f.Status)
-		argNum++
-	}
-	if f.DateFrom != "" {
-		base += fmt.Sprintf(" AND transaction_date >= $%d", argNum)
-		args = append(args, f.DateFrom)
-		argNum++
-	}
-	if f.DateTo != "" {
-		base += fmt.Sprintf(" AND transaction_date <= $%d", argNum)
-		args = append(args, f.DateTo)
-		argNum++
-	}
-
-	sortCol := "transaction_date"
-	if f.SortField != "" {
-		switch f.SortField {
-		case "date":
-			sortCol = "transaction_date"
-		case "account":
-			sortCol = "account_name"
-		case "reference":
-			sortCol = "reference"
-		case "gross":
-			sortCol = "gross_amount"
-		case "gst":
-			sortCol = "gst_amount"
-		case "net":
-			sortCol = "net_amount"
+func (r *transactionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Transaction, error) {
+	q := `
+		SELECT id, clinic_id, source_entry_id, reference_number,
+		       description, transaction_date, status, created_by,
+		       posted_at, voided_at, void_reason,
+		       created_at, updated_at, deleted_at
+		FROM tbl_transaction
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+	var txn domain.Transaction
+	if err := r.db.GetContext(ctx, &txn, q, id); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
 		}
+		return nil, errors.New("failed to get transaction")
 	}
-	sortDir := "DESC"
-	if f.SortDirection == "asc" {
-		sortDir = "ASC"
-	}
-
-	var total int
-	countQuery := "SELECT COUNT(*) " + base
-	if err := r.db.GetContext(ctx, &total, countQuery, args...); err != nil {
-		return nil, 0, err
-	}
-
-	page := f.Page
-	if page < 1 {
-		page = 1
-	}
-	limit := f.Limit
-	if limit < 1 || limit > 100 {
-		limit = 50
-	}
-	offset := (page - 1) * limit
-	args = append(args, limit, offset)
-
-	sel := `SELECT id, clinic_id, source_entry_id, source_form_id, field_id, coa_id, account_code, account_name, tax_category,
-		transaction_date, reference, details, gross_amount, gst_amount, net_amount, status, created_at, updated_at `
-	listQuery := sel + base + " ORDER BY " + sortCol + " " + sortDir + fmt.Sprintf(" LIMIT $%d OFFSET $%d", argNum, argNum+1)
-
-	var list []domain.Transaction
-	if err := r.db.SelectContext(ctx, &list, listQuery, args...); err != nil {
-		return nil, 0, fmt.Errorf("list transactions: %w", err)
-	}
-	if list == nil {
-		list = []domain.Transaction{}
-	}
-	return list, total, nil
+	return &txn, nil
 }
 
-func (r *transactionRepo) ListByEntryID(ctx context.Context, entryID uuid.UUID) ([]domain.Transaction, error) {
-	query := `SELECT id, clinic_id, source_entry_id, source_form_id, field_id, coa_id, account_code, account_name, tax_category,
-		transaction_date, reference, details, gross_amount, gst_amount, net_amount, status, created_at, updated_at
-		FROM tbl_transaction WHERE source_entry_id = $1 ORDER BY transaction_date, account_code`
-	var list []domain.Transaction
-	if err := r.db.SelectContext(ctx, &list, query, entryID); err != nil {
-		return nil, err
+func (r *transactionRepo) GetLedgerByTransactionID(ctx context.Context, transactionID uuid.UUID) ([]domain.TransactionLedger, error) {
+	q := `
+		SELECT id, transaction_id, coa_id, entry_type,
+		       amount, gst_amount, net_amount,
+		       transaction_date, description, created_at
+		FROM tbl_transaction_ledger
+		WHERE transaction_id = $1
+		ORDER BY entry_type, created_at
+	`
+	var lines []domain.TransactionLedger
+	if err := r.db.SelectContext(ctx, &lines, q, transactionID); err != nil {
+		return nil, errors.New("failed to get transaction ledger lines")
 	}
-	if list == nil {
-		list = []domain.Transaction{}
-	}
-	return list, nil
+	return lines, nil
 }
 
-func (r *transactionRepo) DeleteByEntryID(ctx context.Context, entryID uuid.UUID) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM tbl_transaction WHERE source_entry_id = $1`, entryID)
+func (r *transactionRepo) GetByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.Transaction, error) {
+	q := `
+		SELECT id, clinic_id, source_entry_id, reference_number,
+		       description, transaction_date, status, created_by,
+		       posted_at, voided_at, void_reason,
+		       created_at, updated_at, deleted_at
+		FROM tbl_transaction
+		WHERE clinic_id = $1 AND deleted_at IS NULL
+		ORDER BY transaction_date DESC, created_at DESC
+	`
+	var txns []domain.Transaction
+	if err := r.db.SelectContext(ctx, &txns, q, clinicID); err != nil {
+		return nil, errors.New("failed to list transactions for clinic")
+	}
+	return txns, nil
+}
+
+func (r *transactionRepo) Update(ctx context.Context, txn *domain.Transaction) error {
+	q := `
+		UPDATE tbl_transaction SET
+			reference_number = :reference_number,
+			description = :description,
+			transaction_date = :transaction_date,
+			status = :status,
+			posted_at = :posted_at,
+			updated_at = :updated_at
+		WHERE id = :id AND deleted_at IS NULL
+	`
+	res, err := r.db.NamedExecContext(ctx, q, txn)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errors.New("transaction not found")
+	}
+	return nil
+}
+
+func (r *transactionRepo) DeleteLedgerByTransactionID(ctx context.Context, transactionID uuid.UUID) error {
+	_, err := r.db.ExecContext(ctx,
+		`DELETE FROM tbl_transaction_ledger WHERE transaction_id = $1`,
+		transactionID,
+	)
 	return err
+}
+
+func (r *transactionRepo) VoidTransaction(ctx context.Context, id uuid.UUID, reason string) error {
+	now := time.Now()
+	q := `
+		UPDATE tbl_transaction SET
+			status = 'VOIDED',
+			voided_at = $1,
+			void_reason = $2,
+			updated_at = $1
+		WHERE id = $3 AND deleted_at IS NULL AND status != 'VOIDED'
+	`
+	res, err := r.db.ExecContext(ctx, q, now, reason, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errors.New("transaction not found or already voided")
+	}
+	return nil
+}
+
+func (r *transactionRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	q := `
+		UPDATE tbl_transaction SET
+			deleted_at = CURRENT_TIMESTAMP,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+	res, err := r.db.ExecContext(ctx, q, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errors.New("transaction not found")
+	}
+	return nil
 }

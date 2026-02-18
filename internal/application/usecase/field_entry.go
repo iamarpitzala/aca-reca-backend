@@ -1430,7 +1430,7 @@ func (s *FieldEntryService) calculateAndStoreGrossDetails(ctx context.Context, c
 	if len(deductionsJSON) > 0 {
 		var deductionsMap map[string]interface{}
 		if err := json.Unmarshal(deductionsJSON, &deductionsMap); err == nil {
-			if val, ok := deductionsMap["entryPaymentResponsibility"].(string); ok && val != "" {
+			if val, ok := deductionsMap["paymentResponsibility"].(string); ok && val != "" {
 				entryPaymentResp = &val
 			}
 		}

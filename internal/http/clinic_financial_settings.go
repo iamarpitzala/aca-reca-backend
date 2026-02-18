@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type ClinicFinancialSettingsHandler struct {
@@ -25,16 +26,16 @@ func (h *ClinicFinancialSettingsHandler) GetFinancialSettings(c *gin.Context) {
 	clinicIDStr := c.Param("id")
 	clinicID, err := uuid.Parse(clinicIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
 		return
 	}
-	
+
 	settings, err := h.settingsUC.GetByClinicID(c.Request.Context(), clinicID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, settings)
 }
 
@@ -44,16 +45,16 @@ func (h *ClinicFinancialSettingsHandler) CreateOrUpdateFinancialSettings(c *gin.
 	clinicIDStr := c.Param("id")
 	clinicID, err := uuid.Parse(clinicIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
 		return
 	}
-	
+
 	var req domain.ClinicFinancialSettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	settings, err := h.settingsUC.CreateOrUpdate(c.Request.Context(), clinicID, &req)
 	if err != nil {
 		if err == usecase.ErrFinancialSettingsLocked {
@@ -63,6 +64,6 @@ func (h *ClinicFinancialSettingsHandler) CreateOrUpdateFinancialSettings(c *gin.
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, settings)
 }

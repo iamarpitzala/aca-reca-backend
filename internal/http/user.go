@@ -34,12 +34,12 @@ func NewUserHandler(authUC *usecase.AuthService) *UserHandler {
 func (h *UserHandler) GetMe(c *gin.Context) {
 	userIDVal, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUserNotAuthenticated})
 		return
 	}
 	userUUID, ok := userIDVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserContext})
 		return
 	}
 
@@ -68,7 +68,7 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 	userID := c.Param("userId")
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidUserID})
 		return
 	}
 
@@ -98,7 +98,7 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 	userID := c.Param("userId")
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidUserID})
 		return
 	}
 
@@ -134,7 +134,7 @@ func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 	userID := c.Param("userId")
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidUserID})
 		return
 	}
 
@@ -164,14 +164,14 @@ func (h *UserHandler) RevokeSession(c *gin.Context) {
 	userID := c.Param("userId")
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidUserID})
 		return
 	}
 
 	sessionIDStr := c.Param("sessionId")
 	sessionID, err := uuid.Parse(sessionIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidSessionID})
 		return
 	}
 
@@ -191,7 +191,7 @@ func (h *UserHandler) RevokeSession(c *gin.Context) {
 	}
 
 	if !found {
-		c.JSON(http.StatusForbidden, gin.H{"error": "session not found or does not belong to user"})
+		c.JSON(http.StatusForbidden, gin.H{"error": utils.ErrSessionNotFound})
 		return
 	}
 

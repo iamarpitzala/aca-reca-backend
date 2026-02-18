@@ -10,12 +10,13 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 	"github.com/iamarpitzala/aca-reca-backend/util"
+	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type ClinicHandler struct {
-	clinicUC      *usecase.ClinicService
-	userClinicUC  *usecase.UserClinicService
-	clinicCOAUC   *usecase.ClinicCOAService
+	clinicUC     *usecase.ClinicService
+	userClinicUC *usecase.UserClinicService
+	clinicCOAUC  *usecase.ClinicCOAService
 }
 
 func NewClinicHandler(clinicUC *usecase.ClinicService, userClinicUC *usecase.UserClinicService, clinicCOAUC *usecase.ClinicCOAService) *ClinicHandler {
@@ -63,12 +64,12 @@ func (h *ClinicHandler) CreateClinic(c *gin.Context) {
 	if err != nil {
 		_ = h.clinicUC.DeleteClinic(c.Request.Context(), clinic.ID)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "clinic was created but we could not link you as owner. Please try again.",
+			"error":  utils.ErrClinicCreatedButLinkFailed,
 			"detail": err.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "clinic created successfully", "clinic_id": clinic.ID, "clinic": clinic})
+	c.JSON(http.StatusCreated, gin.H{"message": utils.MsgClinicCreatedSuccessfully, "clinic_id": clinic.ID, "clinic": clinic})
 }
 
 // checkOwnerRequire verifies the authenticated user is the owner of the clinic; if not, responds with 403 and returns false
@@ -79,11 +80,11 @@ func (h *ClinicHandler) checkOwnerRequire(c *gin.Context, clinicID uuid.UUID) bo
 	}
 	role, err := h.userClinicUC.UserRoleInClinic(c.Request.Context(), userID, clinicID)
 	if err != nil || role == "" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: owner access required"})
+		c.JSON(http.StatusForbidden, gin.H{"error": utils.ErrAccessDeniedOwnerRequired})
 		return false
 	}
 	if !strings.EqualFold(role, util.RoleOwner) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: only the clinic owner can perform this action"})
+		c.JSON(http.StatusForbidden, gin.H{"error": utils.ErrAccessDeniedOwnerOnly})
 		return false
 	}
 	return true
@@ -107,7 +108,7 @@ func (h *ClinicHandler) GetClinic(c *gin.Context) {
 	id := c.Param("id")
 	idUUID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
 		return
 	}
 	if !RequireClinicAccess(c, h.userClinicUC, idUUID) {
@@ -144,7 +145,7 @@ func (h *ClinicHandler) UpdateClinic(c *gin.Context) {
 	id := c.Param("id")
 	idUUID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
 		return
 	}
 	if !RequireClinicAccess(c, h.userClinicUC, idUUID) {
@@ -184,7 +185,7 @@ func (h *ClinicHandler) DeleteClinic(c *gin.Context) {
 	id := c.Param("id")
 	idUUID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clinic ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
 		return
 	}
 	if !RequireClinicAccess(c, h.userClinicUC, idUUID) {
@@ -198,7 +199,7 @@ func (h *ClinicHandler) DeleteClinic(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "clinic deleted successfully", "clinic_id": idUUID})
+	c.JSON(http.StatusOK, gin.H{"message": utils.MsgClinicDeletedSuccessfully, "clinic_id": idUUID})
 }
 
 // GetAllClinics retrieves clinics the current user has access to
@@ -226,7 +227,7 @@ func (h *ClinicHandler) GetAllClinics(c *gin.Context) {
 	for _, uc := range userClinics {
 		clinics = append(clinics, uc.Clinic)
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "clinics retrieved successfully", "clinics": clinics})
+	c.JSON(http.StatusOK, gin.H{"message": utils.MsgClinicsRetrievedSuccessfully, "clinics": clinics})
 }
 
 // GetClinicByABNNumber retrieves a clinic by ABN number (requires user to be associated)
@@ -294,7 +295,7 @@ func (h *ClinicHandler) AddClinicAOC(c *gin.Context) {
 	}
 	var req domain.ClinicCOARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: coaId required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrCOAIDRequired})
 		return
 	}
 	resp, err := h.clinicCOAUC.AddClinicAOC(c.Request.Context(), clinicID, req.COAID)
@@ -306,7 +307,7 @@ func (h *ClinicHandler) AddClinicAOC(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "clinic AOC added successfully", "data": resp})
+	c.JSON(http.StatusCreated, gin.H{"message": utils.MsgClinicAOCAddedSuccessfully, "data": resp})
 }
 
 // CreateCOAForClinic creates a new chart-of-accounts entry and assigns it to the clinic.
@@ -323,7 +324,7 @@ func (h *ClinicHandler) CreateCOAForClinic(c *gin.Context) {
 	}
 	var req domain.CreateCOAForClinicRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: code, name, accountTypeId, accountTaxId required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrCOAFieldsRequired})
 		return
 	}
 	resp, err := h.clinicCOAUC.CreateCOAForClinic(c.Request.Context(), clinicID, &req)
@@ -335,7 +336,7 @@ func (h *ClinicHandler) CreateCOAForClinic(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "chart of accounts entry created and assigned to clinic", "data": resp})
+	c.JSON(http.StatusCreated, gin.H{"message": utils.MsgClinicAOCCreatedAndAssigned, "data": resp})
 }
 
 // RemoveClinicAOC removes an AOC association from a clinic
@@ -353,21 +354,21 @@ func (h *ClinicHandler) RemoveClinicAOC(c *gin.Context) {
 	associationIDStr := c.Param("associationId")
 	associationID, err := uuid.Parse(associationIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid association ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidAssociationID})
 		return
 	}
 	existing, err := h.clinicCOAUC.GetClinicAOCByID(c.Request.Context(), associationID)
 	if err != nil || existing == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "clinic AOC association not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrClinicAOCAssociationNotFound})
 		return
 	}
 	if existing.ClinicID != clinicID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "association does not belong to this clinic"})
+		c.JSON(http.StatusForbidden, gin.H{"error": utils.ErrAssociationNotBelongsToClinic})
 		return
 	}
 	if err := h.clinicCOAUC.RemoveClinicAOC(c.Request.Context(), associationID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "clinic AOC removed successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": utils.MsgClinicAOCRemovedSuccessfully})
 }

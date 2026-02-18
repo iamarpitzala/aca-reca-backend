@@ -36,6 +36,15 @@ func NewCustomFormService(
 	}
 }
 
+// normaliseCalculationMethod returns NET or GROSS; defaults to NET if empty or invalid.
+func normaliseCalculationMethod(v string) string {
+	v = strings.TrimSpace(strings.ToUpper(v))
+	if v == util.MethodTypeGross {
+		return util.MethodTypeGross
+	}
+	return util.MethodTypeNet
+}
+
 func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustomFormRequest, userID uuid.UUID) (*domain.CustomFormResponse, error) {
 	clinicID, err := uuid.Parse(req.ClinicID)
 	if err != nil {
@@ -58,7 +67,8 @@ func (s *CustomFormService) Create(ctx context.Context, req *domain.CreateCustom
 	if err != nil {
 		return nil, err
 	}
-	form.CalculationMethod = req.CalculationMethod
+	// Normalise calculation method: default to NET if empty or not NET/GROSS (check removed for now)
+	form.CalculationMethod = normaliseCalculationMethod(req.CalculationMethod)
 	form.FormType = req.FormType
 	form.DefaultPaymentResponsibility = defaultPayment
 	if err := s.repo.Create(ctx, form); err != nil {
@@ -269,7 +279,7 @@ func applyUpdateToForm(form *domain.CustomForm, req *domain.UpdateCustomFormRequ
 		form.DefaultPaymentResponsibility = req.DefaultPaymentResponsibility
 	}
 	if req.CalculationMethod != nil {
-		form.CalculationMethod = *req.CalculationMethod
+		form.CalculationMethod = normaliseCalculationMethod(*req.CalculationMethod)
 	}
 	if req.FormType != nil {
 		form.FormType = *req.FormType

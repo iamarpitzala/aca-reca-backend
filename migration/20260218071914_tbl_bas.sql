@@ -171,11 +171,6 @@ CREATE TRIGGER trg_bas_snapshot_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-ALTER TABLE tbl_custom_form_field
-    DROP COLUMN IF EXISTS gst_type;
-
-ALTER TABLE tbl_custom_form_field
-    ADD COLUMN gst_type VARCHAR(50)
 
 -- +goose StatementEnd
 
@@ -195,12 +190,6 @@ DROP INDEX IF EXISTS idx_bas_snapshot_status;
 DROP INDEX IF EXISTS idx_bas_snapshot_quarter;
 DROP INDEX IF EXISTS idx_bas_snapshot_clinic_period;
 DROP INDEX IF EXISTS idx_bas_snapshot_clinic;
-
-ALTER TABLE tbl_custom_form_field
-    DROP COLUMN IF EXISTS gst_type;
-
-ALTER TABLE tbl_custom_form_field
-    ADD COLUMN gst_type VARCHAR(50)
 
 DROP TABLE IF EXISTS tbl_bas_snapshot_line;
 DROP TABLE IF EXISTS tbl_bas_snapshot;

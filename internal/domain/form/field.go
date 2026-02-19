@@ -2,61 +2,50 @@ package form
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type FieldType string
-
-const (
-	FieldTypeText   FieldType = "TEXT"
-	FieldTypeNumber FieldType = "NUMBER"
-)
-
-type FieldWidth string
-
-const (
-	FieldWidthSmall  FieldWidth = "SMALL"
-	FieldWidthMedium FieldWidth = "MEDIUM"
-	FieldWidthLarge  FieldWidth = "LARGE"
-	FieldWidthFull   FieldWidth = "FULL"
-)
-
 type FieldRequest struct {
-	ID          *string    `json:"id" validate:"omitempty,required"`
-	Name        string     `json:"name" validate:"required,min=3,max=255"`
-	DisplayName string     `json:"displayName" validate:"omitempty,required,min=3,max=255"`
-	Placeholder string     `json:"placeholder" validate:"omitempty,required,min=3,max=255"`
-	HelpText    string     `json:"helpText" validate:"omitempty,required,min=3,max=255"`
-	Width       FieldWidth `json:"width" validate:"omitempty,required,oneof=SMALL MEDIUM LARGE FULL"`
+	ID          *string `json:"id" validate:"omitempty,required"`
+	Name        string  `json:"name" validate:"required,min=3,max=255"`
+	DisplayName string  `json:"displayName" validate:"omitempty,required,min=3,max=255"`
+	Placeholder string  `json:"placeholder" validate:"omitempty,required,min=3,max=255"`
+	HelpText    string  `json:"helpText" validate:"omitempty,required,min=3,max=255"`
 
 	Required        bool             `json:"required" validate:"required"`
 	ValidationRules []ValidationRule `json:"validationRules" validate:"omitempty,required,oneof=REQUIRED MIN MAX PATTERN CUSTOM"`
 
 	Value json.RawMessage `json:"value" validate:"omitempty,required"`
 
-	Type                  FieldType              `json:"type" validate:"required,oneof=TEXT NUMBER"`
-	Section               Section                `json:"section" validate:"required,oneof=INCOME EXPENSE REDUCTION"`
-	AocID                 int                    `json:"aocId" validate:"required,min=1"`
-	IncludeInTotal        bool                   `json:"includeInTotal" validate:"required"`
-	GstConfig             *GstConfigRequest      `json:"gstConfig" validate:"omitempty,required"`
-	PaymentResponsibility *PaymentResponsibility `json:"paymentResponsibility" validate:"required,oneof=OWNER CLINIC"`
-	CreatedAt             time.Time              `json:"createdAt" validate:"required"`
-	UpdatedAt             *time.Time             `json:"updatedAt" validate:"required_with=CreatedAt"`
-	DeletedAt             *time.Time             `json:"deletedAt" validate:"required_with=UpdatedAt"`
+	Section     Section `json:"section" validate:"required,oneof=INCOME EXPENSE"`
+	CoaID       string  `json:"coaId" validate:"required"`
+	TaxConfigID string  `json:"taxConfigId" validate:"required"`
+
+	CreatedAt time.Time  `json:"createdAt" validate:"required"`
+	UpdatedAt *time.Time `json:"updatedAt" validate:"required_with=CreatedAt"`
+	DeletedAt *time.Time `json:"deletedAt" validate:"required_with=UpdatedAt"`
 }
 
 func (f *FieldRequest) Validate() error {
-	if f.Required && f.Value == nil {
-		return fmt.Errorf("value is required")
-	}
+	// If ValidationRules contains REQUIRED, value must be present (not nil or empty).
 	if f.ValidationRules != nil {
 		for _, rule := range f.ValidationRules {
-			if rule == ValidationRuleRequired && f.Value == nil {
-				return fmt.Errorf("value is required")
+			if rule == ValidationRuleRequired {
+				if f.Value == nil || len(f.Value) == 0 {
+					return errors.New("value is required due to REQUIRED validation rule")
+				}
+				// If REQUIRED is found, no need to check f.Required - we already require value.
+				return nil
 			}
+		}
+	}
+	// Otherwise, if the Required field is set, also require value.
+	if f.Required {
+		if f.Value == nil || len(f.Value) == 0 {
+			return errors.New("value is required")
 		}
 	}
 	return nil
@@ -65,48 +54,40 @@ func (f *FieldRequest) Validate() error {
 type Field struct {
 	ID uuid.UUID `db:"id"`
 
-	Name        string     `db:"name"`
-	DisplayName string     `db:"displayName"`
-	Placeholder string     `db:"placeholder"`
-	HelpText    string     `db:"helpText"`
-	Width       FieldWidth `db:"width"`
+	Name        string `db:"name"`
+	DisplayName string `db:"displayName"`
+	Placeholder string `db:"placeholder"`
 
 	Required        bool             `db:"required"`
 	ValidationRules []ValidationRule `db:"validationRules"`
 
 	Value json.RawMessage `db:"value"`
 
-	Type                  FieldType              `db:"type"`
-	Section               Section                `db:"section"`
-	AocID                 int                    `db:"aocId"`
-	IncludeInTotal        bool                   `db:"includeInTotal"`
-	GstConfig             *GstConfig             `db:"gstConfig"`
-	PaymentResponsibility *PaymentResponsibility `db:"paymentResponsibility"`
-	CreatedAt             time.Time              `db:"createdAt"`
-	UpdatedAt             *time.Time             `db:"updatedAt"`
-	DeletedAt             *time.Time             `db:"deletedAt"`
+	Section     Section    `db:"section"`
+	CoaID       uuid.UUID  `db:"coaId"`
+	TaxConfigID uuid.UUID  `db:"taxConfigId"`
+	CreatedAt   time.Time  `db:"createdAt"`
+	UpdatedAt   *time.Time `db:"updatedAt"`
+	DeletedAt   *time.Time `db:"deletedAt"`
 }
 
 func (f *Field) ToFieldDB(field *FieldRequest) {
-
-	gstConfig := &GstConfig{}
-	gstConfig.ToGstDB(field.GstConfig)
-
-	f.ID = uuid.MustParse(*field.ID)
+	if field.ID != nil && *field.ID != "" {
+		f.ID = uuid.MustParse(*field.ID)
+	}
 	f.Name = field.Name
 	f.DisplayName = field.DisplayName
 	f.Placeholder = field.Placeholder
-	f.HelpText = field.HelpText
-	f.Width = field.Width
 	f.Required = field.Required
 	f.ValidationRules = field.ValidationRules
 	f.Value = field.Value
-	f.Type = field.Type
 	f.Section = field.Section
-	f.AocID = field.AocID
-	f.IncludeInTotal = field.IncludeInTotal
-	f.GstConfig = gstConfig
-	f.PaymentResponsibility = field.PaymentResponsibility
+	if field.CoaID != "" {
+		f.CoaID = uuid.MustParse(field.CoaID)
+	}
+	if field.TaxConfigID != "" {
+		f.TaxConfigID = uuid.MustParse(field.TaxConfigID)
+	}
 	f.CreatedAt = field.CreatedAt
 	f.UpdatedAt = field.UpdatedAt
 	f.DeletedAt = field.DeletedAt
@@ -118,42 +99,38 @@ type FieldResponse struct {
 	DisplayName     string           `json:"displayName"`
 	Placeholder     string           `json:"placeholder"`
 	HelpText        string           `json:"helpText"`
-	Width           FieldWidth       `json:"width"`
 	Required        bool             `json:"required"`
 	ValidationRules []ValidationRule `json:"validationRules"`
 
 	Value json.RawMessage `json:"value"`
 
-	Type                  FieldType              `json:"type"`
-	Section               Section                `json:"section"`
-	AocID                 int                    `json:"aocId"`
-	IncludeInTotal        bool                   `json:"includeInTotal"`
-	GstConfig             *GstResponse           `json:"gstConfig"`
-	PaymentResponsibility *PaymentResponsibility `json:"paymentResponsibility"`
-	CreatedAt             time.Time              `json:"createdAt"`
-	UpdatedAt             *time.Time             `json:"updatedAt"`
-	DeletedAt             *time.Time             `json:"deletedAt"`
+	Section   Section            `json:"section"`
+	CoaID     string             `json:"coaId"`
+	TaxConfig *TaxConfigResponse `json:"taxConfig"`
+	CreatedAt time.Time          `json:"createdAt"`
+	UpdatedAt *time.Time         `json:"updatedAt"`
+	DeletedAt *time.Time         `json:"deletedAt"`
 }
 
-func (f *Field) ToFieldResponse() *FieldResponse {
+func (f *Field) ToFieldResponse(taxConfig *TaxConfig) *FieldResponse {
+	var taxConfigResp *TaxConfigResponse
+	if taxConfig != nil {
+		taxConfigResp = taxConfig.ToTaxConfigResponse()
+	}
 	return &FieldResponse{
-		ID:                    f.ID.String(),
-		Name:                  f.Name,
-		DisplayName:           f.DisplayName,
-		Placeholder:           f.Placeholder,
-		HelpText:              f.HelpText,
-		Width:                 f.Width,
-		Required:              f.Required,
-		ValidationRules:       f.ValidationRules,
-		Value:                 f.Value,
-		Type:                  f.Type,
-		Section:               f.Section,
-		AocID:                 f.AocID,
-		IncludeInTotal:        f.IncludeInTotal,
-		GstConfig:             f.GstConfig.ToGstResponse(),
-		PaymentResponsibility: f.PaymentResponsibility,
-		CreatedAt:             f.CreatedAt,
-		UpdatedAt:             f.UpdatedAt,
-		DeletedAt:             f.DeletedAt,
+		ID:              f.ID.String(),
+		Name:            f.Name,
+		DisplayName:     f.DisplayName,
+		Placeholder:     f.Placeholder,
+		HelpText:        "", // HelpText is not present on Field model; adjust as needed if logic changes
+		Required:        f.Required,
+		ValidationRules: f.ValidationRules,
+		Value:           f.Value,
+		Section:         f.Section,
+		CoaID:           f.CoaID.String(),
+		TaxConfig:       taxConfigResp,
+		CreatedAt:       f.CreatedAt,
+		UpdatedAt:       f.UpdatedAt,
+		DeletedAt:       f.DeletedAt,
 	}
 }

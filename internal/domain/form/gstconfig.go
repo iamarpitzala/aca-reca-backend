@@ -2,73 +2,38 @@ package form
 
 import (
 	"github.com/google/uuid"
-	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
-type GstType string
-
-const (
-	GstTypeInclusive GstType = GstType(util.GSTTypeInclusive)
-	GstTypeExclusive GstType = GstType(util.GSTTypeExclusive)
-	GstTypeManual    GstType = GstType(util.GSTTypeManual)
-)
-
-type GstRate float64
-
-const (
-	GstRate0  GstRate = 0
-	GstRate10 GstRate = 10.0
-)
-
-func (g GstType) String() string {
-	return string(g)
+type TaxConfigRequest struct {
+	ID   *string `json:"id" validate:"omitempty,required"`
+	Rate float64 `json:"rate" validate:"required"`
+	Name string  `json:"name" validate:"required,min=3,max=255"`
 }
 
-type GstConfigRequest struct {
-	ID      *string  `json:"id" validate:"omitempty,required"`
-	Enabled bool     `json:"enabled" validate:"required"`
-	Rate    GstRate  `json:"rate" validate:"required"`
-	Type    GstType  `json:"type" validate:"required,oneof=INCLUSIVE EXCLUSIVE MANUAL"`
-	Amount  *float64 `json:"amount" validate:"omitempty,required"`
+type TaxConfig struct {
+	ID   uuid.UUID `db:"id"`
+	Rate float64   `db:"rate"`
+	Name string    `db:"name"`
 }
 
-func (g GstConfigRequest) Validate() error {
-	if g.Type == "" {
-		g.Type = GstTypeExclusive
+func (t *TaxConfig) ToTaxConfigDB(taxConfig *TaxConfigRequest) {
+	if taxConfig.ID != nil && *taxConfig.ID != "" {
+		t.ID = uuid.MustParse(*taxConfig.ID)
 	}
-	return nil
+	t.Rate = taxConfig.Rate
+	t.Name = taxConfig.Name
 }
 
-type GstConfig struct {
-	ID      uuid.UUID `db:"id"`
-	Enabled bool      `db:"enabled"`
-	Rate    GstRate   `db:"rate"`
-	Type    GstType   `db:"type"`
-	Amount  *float64  `db:"amount"`
+type TaxConfigResponse struct {
+	ID   uuid.UUID `json:"id"`
+	Rate float64   `json:"rate"`
+	Name string    `json:"name"`
 }
 
-func (g *GstConfig) ToGstDB(gstConfig *GstConfigRequest) {
-	g.ID = uuid.MustParse(*gstConfig.ID)
-	g.Enabled = gstConfig.Enabled
-	g.Rate = gstConfig.Rate
-	g.Type = gstConfig.Type
-	g.Amount = gstConfig.Amount
-}
-
-type GstResponse struct {
-	ID      string   `json:"id"`
-	Enabled bool     `json:"enabled"`
-	Rate    GstRate  `json:"rate"`
-	Type    GstType  `json:"type"`
-	Amount  *float64 `json:"amount"`
-}
-
-func (g *GstConfig) ToGstResponse() *GstResponse {
-	return &GstResponse{
-		ID:      g.ID.String(),
-		Enabled: g.Enabled,
-		Rate:    g.Rate,
-		Type:    g.Type,
-		Amount:  g.Amount,
+func (t *TaxConfig) ToTaxConfigResponse() *TaxConfigResponse {
+	return &TaxConfigResponse{
+		ID:   t.ID,
+		Rate: t.Rate,
+		Name: t.Name,
 	}
 }

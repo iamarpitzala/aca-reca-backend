@@ -61,13 +61,14 @@ const (
 	GSTTypeInclusive = "INCLUSIVE"
 	GSTTypeExclusive = "EXCLUSIVE"
 	GSTTypeManual    = "MANUAL"
+	GSTTypeNone      = "NONE"
 )
 
 // Date formats
 const (
-	DateFormatRFC3339     = "2006-01-02T15:04:05Z07:00"
-	DateFormatDate        = "2006-01-02"
-	DateFormatYYYYMMDD   = "YYYY-MM-DD"
+	DateFormatRFC3339  = "2006-01-02T15:04:05Z07:00"
+	DateFormatDate     = "2006-01-02"
+	DateFormatYYYYMMDD = "YYYY-MM-DD"
 )
 
 // OAuth error codes (used in redirect URLs)

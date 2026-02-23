@@ -20,26 +20,26 @@ INSERT INTO tbl_time_zone (timezone) VALUES
     ('Australia/Darwin')
 ON CONFLICT (timezone) DO NOTHING;
 
-CREATE TABLE IF NOT EXISTS tbl_financial_setting (
+-- Application uses tbl_clinic_financial_settings (see clinic_financial_setting adapter/domain).
+CREATE TABLE IF NOT EXISTS tbl_clinic_financial_settings (
     id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
     clinic_id VARCHAR(40) NOT NULL REFERENCES tbl_clinic(id),
-
     financial_year_id INTEGER NOT NULL REFERENCES tbl_financial_year(id),
     financial_quarter_id INTEGER NOT NULL REFERENCES tbl_financial_quarter(id),
     accounting_method VARCHAR(20) NOT NULL DEFAULT 'ACCRUAL' CHECK (accounting_method IN ('CASH', 'ACCRUAL')),
-    
-    tax_calculation_method VARCHAR(20) NOT NULL DEFAULT 'QUARTERLY' CHECK (tax_calculation_method IN ('QUARTERLY', 'ANNUALLY')),
-
-    tax_sale_calculation_method VARCHAR(20) NOT NULL DEFAULT 'INCLUSIVE' CHECK (tax_sale_calculation_method IN ('INCLUSIVE', 'EXCLUSIVE')),
-
-    tax_purchase_calculation_method VARCHAR(20) NOT NULL DEFAULT 'INCLUSIVE' CHECK (tax_purchase_calculation_method IN ('INCLUSIVE', 'EXCLUSIVE')),
-    lock_date DATE,
-
-    time_zone_id INTEGER NOT NULL REFERENCES tbl_time_zone(id),
-
+    gst_registered BOOLEAN NOT NULL DEFAULT true,
+    gst_reporting_frequency VARCHAR(20) NOT NULL DEFAULT 'QUARTERLY' CHECK (gst_reporting_frequency IN ('QUARTERLY', 'ANNUALLY')),
+    default_amount_mode VARCHAR(20) NOT NULL DEFAULT 'INCLUSIVE' CHECK (default_amount_mode IN ('INCLUSIVE', 'EXCLUSIVE')),
+    lock_date TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at TIMESTAMPTZ NULL
+    deleted_at TIMESTAMPTZ NULL,
+    CONSTRAINT chk_quarter_belongs_to_year CHECK (
+        (SELECT fq.financial_year_id FROM tbl_financial_quarter fq WHERE fq.id = financial_quarter_id AND fq.deleted_at IS NULL LIMIT 1) = financial_year_id
+    ),
+    CONSTRAINT chk_year_belongs_to_clinic CHECK (
+        (SELECT 1 FROM tbl_financial_year fy WHERE fy.id = financial_year_id AND fy.clinic_id = tbl_clinic_financial_settings.clinic_id AND fy.deleted_at IS NULL LIMIT 1) IS NOT NULL
+    )
 );
 
 -- +goose StatementEnd
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS tbl_financial_setting (
 -- +goose Down
 -- +goose StatementBegin
 
-DROP TABLE IF EXISTS tbl_financial_setting;
+DROP TABLE IF EXISTS tbl_clinic_financial_settings;
 DROP TABLE IF EXISTS tbl_time_zone;
 
 -- +goose StatementEnd

@@ -19,10 +19,12 @@ type ClinicFinancialSettingsService struct {
 	financialQuarterRepo port.FinancialQuarterRepository
 }
 
-func NewClinicFinancialSettingsService(repo port.ClinicFinancialSettingRepository, clinicRepo port.ClinicRepository) *ClinicFinancialSettingsService {
+func NewClinicFinancialSettingsService(repo port.ClinicFinancialSettingRepository, clinicRepo port.ClinicRepository, financialYearRepo port.FinancialYearRepository, financialQuarterRepo port.FinancialQuarterRepository) *ClinicFinancialSettingsService {
 	return &ClinicFinancialSettingsService{
-		repo:       repo,
-		clinicRepo: clinicRepo,
+		repo:                 repo,
+		clinicRepo:           clinicRepo,
+		financialYearRepo:    financialYearRepo,
+		financialQuarterRepo: financialQuarterRepo,
 	}
 }
 
@@ -77,8 +79,8 @@ func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, cli
 	if req.FinancialQuarterID != existing.FinancialQuarterID {
 		existing.FinancialQuarterID = req.FinancialQuarterID
 	}
-	if req.AccountingMethod != "" {
-		existing.AccountingMethod = req.AccountingMethod
+	if req.CalculationMethod != "" {
+		existing.CalculationMethod = req.CalculationMethod
 	}
 	existing.GSTRegistered = req.GSTRegistered
 	if req.GSTReportingFrequency != "" {
@@ -112,7 +114,7 @@ func (s *ClinicFinancialSettingsService) getDefaultSettings(ctx context.Context,
 		ClinicID:              clinicID,
 		FinancialYearID:       financialYear.ID,
 		FinancialQuarterID:    financialQuarter.ID,
-		AccountingMethod:      util.AccountingMethodAccrual,
+		CalculationMethod:     util.AccountingMethodAccrual,
 		GSTRegistered:         true,
 		GSTReportingFrequency: util.PeriodQuarterly,
 		DefaultAmountMode:     util.Inclusive,

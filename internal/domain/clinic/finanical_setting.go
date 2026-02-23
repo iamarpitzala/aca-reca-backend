@@ -12,7 +12,7 @@ type ClinicFinancialSettingRequest struct {
 	ID                    *string    `json:"id" validate:"omitempty,required"`
 	FinancialYearID       int        `json:"financialYearId" validate:"required"`
 	FinancialQuarterID    int        `json:"financialQuarterId" validate:"required"`
-	AccountingMethod      string     `json:"accountingMethod" validate:"required,oneof=NET GROSS"`
+	CalculationMethod     string     `json:"calculationMethod" validate:"required,oneof=CASH ACCRUAL"`
 	GSTRegistered         bool       `json:"gstRegistered" validate:"required"`
 	GSTReportingFrequency string     `json:"gstReportingFrequency" validate:"required,oneof=QUARTERLY ANNUALLY"`
 	DefaultAmountMode     string     `json:"defaultAmountMode" validate:"required,oneof=INCLUSIVE EXCLUSIVE"`
@@ -31,8 +31,8 @@ func (r *ClinicFinancialSettingRequest) Validate() error {
 		return errors.New("financialQuarterId must be between 1 and 4")
 	}
 
-	if r.AccountingMethod != "NET" && r.AccountingMethod != "GROSS" {
-		return errors.New("accountingMethod must be NET or GROSS")
+	if r.CalculationMethod != "CASH" && r.CalculationMethod != "ACCRUAL" {
+		return errors.New("calculationMethod must be CASH or ACCRUAL")
 	}
 
 	if r.GSTReportingFrequency != "QUARTERLY" && r.GSTReportingFrequency != "ANNUALLY" {
@@ -72,7 +72,7 @@ func (r *ClinicFinancialSettingRequest) ToClinicFinancialSetting(clinicID string
 		ClinicID:              clinicID,
 		FinancialYearID:       r.FinancialYearID,
 		FinancialQuarterID:    r.FinancialQuarterID,
-		AccountingMethod:      r.AccountingMethod,
+		CalculationMethod:     r.CalculationMethod,
 		GSTRegistered:         r.GSTRegistered,
 		GSTReportingFrequency: r.GSTReportingFrequency,
 		DefaultAmountMode:     r.DefaultAmountMode,
@@ -91,7 +91,7 @@ type ClinicFinancialSetting struct {
 	ClinicID              string     `db:"clinic_id" json:"clinicId"`
 	FinancialYearID       int        `db:"financial_year_id" json:"financialYearId"`
 	FinancialQuarterID    int        `db:"financial_quarter_id" json:"financialQuarterId"`
-	AccountingMethod      string     `db:"accounting_method" json:"accountingMethod"`
+	CalculationMethod     string     `db:"calculation_method" json:"calculationMethod"`
 	GSTRegistered         bool       `db:"gst_registered" json:"gstRegistered"`
 	GSTReportingFrequency string     `db:"gst_reporting_frequency" json:"gstReportingFrequency"`
 	DefaultAmountMode     string     `db:"default_amount_mode" json:"defaultAmountMode"`
@@ -107,7 +107,7 @@ type ClinicFinancialSettingResponse struct {
 	ClinicID              string     `json:"clinicId"`
 	FinancialYearID       int        `json:"financialYearId"`
 	FinancialQuarterID    int        `json:"financialQuarterId"`
-	AccountingMethod      string     `json:"accountingMethod"`
+	CalculationMethod     string     `json:"calculationMethod"`
 	GSTRegistered         bool       `json:"gstRegistered"`
 	GSTReportingFrequency string     `json:"gstReportingFrequency"`
 	DefaultAmountMode     string     `json:"defaultAmountMode"`
@@ -124,7 +124,7 @@ func (f *ClinicFinancialSetting) ToClinicFinancialSettingResponse() *ClinicFinan
 		ClinicID:              f.ClinicID,
 		FinancialYearID:       f.FinancialYearID,
 		FinancialQuarterID:    f.FinancialQuarterID,
-		AccountingMethod:      f.AccountingMethod,
+		CalculationMethod:     f.CalculationMethod,
 		GSTRegistered:         f.GSTRegistered,
 		GSTReportingFrequency: f.GSTReportingFrequency,
 		DefaultAmountMode:     f.DefaultAmountMode,

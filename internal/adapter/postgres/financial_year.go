@@ -35,7 +35,7 @@ func (f *financialYearRepo) Delete(ctx context.Context, id int) error {
 
 // GetByClinicID implements [port.FinancialYearRepository].
 func (f *financialYearRepo) GetByClinicID(ctx context.Context, clinicID string) (*clinic.FinancialYear, error) {
-	query := `SELECT id, clinic_id, fy_label, start_date, end_date, is_current, is_closed, closed_at, closed_by, created_at, updated_at, deleted_at FROM tbl_financial_year WHERE clinic_id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, clinic_id, fy_label, start_date, end_date, is_current, is_closed, closed_at, closed_by, created_at, updated_at, deleted_at FROM tbl_financial_year WHERE clinic_id = $1 AND deleted_at IS NULL ORDER BY start_date DESC LIMIT 1`
 	var year clinic.FinancialYear
 	err := f.db.GetContext(ctx, &year, query, clinicID)
 	if err != nil {

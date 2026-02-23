@@ -2,6 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS tbl_arrangement (
     id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
+    user_id VARCHAR(40) NOT NULL REFERENCES tbl_user(id),
     method VARCHAR(50) NOT NULL DEFAULT 'GROSS' CHECK (method IN ('GROSS', 'NET')),
     name VARCHAR(255) NOT NULL,
     percentage NUMERIC(5,2) NOT NULL DEFAULT 0,

@@ -11,6 +11,7 @@ import (
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	"github.com/iamarpitzala/aca-reca-backend/pkg/cloudinary"
+	"github.com/iamarpitzala/aca-reca-backend/route/arrangement"
 	"github.com/iamarpitzala/aca-reca-backend/route/auth"
 	"github.com/iamarpitzala/aca-reca-backend/route/clinic"
 	clinic_financial_settings "github.com/iamarpitzala/aca-reca-backend/route/clinic_financial_settings"
@@ -59,6 +60,7 @@ func InitRouter(e *gin.Engine) {
 	transactionRepo := postgres.NewTransactionRepository(sqlxDB)
 	pnlReportRepo := postgres.NewPnlReportRepository(sqlxDB)
 	ChartOfAccountsRepo := postgres.NewChartOfAccountsRepository(sqlxDB)
+	arrangementRepo := postgres.NewArrangementRepository(sqlxDB)
 
 	// Use cases (application layer)
 	clinicUC := usecase.NewClinicService(clinicRepo)
@@ -71,6 +73,7 @@ func InitRouter(e *gin.Engine) {
 	transactionUC := usecase.NewTransactionService(transactionRepo, clinicRepo)
 	pnlReportUC := usecase.NewPnlReportService(pnlReportRepo, clinicRepo)
 	coaUC := usecase.NewCOAService(ChartOfAccountsRepo)
+	arrangementUC := usecase.NewArrangementService(arrangementRepo)
 	// HTTP handlers (driving adapters)
 	authHandler := httpHandler.NewAuthHandler(authUC, oauthService, cfg.OAuth.FrontendURL)
 	userHandler := httpHandler.NewUserHandler(authUC, userClinicUC)
@@ -84,6 +87,7 @@ func InitRouter(e *gin.Engine) {
 	transactionHandler := httpHandler.NewTransactionHandler(transactionUC)
 	pnlReportHandler := httpHandler.NewPnlReportHandler(pnlReportUC)
 	coaHandler := httpHandler.NewCOAHandler(coaUC)
+	arrangementHandler := httpHandler.NewArrangmentHandler(arrangementUC)
 
 	cloudinarySvc, _ := cloudinary.NewService(cfg.Cloudinary)
 	uploadHandler := httpHandler.NewUploadHandler(cloudinarySvc)
@@ -105,4 +109,5 @@ func InitRouter(e *gin.Engine) {
 	transaction_route.RegisterTransactionRoutes(v1, transactionHandler, tokenService)
 	reports_route.RegisterReportsRoutes(v1, pnlReportHandler, tokenService)
 	coa_route.RegisterCOARoutes(v1, coaHandler, tokenService)
+	arrangement.RegisterArrangementRoutes(v1, arrangementHandler, tokenService)
 }

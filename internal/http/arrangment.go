@@ -32,10 +32,10 @@ func (h *ArrangmentHandler) Create(c *gin.Context) {
 	}
 	resp, err := h.arrangementUC.Create(c.Request.Context(), userID, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": utils.ErrArrangementFailed})
 		return
 	}
-	utils.JSONResponse(c, http.StatusCreated, "arrangement created successfully", resp, nil)
+	utils.JSONResponse(c, http.StatusCreated, utils.MsgArrangementCreated, resp, nil)
 }
 
 // GetByID returns an arrangement by id (only if owned by current user)
@@ -47,19 +47,19 @@ func (h *ArrangmentHandler) GetByID(c *gin.Context) {
 	}
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrArrangementIDRequired})
 		return
 	}
 	resp, err := h.arrangementUC.GetByID(c.Request.Context(), id, userID)
 	if err != nil {
 		if err == usecase.ErrArrangementNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrArrangementNotFound})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": utils.ErrArrangementFailed})
 		return
 	}
-	utils.JSONResponse(c, http.StatusOK, "arrangement retrieved successfully", resp, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgArrangementRetrieved, resp, nil)
 }
 
 // List returns all arrangements for the current user
@@ -71,10 +71,10 @@ func (h *ArrangmentHandler) ListByUserID(c *gin.Context) {
 	}
 	list, err := h.arrangementUC.ListByUserID(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": utils.ErrArrangementFailed})
 		return
 	}
-	utils.JSONResponse(c, http.StatusOK, "arrangements retrieved successfully", list, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgArrangementsRetrieved, list, nil)
 }
 
 // Update updates an arrangement (only if owned by current user)
@@ -86,7 +86,7 @@ func (h *ArrangmentHandler) Update(c *gin.Context) {
 	}
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrArrangementIDRequired})
 		return
 	}
 	var req coa.ArrangementRequest
@@ -97,13 +97,13 @@ func (h *ArrangmentHandler) Update(c *gin.Context) {
 	resp, err := h.arrangementUC.Update(c.Request.Context(), id, userID, &req)
 	if err != nil {
 		if err == usecase.ErrArrangementNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrArrangementNotFound})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": utils.ErrArrangementFailed})
 		return
 	}
-	utils.JSONResponse(c, http.StatusOK, "arrangement updated successfully", resp, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgArrangementUpdated, resp, nil)
 }
 
 // Delete soft-deletes an arrangement (only if owned by current user)
@@ -115,16 +115,16 @@ func (h *ArrangmentHandler) Delete(c *gin.Context) {
 	}
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrArrangementIDRequired})
 		return
 	}
 	if err := h.arrangementUC.Delete(c.Request.Context(), id, userID); err != nil {
 		if err == usecase.ErrArrangementNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrArrangementNotFound})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": utils.ErrArrangementFailed})
 		return
 	}
-	utils.JSONResponse(c, http.StatusOK, "arrangement deleted successfully", nil, nil)
+	utils.JSONResponse(c, http.StatusOK, utils.MsgArrangementDeleted, nil, nil)
 }

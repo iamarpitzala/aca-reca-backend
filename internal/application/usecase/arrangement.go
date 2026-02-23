@@ -7,9 +7,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain/coa"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
-var ErrArrangementNotFound = errors.New("arrangement not found")
+var ErrArrangementNotFound = errors.New(util.ErrArrangementNotFound)
 
 type ArrangementService struct {
 	repo port.ArrangementRepository

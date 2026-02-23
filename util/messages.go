@@ -35,6 +35,7 @@ const (
 
 	// Not found errors
 	ErrClinicNotFound                = "clinic not found"
+	ErrArrangementNotFound           = "arrangement not found"
 	ErrAOCNotFound                   = "coa not found"
 	ErrUserClinicAssociationNotFound = "user-clinic association not found"
 	ErrNetDetailsNotFound            = "net details not found for this entry"
@@ -59,6 +60,10 @@ const (
 	ErrClinicCreatedButLinkFailed = "clinic was created but we could not link you as owner. Please try again."
 	ErrInvalidJSONData            = "Invalid JSON data"
 	ErrInvalidIDFormat            = "invalid id: "
+
+	// Arrangement errors
+	ErrArrangementIDRequired = "arrangement id is required"
+	ErrArrangementFailed      = "failed to get arrangement"
 )
 
 // Success messages for HTTP responses
@@ -110,6 +115,13 @@ const (
 	MsgPnlReportFinalized   = "P&L report finalized"
 	MsgPnlReportRegenerated = "P&L report regenerated"
 	MsgPnlReportDeleted     = "P&L report deleted"
+
+	// Arrangement messages
+	MsgArrangementCreated   = "arrangement created successfully"
+	MsgArrangementRetrieved = "arrangement retrieved successfully"
+	MsgArrangementsRetrieved = "arrangements retrieved successfully"
+	MsgArrangementUpdated   = "arrangement updated successfully"
+	MsgArrangementDeleted   = "arrangement deleted successfully"
 
 	// Auth messages
 	MsgLoggedOutSuccessfully = "logged out successfully"

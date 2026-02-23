@@ -8,6 +8,7 @@ import (
 
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain/coa"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -39,7 +40,7 @@ func (r *arrangementRepo) GetByID(ctx context.Context, id, userID string) (*coa.
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, errors.New("failed to get arrangement by id")
+		return nil, errors.New(util.ErrArrangementFailed)
 	}
 	return &a, nil
 }

@@ -9,7 +9,7 @@
 ```sql
 CREATE TABLE IF NOT EXISTS tbl_entry_gross_details (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    source_entry_id UUID NOT NULL UNIQUE REFERENCES tbl_custom_form_entry(id) ON DELETE CASCADE,
+    source_entry_id UUID NOT NULL UNIQUE REFERENCES tbl_custom_form_entry(id),
     service_facility_fee_percent NUMERIC(5,2) NOT NULL,
     service_fee_base NUMERIC(14,2) NOT NULL DEFAULT 0,
     gst_on_service_fee NUMERIC(14,2) NOT NULL DEFAULT 0,
@@ -32,9 +32,9 @@ CREATE TABLE IF NOT EXISTS tbl_entry_gross_details (
 ```sql
 CREATE TABLE IF NOT EXISTS tbl_entry_gross_reduction (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    gross_details_id UUID NOT NULL REFERENCES tbl_entry_gross_details(id) ON DELETE CASCADE,
-    source_entry_id UUID NOT NULL REFERENCES tbl_custom_form_entry(id) ON DELETE CASCADE,
-    tbl_custom_form_field_id UUID NOT NULL REFERENCES tbl_custom_form_field(id) ON DELETE CASCADE,
+    gross_details_id UUID NOT NULL REFERENCES tbl_entry_gross_details(id),
+    source_entry_id UUID NOT NULL REFERENCES tbl_custom_form_entry(id),
+    tbl_custom_form_field_id UUID NOT NULL REFERENCES tbl_custom_form_field(id),
     base_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
     gst_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
     total_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
@@ -57,9 +57,9 @@ CREATE TABLE IF NOT EXISTS tbl_entry_gross_reduction (
 ```sql
 CREATE TABLE IF NOT EXISTS tbl_entry_gross_reimbursement (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    gross_details_id UUID NOT NULL REFERENCES tbl_entry_gross_details(id) ON DELETE CASCADE,
-    source_entry_id UUID NOT NULL REFERENCES tbl_custom_form_entry(id) ON DELETE CASCADE,
-    tbl_custom_form_field_id UUID NOT NULL REFERENCES tbl_custom_form_field(id) ON DELETE CASCADE,
+    gross_details_id UUID NOT NULL REFERENCES tbl_entry_gross_details(id),
+    source_entry_id UUID NOT NULL REFERENCES tbl_custom_form_entry(id),
+    tbl_custom_form_field_id UUID NOT NULL REFERENCES tbl_custom_form_field(id),
     base_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
     gst_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
     total_amount NUMERIC(14,2) NOT NULL DEFAULT 0,

@@ -3,13 +3,12 @@ package port
 import (
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/auth"
 )
 
 // TokenProvider generates and validates JWT tokens (used by auth use case).
 type TokenProvider interface {
-	GenerateTokenPair(userID uuid.UUID, email string, sessionID uuid.UUID) (*domain.TokenPair, error)
-	ValidateToken(tokenString string) (*domain.TokenClaims, error)
+	GenerateTokenPair(userID string, email string, sessionID string) (*auth.TokenPair, error)
+	ValidateToken(tokenString string) (*auth.TokenClaims, error)
 	RefreshTokenTTL() time.Duration
 }

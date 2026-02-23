@@ -4,23 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/auth"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/clinic"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/user"
 	"github.com/iamarpitzala/aca-reca-backend/util"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// generatePlaceholderABN returns a unique 11-digit ABN for default clinics (derived from userID).
-func generatePlaceholderABN(userID uuid.UUID) string {
-	h := fnv.New64a()
-	_, _ = h.Write(userID[:])
-	n := h.Sum64() % 10000000000
-	return "1" + fmt.Sprintf("%010d", n)
-}
 
 type AuthService struct {
 	userRepo     port.UserRepository
@@ -40,7 +33,7 @@ func NewAuthService(userRepo port.UserRepository, sessionRepo port.SessionReposi
 	}
 }
 
-func (s *AuthService) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.AuthResponse, error) {
+func (s *AuthService) Register(ctx context.Context, req *auth.RegisterRequest) (*auth.AuthResponse, error) {
 	exists, err := s.userRepo.EmailExists(ctx, req.Email)
 	if err != nil {
 		return nil, errors.New("failed to check if email exists")
@@ -52,79 +45,40 @@ func (s *AuthService) Register(ctx context.Context, req *domain.RegisterRequest)
 	if err != nil {
 		return nil, errors.New("failed to hash password")
 	}
-	now := time.Now()
-	user := domain.User{
-		ID:        uuid.New(),
+	user := &user.User{
+		ID:        uuid.NewString(),
 		Email:     req.Email,
 		Password:  string(hashedPassword),
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Phone:     req.Phone,
-		CreatedAt: now,
-		UpdatedAt: now,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
-	if err := s.userRepo.Create(ctx, &user); err != nil {
+	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
 	if err := s.ensureDefaultClinicForUser(ctx, user.ID, user.FirstName); err != nil {
 		return nil, fmt.Errorf("registration succeeded but default clinic setup failed; please log in and create a clinic manually: %w", err)
 	}
-	sessionID := uuid.New()
+	sessionID := uuid.NewString()
 	tokenPair, err := s.token.GenerateTokenPair(user.ID, user.Email, sessionID)
 	if err != nil {
 		return nil, errors.New("failed to generate tokens")
 	}
-	session := domain.Session{
+	session := auth.Session{
 		ID:           sessionID,
 		UserID:       user.ID,
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresAt:    time.Now().Add(s.token.RefreshTokenTTL()),
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 	if err := s.sessionRepo.Create(ctx, &session); err != nil {
 		return nil, err
 	}
 	user.Password = ""
-	return &domain.AuthResponse{
-		User:         &user,
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		TokenType:    tokenPair.TokenType,
-		ExpiresIn:    tokenPair.ExpiresIn,
-	}, nil
-}
-
-func (s *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*domain.AuthResponse, error) {
-	user, err := s.userRepo.GetByEmail(ctx, req.Email)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil || user.ID == uuid.Nil {
-		return nil, errors.New("invalid email or password")
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return nil, errors.New("invalid email or password")
-	}
-	sessionID := uuid.New()
-	tokenPair, err := s.token.GenerateTokenPair(user.ID, user.Email, sessionID)
-	if err != nil {
-		return nil, errors.New("failed to generate tokens")
-	}
-	now := time.Now()
-	session := domain.Session{
-		ID:           sessionID,
-		UserID:       user.ID,
-		RefreshToken: tokenPair.RefreshToken,
-		ExpiresAt:    now.Add(s.token.RefreshTokenTTL()),
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
-	if err := s.sessionRepo.Create(ctx, &session); err != nil {
-		return nil, err
-	}
-	user.Password = ""
-	return &domain.AuthResponse{
+	return &auth.AuthResponse{
 		User:         user,
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
@@ -133,7 +87,44 @@ func (s *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*dom
 	}, nil
 }
 
-func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*domain.AuthResponse, error) {
+func (s *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*auth.AuthResponse, error) {
+	user, err := s.userRepo.GetByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil || user.ID == "" {
+		return nil, errors.New("invalid email or password")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		return nil, errors.New("invalid email or password")
+	}
+	sessionID := uuid.NewString()
+	tokenPair, err := s.token.GenerateTokenPair(user.ID, user.Email, sessionID)
+	if err != nil {
+		return nil, errors.New("failed to generate tokens")
+	}
+	session := auth.Session{
+		ID:           sessionID,
+		UserID:       user.ID,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresAt:    time.Now().Add(s.token.RefreshTokenTTL()),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+	if err := s.sessionRepo.Create(ctx, &session); err != nil {
+		return nil, err
+	}
+	user.Password = ""
+	return &auth.AuthResponse{
+		User:         user,
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		TokenType:    tokenPair.TokenType,
+		ExpiresIn:    tokenPair.ExpiresIn,
+	}, nil
+}
+
+func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*auth.AuthResponse, error) {
 	claims, err := s.token.ValidateToken(refreshToken)
 	if err != nil {
 		return nil, errors.New("invalid refresh token")
@@ -159,7 +150,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 	if err := s.sessionRepo.Update(ctx, session); err != nil {
 		return nil, err
 	}
-	return &domain.AuthResponse{
+	return &auth.AuthResponse{
 		AccessToken:  newTokenPair.AccessToken,
 		RefreshToken: newTokenPair.RefreshToken,
 		TokenType:    newTokenPair.TokenType,
@@ -167,18 +158,18 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 	}, nil
 }
 
-func (s *AuthService) Logout(ctx context.Context, sessionID uuid.UUID) error {
+func (s *AuthService) Logout(ctx context.Context, sessionID string) error {
 	return s.sessionRepo.Delete(ctx, sessionID)
 }
 
 // EnsureDefaultClinicForUser creates a default clinic for the user and links them as owner.
 // Idempotent: if the user already has at least one clinic, no-op.
 // Used after registration and OAuth sign-up.
-func (s *AuthService) EnsureDefaultClinicForUser(ctx context.Context, userID uuid.UUID, displayName string) error {
+func (s *AuthService) EnsureDefaultClinicForUser(ctx context.Context, userID string, displayName string) error {
 	return s.ensureDefaultClinicForUser(ctx, userID, displayName)
 }
 
-func (s *AuthService) ensureDefaultClinicForUser(ctx context.Context, userID uuid.UUID, displayName string) error {
+func (s *AuthService) ensureDefaultClinicForUser(ctx context.Context, userID string, displayName string) error {
 	clinics, err := s.userClinicUC.GetUserClinics(ctx, userID)
 	if err != nil {
 		return err
@@ -190,14 +181,14 @@ func (s *AuthService) ensureDefaultClinicForUser(ctx context.Context, userID uui
 	if displayName != "" {
 		name = displayName + "'s Clinic"
 	}
-	clinic := &domain.Clinic{
+	clinic := &clinic.Clinic{
 		Name:        name,
-		ABNNumber:   generatePlaceholderABN(userID),
+		ABNNumber:   "",
 		Address:     "To be updated",
 		City:        "To be updated",
-		State:       domain.StateNSW,
-		ShareType:   domain.ShareTypePercentage,
-		MethodType:  domain.MethodTypeNet,
+		State:       clinic.StateNSW,
+		ShareType:   "PERCENTAGE",
+		MethodType:  "NET",
 		ClinicShare: 50,
 		OwnerShare:  50,
 		IsActive:    true,
@@ -215,7 +206,7 @@ func (s *AuthService) ensureDefaultClinicForUser(ctx context.Context, userID uui
 	return nil
 }
 
-func (s *AuthService) GetUserByID(ctx context.Context, userID uuid.UUID) (*domain.User, error) {
+func (s *AuthService) GetUserByID(ctx context.Context, userID string) (*user.User, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -226,7 +217,7 @@ func (s *AuthService) GetUserByID(ctx context.Context, userID uuid.UUID) (*domai
 	return user, nil
 }
 
-func (s *AuthService) UpdateUser(ctx context.Context, userID uuid.UUID, firstName, lastName, phone string) (*domain.User, error) {
+func (s *AuthService) UpdateUser(ctx context.Context, userID string, firstName, lastName, phone string) (*user.User, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -245,15 +236,15 @@ func (s *AuthService) UpdateUser(ctx context.Context, userID uuid.UUID, firstNam
 	return user, nil
 }
 
-func (s *AuthService) GetUserSessions(ctx context.Context, userID uuid.UUID) ([]domain.Session, error) {
+func (s *AuthService) GetUserSessions(ctx context.Context, userID string) ([]auth.Session, error) {
 	return s.sessionRepo.GetUserSessions(ctx, userID)
 }
 
-func (s *AuthService) RevokeSession(ctx context.Context, sessionID uuid.UUID) error {
+func (s *AuthService) RevokeSession(ctx context.Context, sessionID string) error {
 	return s.sessionRepo.Revoke(ctx, sessionID)
 }
 
-func (s *AuthService) OAuthLogin(ctx context.Context, userID uuid.UUID) (*domain.AuthResponse, error) {
+func (s *AuthService) OAuthLogin(ctx context.Context, userID string) (*auth.AuthResponse, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -261,13 +252,13 @@ func (s *AuthService) OAuthLogin(ctx context.Context, userID uuid.UUID) (*domain
 	if user == nil {
 		return nil, errors.New("user not found")
 	}
-	sessionID := uuid.New()
+	sessionID := uuid.NewString()
 	tokenPair, err := s.token.GenerateTokenPair(user.ID, user.Email, sessionID)
 	if err != nil {
 		return nil, errors.New("failed to generate tokens")
 	}
 	now := time.Now()
-	session := domain.Session{
+	session := auth.Session{
 		ID:           sessionID,
 		UserID:       user.ID,
 		RefreshToken: tokenPair.RefreshToken,
@@ -279,7 +270,7 @@ func (s *AuthService) OAuthLogin(ctx context.Context, userID uuid.UUID) (*domain
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 	user.Password = ""
-	return &domain.AuthResponse{
+	return &auth.AuthResponse{
 		User:         user,
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,

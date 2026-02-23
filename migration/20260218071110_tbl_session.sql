@@ -2,36 +2,22 @@
 -- +goose StatementBegin
 
 CREATE TABLE IF NOT EXISTS tbl_session (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
 
-    user_id UUID NOT NULL REFERENCES tbl_user(id) ON DELETE CASCADE,
+    user_id VARCHAR(40) NOT NULL REFERENCES tbl_user(id),
 
-    refresh_token VARCHAR(255) NOT NULL,
+    refresh_token TEXT NOT NULL,
 
     user_agent TEXT,
     ip_address VARCHAR(45),
 
-    expires_at TIMESTAMP NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
 
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    deleted_at TIMESTAMP NULL
+    deleted_at TIMESTAMPTZ NULL
 );
-
--- UNIQUE (ACTIVE SESSIONS ONLY)
-CREATE UNIQUE INDEX ux_session_refresh_token_active
-ON tbl_session (refresh_token)
-WHERE deleted_at IS NULL;
-
--- COMMON LOOKUPS
-CREATE INDEX idx_session_user_active
-ON tbl_session (user_id)
-WHERE deleted_at IS NULL;
-
-CREATE INDEX idx_session_expires_active
-ON tbl_session (expires_at)
-WHERE deleted_at IS NULL;
 
 -- +goose StatementEnd
 

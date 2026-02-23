@@ -2,8 +2,6 @@ package auth
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type AuthRequest struct {
@@ -28,7 +26,7 @@ type UserInfo struct {
 }
 
 type GoogleAuth struct {
-	UserID   uuid.UUID
+	UserID   string
 	UserInfo UserInfo
 	Token    Token
 }

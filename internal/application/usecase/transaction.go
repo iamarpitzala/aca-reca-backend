@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	ErrTransactionNotFound     = errors.New("transaction not found")
+	ErrTransactionNotFound      = errors.New("transaction not found")
 	ErrTransactionAlreadyVoided = errors.New("transaction is already voided")
-	ErrTransactionNotDraft     = errors.New("only DRAFT transactions can be updated")
-	ErrLedgerImbalanced        = errors.New("ledger debits and credits must balance")
-	ErrInvalidTransactionDate  = errors.New("invalid transaction date format, use YYYY-MM-DD")
-	ErrLedgerRequired          = errors.New("at least one ledger line is required")
+	ErrTransactionNotDraft      = errors.New("only DRAFT transactions can be updated")
+	ErrLedgerImbalanced         = errors.New("ledger debits and credits must balance")
+	ErrInvalidTransactionDate   = errors.New("invalid transaction date format, use YYYY-MM-DD")
+	ErrLedgerRequired           = errors.New("at least one ledger line is required")
 )
 
 type TransactionService struct {
@@ -39,7 +39,7 @@ func NewTransactionService(
 func (s *TransactionService) Create(
 	ctx context.Context,
 	req *domain.CreateTransactionRequest,
-	userID uuid.UUID,
+	userID string,
 ) (*domain.TransactionWithLedger, error) {
 	// Verify clinic exists
 	_, err := s.clinicRepo.GetByID(ctx, req.ClinicID)
@@ -74,7 +74,7 @@ func (s *TransactionService) Create(
 	}
 
 	txn := &domain.Transaction{
-		ID:              uuid.New(),
+		ID:              uuid.NewString(),
 		ClinicID:        req.ClinicID,
 		SourceEntryID:   req.SourceEntryID,
 		ReferenceNumber: req.ReferenceNumber,
@@ -104,7 +104,7 @@ func (s *TransactionService) Create(
 }
 
 // GetByID retrieves a transaction with its ledger lines
-func (s *TransactionService) GetByID(ctx context.Context, id uuid.UUID) (*domain.TransactionWithLedger, error) {
+func (s *TransactionService) GetByID(ctx context.Context, id string) (*domain.TransactionWithLedger, error) {
 	txn, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (s *TransactionService) GetByID(ctx context.Context, id uuid.UUID) (*domain
 }
 
 // GetByClinicID lists all transactions for a clinic
-func (s *TransactionService) GetByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.TransactionWithLedger, error) {
+func (s *TransactionService) GetByClinicID(ctx context.Context, clinicID string) ([]domain.TransactionWithLedger, error) {
 	txns, err := s.repo.GetByClinicID(ctx, clinicID)
 	if err != nil {
 		return nil, err
@@ -148,7 +148,7 @@ func (s *TransactionService) GetByClinicID(ctx context.Context, clinicID uuid.UU
 // Update updates a DRAFT transaction (header + ledger lines)
 func (s *TransactionService) Update(
 	ctx context.Context,
-	id uuid.UUID,
+	id string,
 	req *domain.UpdateTransactionRequest,
 ) (*domain.TransactionWithLedger, error) {
 	txn, err := s.repo.GetByID(ctx, id)
@@ -210,7 +210,7 @@ func (s *TransactionService) Update(
 }
 
 // PostTransaction changes a DRAFT transaction to POSTED
-func (s *TransactionService) PostTransaction(ctx context.Context, id uuid.UUID) (*domain.TransactionWithLedger, error) {
+func (s *TransactionService) PostTransaction(ctx context.Context, id string) (*domain.TransactionWithLedger, error) {
 	txn, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -243,7 +243,7 @@ func (s *TransactionService) PostTransaction(ctx context.Context, id uuid.UUID) 
 }
 
 // VoidTransaction marks a transaction as VOIDED
-func (s *TransactionService) VoidTransaction(ctx context.Context, id uuid.UUID, reason string) (*domain.Transaction, error) {
+func (s *TransactionService) VoidTransaction(ctx context.Context, id string, reason string) (*domain.Transaction, error) {
 	txn, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -268,7 +268,7 @@ func (s *TransactionService) VoidTransaction(ctx context.Context, id uuid.UUID, 
 }
 
 // Delete soft-deletes a transaction
-func (s *TransactionService) Delete(ctx context.Context, id uuid.UUID) error {
+func (s *TransactionService) Delete(ctx context.Context, id string) error {
 	txn, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -299,7 +299,7 @@ func validateLedgerBalance(lines []domain.LedgerLineRequest) error {
 }
 
 func buildLedgerLines(
-	transactionID uuid.UUID,
+	transactionID string,
 	txnDate time.Time,
 	now time.Time,
 	lines []domain.LedgerLineRequest,
@@ -315,7 +315,7 @@ func buildLedgerLines(
 			}
 		}
 		result = append(result, domain.TransactionLedger{
-			ID:              uuid.New(),
+			ID:              uuid.NewString(),
 			TransactionID:   transactionID,
 			COAID:           l.COAID,
 			EntryType:       l.EntryType,

@@ -4,19 +4,20 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/user"
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type UserHandler struct {
-	authUC *usecase.AuthService
+	authUC       *usecase.AuthService
+	userClinicUC *usecase.UserClinicService
 }
 
-func NewUserHandler(authUC *usecase.AuthService) *UserHandler {
+func NewUserHandler(authUC *usecase.AuthService, userClinicUC *usecase.UserClinicService) *UserHandler {
 	return &UserHandler{
-		authUC: authUC,
+		authUC:       authUC,
+		userClinicUC: userClinicUC,
 	}
 }
 
@@ -32,18 +33,13 @@ func NewUserHandler(authUC *usecase.AuthService) *UserHandler {
 // @Failure 500 {object} domain.H
 // @Router /users/me [get]
 func (h *UserHandler) GetMe(c *gin.Context) {
-	userIDVal, exists := c.Get("user_id")
-	if !exists {
+	userID, ok := GetAuthUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUserNotAuthenticated})
 		return
 	}
-	userUUID, ok := userIDVal.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserContext})
-		return
-	}
 
-	user, err := h.authUC.GetUserByID(c.Request.Context(), userUUID)
+	user, err := h.authUC.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -66,13 +62,11 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 // @Router /users/{userId} [get]
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 	userID := c.Param("userId")
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidUserID})
+	if !RequireClinicAccess(c, h.userClinicUC, userID) {
 		return
 	}
 
-	user, err := h.authUC.GetUserByID(c.Request.Context(), userUUID)
+	user, err := h.authUC.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -96,20 +90,18 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 // @Router /users/{userId} [put]
 func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 	userID := c.Param("userId")
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidUserID})
+	if !RequireClinicAccess(c, h.userClinicUC, userID) {
 		return
 	}
 
-	var req domain.UpdateUserRequest
+	var req user.UserRequest
 
 	if err := utils.BindAndValidate(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user, err := h.authUC.UpdateUser(c.Request.Context(), userUUID, req.FirstName, req.LastName, req.Phone)
+	user, err := h.authUC.UpdateUser(c.Request.Context(), userID, req.FirstName, req.LastName, req.Phone)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -132,13 +124,10 @@ func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 // @Router /users/{userId}/sessions [get]
 func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 	userID := c.Param("userId")
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidUserID})
+	if !RequireClinicAccess(c, h.userClinicUC, userID) {
 		return
 	}
-
-	sessions, err := h.authUC.GetUserSessions(c.Request.Context(), userUUID)
+	sessions, err := h.authUC.GetUserSessions(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -162,21 +151,13 @@ func (h *UserHandler) GetActiveSessions(c *gin.Context) {
 // @Router /users/{userId}/sessions/{sessionId} [delete]
 func (h *UserHandler) RevokeSession(c *gin.Context) {
 	userID := c.Param("userId")
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidUserID})
+	if !RequireClinicAccess(c, h.userClinicUC, userID) {
 		return
 	}
-
-	sessionIDStr := c.Param("sessionId")
-	sessionID, err := uuid.Parse(sessionIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidSessionID})
-		return
-	}
+	sessionID := c.Param("sessionId")
 
 	// Verify session belongs to user
-	sessions, err := h.authUC.GetUserSessions(c.Request.Context(), userUUID)
+	sessions, err := h.authUC.GetUserSessions(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

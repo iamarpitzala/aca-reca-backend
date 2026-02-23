@@ -28,40 +28,26 @@ const (
 
 // Default amount mode
 const (
-	DefaultAmountModeGSTInclusive = "GST_INCLUSIVE"
-	DefaultAmountModeGSTExclusive = "GST_EXCLUSIVE"
+	Inclusive = "INCLUSIVE"
+	Exclusive = "EXCLUSIVE"
 )
 
 // Share / method types (clinic)
 const (
-	ShareTypePercentage = "PERCENTAGE"
-	ShareTypeFixed      = "FIXED"
-	MethodTypeNet       = "NET"
-	MethodTypeGross     = "GROSS"
+	CalculationMethodNet   = "NET"
+	CalculationMethodGross = "GROSS"
 )
 
 // Form type and section
 const (
-	FormTypeIncome   = "INCOME"
-	FormTypeExpense  = "EXPENSE"
-	FormTypeBoth     = "BOTH"
-	SectionIncome    = "INCOME"
-	SectionExpense   = "EXPENSE"
-	SectionReduction = "REDUCTION"
+	FormTypeIncome  = "INCOME"
+	FormTypeExpense = "EXPENSE"
 )
 
 // Payment responsibility (form default_payment_responsibility, field payment_responsibility)
 const (
 	PaymentResponsibilityOwner  = "OWNER"
 	PaymentResponsibilityClinic = "CLINIC"
-)
-
-// GST type (field gst_type, tbl_gst.type)
-const (
-	GSTTypeInclusive = "INCLUSIVE"
-	GSTTypeExclusive = "EXCLUSIVE"
-	GSTTypeManual    = "MANUAL"
-	GSTTypeNone      = "NONE"
 )
 
 // Date formats
@@ -89,3 +75,61 @@ const (
 	OAuthParamError        = "error"
 	OAuthParamCode         = "code"
 )
+
+type TaxTreatment string
+
+const (
+	TaxTreatmentInclusive TaxTreatment = "INCLUSIVE"
+	TaxTreatmentExclusive TaxTreatment = "EXCLUSIVE"
+	TaxTreatmentManual    TaxTreatment = "MANUAL"
+	TaxTreatmentNone      TaxTreatment = "NONE"
+)
+
+func (s TaxTreatment) String() string {
+	return string(s)
+}
+
+type FormStatus string
+
+const (
+	FormStatusDraft     FormStatus = "DRAFT"
+	FormStatusPublished FormStatus = "PUBLISHED"
+	FormStatusArchived  FormStatus = "ARCHIVED"
+)
+
+func (s FormStatus) String() string {
+	return string(s)
+}
+
+type FormSection string
+
+const (
+	FormSectionIncome  FormSection = "INCOME"
+	FormSectionExpense FormSection = "EXPENSE"
+)
+
+func (s FormSection) String() string {
+	return string(s)
+}
+
+type AccountingMethod string
+
+const (
+	AccountingMethodNet   AccountingMethod = "NET"
+	AccountingMethodGross AccountingMethod = "GROSS"
+)
+
+func (s AccountingMethod) String() string {
+	return string(s)
+}
+
+type ShareType string
+
+const (
+	ShareTypePercentage ShareType = "PERCENTAGE"
+	ShareTypeFixed      ShareType = "FIXED"
+)
+
+func (s ShareType) String() string {
+	return string(s)
+}

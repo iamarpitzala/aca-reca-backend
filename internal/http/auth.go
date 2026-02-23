@@ -7,9 +7,8 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/auth"
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
@@ -37,7 +36,7 @@ type refreshTokenRequest struct {
 
 // Register handles POST /auth/register.
 func (h *AuthHandler) Register(c *gin.Context) {
-	var req domain.RegisterRequest
+	var req auth.RegisterRequest
 	if err := utils.BindAndValidate(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -52,7 +51,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 // Login handles POST /auth/login.
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req domain.LoginRequest
+	var req auth.LoginRequest
 	if err := utils.BindAndValidate(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -82,12 +81,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 // Logout handles POST /auth/logout/:sessionId.
 func (h *AuthHandler) Logout(c *gin.Context) {
-	sessionIDStr := c.Param("sessionId")
-	sessionID, err := uuid.Parse(sessionIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidSessionID})
-		return
-	}
+	sessionID := c.Param("sessionId")
 	if err := h.authUC.Logout(c.Request.Context(), sessionID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -171,26 +165,21 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	c.Redirect(http.StatusFound, redirectURL)
 }
 
-// GetAuthUserID extracts the authenticated user ID from the request context (set by auth middleware).
-// If the user is not authenticated or the context value is invalid, it responds with 401 and returns (uuid.Nil, false).
-func GetAuthUserID(c *gin.Context) (uuid.UUID, bool) {
+func GetAuthUserID(c *gin.Context) (string, bool) {
 	v, ok := c.Get("user_id")
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUnauthorized})
-		return uuid.Nil, false
+		return "", false
 	}
-	userID, ok := v.(uuid.UUID)
+	userID, ok := v.(string)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserContext})
-		return uuid.Nil, false
+		return "", false
 	}
 	return userID, true
 }
 
-// RequireClinicAccess verifies the authenticated user has access to the given clinic.
-// If the user is not authenticated or does not have access, it responds with 401/403 and returns false.
-// Callers should return immediately when RequireClinicAccess returns false (response already sent).
-func RequireClinicAccess(c *gin.Context, userClinicUC *usecase.UserClinicService, clinicID uuid.UUID) bool {
+func RequireClinicAccess(c *gin.Context, userClinicUC *usecase.UserClinicService, clinicID string) bool {
 	userID, ok := GetAuthUserID(c)
 	if !ok {
 		return false

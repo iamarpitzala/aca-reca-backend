@@ -41,7 +41,7 @@ func NewPnlReportService(
 func (s *PnlReportService) Generate(
 	ctx context.Context,
 	req *domain.GeneratePnlRequest,
-	userID uuid.UUID,
+	userID string,
 ) (*domain.PnlReportWithLines, error) {
 	// Verify clinic exists
 	if _, err := s.clinicRepo.GetByID(ctx, req.ClinicID); err != nil {
@@ -69,7 +69,7 @@ func (s *PnlReportService) Generate(
 
 	// Build lines and compute totals
 	now := time.Now()
-	reportID := uuid.New()
+	reportID := uuid.NewString()
 	lines, totals := buildPnlLines(reportID, aggRows, now)
 
 	report := &domain.PnlReport{
@@ -108,7 +108,7 @@ func (s *PnlReportService) Generate(
 }
 
 // GetByID retrieves a P&L report with its line items.
-func (s *PnlReportService) GetByID(ctx context.Context, id uuid.UUID) (*domain.PnlReportWithLines, error) {
+func (s *PnlReportService) GetByID(ctx context.Context, id string) (*domain.PnlReportWithLines, error) {
 	report, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -129,12 +129,12 @@ func (s *PnlReportService) GetByID(ctx context.Context, id uuid.UUID) (*domain.P
 }
 
 // GetByClinicID lists all P&L reports for a clinic.
-func (s *PnlReportService) GetByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.PnlReport, error) {
+func (s *PnlReportService) GetByClinicID(ctx context.Context, clinicID string) ([]domain.PnlReport, error) {
 	return s.repo.GetByClinicID(ctx, clinicID)
 }
 
 // Finalize changes a DRAFT report to FINAL, preventing further modifications.
-func (s *PnlReportService) Finalize(ctx context.Context, id uuid.UUID) (*domain.PnlReport, error) {
+func (s *PnlReportService) Finalize(ctx context.Context, id string) (*domain.PnlReport, error) {
 	report, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -160,7 +160,7 @@ func (s *PnlReportService) Finalize(ctx context.Context, id uuid.UUID) (*domain.
 }
 
 // Regenerate re-aggregates the ledger and replaces lines on a DRAFT report.
-func (s *PnlReportService) Regenerate(ctx context.Context, id uuid.UUID) (*domain.PnlReportWithLines, error) {
+func (s *PnlReportService) Regenerate(ctx context.Context, id string) (*domain.PnlReportWithLines, error) {
 	report, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -211,7 +211,7 @@ func (s *PnlReportService) Regenerate(ctx context.Context, id uuid.UUID) (*domai
 }
 
 // Delete soft-deletes a P&L report.
-func (s *PnlReportService) Delete(ctx context.Context, id uuid.UUID) error {
+func (s *PnlReportService) Delete(ctx context.Context, id string) error {
 	report, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -236,7 +236,7 @@ type pnlTotals struct {
 }
 
 // buildPnlLines converts aggregated ledger rows into report lines and computes totals.
-func buildPnlLines(reportID uuid.UUID, aggRows []domain.LedgerAggRow, now time.Time) ([]domain.PnlReportLine, pnlTotals) {
+func buildPnlLines(reportID string, aggRows []domain.LedgerAggRow, now time.Time) ([]domain.PnlReportLine, pnlTotals) {
 	lines := make([]domain.PnlReportLine, 0, len(aggRows))
 	var totals pnlTotals
 
@@ -268,7 +268,7 @@ func buildPnlLines(reportID uuid.UUID, aggRows []domain.LedgerAggRow, now time.T
 		}
 
 		lines = append(lines, domain.PnlReportLine{
-			ID:               uuid.New(),
+			ID:               uuid.NewString(),
 			PnlReportID:      reportID,
 			COAID:            row.COAID,
 			AccountCode:      row.AccountCode,

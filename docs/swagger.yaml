@@ -399,7 +399,7 @@ info:
   title: ACA RECA API
   version: "1.0"
 paths:
-  /aoc:
+  /coa:
     get:
       description: Get all chart of accounts entries
       responses:
@@ -415,11 +415,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new aoc with the given information
+      description: Create a new coa with the given information
       parameters:
       - description: AOC information
         in: body
-        name: aoc
+        name: coa
         required: true
         schema:
           $ref: '#/definitions/domain.AOCRequest'
@@ -438,10 +438,10 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/domain.H'
-      summary: Create a new aoc
+      summary: Create a new coa
       tags:
       - AOC
-  /aoc/account-types:
+  /coa/account-types:
     get:
       description: 'Get all accounts. Query params: sort (code|name, default code),
         order (asc|desc, default asc)'
@@ -464,7 +464,7 @@ paths:
       summary: Get all accounts (optionally sorted)
       tags:
       - AOC
-  /aoc/tax:
+  /coa/tax:
     get:
       consumes:
       - application/json

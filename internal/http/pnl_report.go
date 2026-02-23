@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
@@ -27,18 +26,13 @@ func (h *PnlReportHandler) Generate(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("user_id")
-	if !exists {
+	userID, ok := GetAuthUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrUserNotAuthenticated})
 		return
 	}
-	userIDUUID, ok := userID.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": utils.ErrInvalidUserID})
-		return
-	}
 
-	result, err := h.pnlUC.Generate(c.Request.Context(), &req, userIDUUID)
+	result, err := h.pnlUC.Generate(c.Request.Context(), &req, userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -54,11 +48,7 @@ func (h *PnlReportHandler) Generate(c *gin.Context) {
 // GetByID retrieves a P&L report by ID
 // GET /api/v1/reports/pnl/:id
 func (h *PnlReportHandler) GetByID(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidID})
-		return
-	}
+	id := c.Param("id")
 
 	result, err := h.pnlUC.GetByID(c.Request.Context(), id)
 	if err != nil {
@@ -76,11 +66,7 @@ func (h *PnlReportHandler) GetByID(c *gin.Context) {
 // GetByClinicID lists all P&L reports for a clinic
 // GET /api/v1/reports/pnl/clinic/:clinicId
 func (h *PnlReportHandler) GetByClinicID(c *gin.Context) {
-	clinicID, err := uuid.Parse(c.Param("clinicId"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
-		return
-	}
+	clinicID := c.Param("clinicId")
 
 	reports, err := h.pnlUC.GetByClinicID(c.Request.Context(), clinicID)
 	if err != nil {
@@ -98,11 +84,7 @@ func (h *PnlReportHandler) GetByClinicID(c *gin.Context) {
 // Finalize changes a DRAFT report to FINAL
 // POST /api/v1/reports/pnl/:id/finalize
 func (h *PnlReportHandler) Finalize(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidID})
-		return
-	}
+	id := c.Param("id")
 
 	report, err := h.pnlUC.Finalize(c.Request.Context(), id)
 	if err != nil {
@@ -119,11 +101,7 @@ func (h *PnlReportHandler) Finalize(c *gin.Context) {
 // Regenerate re-aggregates ledger data for a DRAFT report
 // POST /api/v1/reports/pnl/:id/regenerate
 func (h *PnlReportHandler) Regenerate(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidID})
-		return
-	}
+	id := c.Param("id")
 
 	result, err := h.pnlUC.Regenerate(c.Request.Context(), id)
 	if err != nil {
@@ -141,11 +119,7 @@ func (h *PnlReportHandler) Regenerate(c *gin.Context) {
 // Delete soft-deletes a P&L report
 // DELETE /api/v1/reports/pnl/:id
 func (h *PnlReportHandler) Delete(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidID})
-		return
-	}
+	id := c.Param("id")
 
 	if err := h.pnlUC.Delete(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/clinic"
 )
 
 var ErrDuplicateABN = errors.New("a clinic with this ABN already exists")
@@ -20,28 +20,22 @@ func NewClinicService(repo port.ClinicRepository) *ClinicService {
 	return &ClinicService{repo: repo}
 }
 
-func (s *ClinicService) CreateClinic(ctx context.Context, clinic *domain.Clinic) error {
+func (s *ClinicService) CreateClinic(ctx context.Context, clinic *clinic.Clinic) error {
 	if err := ValidateState(clinic.State); err != nil {
 		return err
 	}
 	if err := ValidateABN(clinic.ABNNumber); err != nil {
 		return err
 	}
-	clinic.ID = uuid.New()
-	if err := s.repo.Create(ctx, clinic); err != nil {
-		if strings.Contains(err.Error(), "ux_clinic_abn_active") || strings.Contains(err.Error(), "duplicate key") {
-			return ErrDuplicateABN
-		}
-		return err
-	}
-	return nil
+	clinic.ID = uuid.NewString()
+	return s.repo.Create(ctx, clinic)
 }
 
-func (s *ClinicService) GetClinicByID(ctx context.Context, id uuid.UUID) (*domain.Clinic, error) {
+func (s *ClinicService) GetClinicByID(ctx context.Context, id string) (*clinic.Clinic, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *ClinicService) UpdateClinic(ctx context.Context, clinic *domain.Clinic) error {
+func (s *ClinicService) UpdateClinic(ctx context.Context, clinic *clinic.Clinic) error {
 	if err := ValidateState(clinic.State); err != nil {
 		return err
 	}
@@ -51,7 +45,7 @@ func (s *ClinicService) UpdateClinic(ctx context.Context, clinic *domain.Clinic)
 	return s.repo.Update(ctx, clinic)
 }
 
-func (s *ClinicService) UpdateClinicPartial(ctx context.Context, id uuid.UUID, req *domain.UpdateClinicRequest) (*domain.Clinic, error) {
+func (s *ClinicService) UpdateClinicPartial(ctx context.Context, id string, req *clinic.UpdateClinicRequest) (*clinic.Clinic, error) {
 	existing, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -113,14 +107,14 @@ func (s *ClinicService) UpdateClinicPartial(ctx context.Context, id uuid.UUID, r
 	return existing, nil
 }
 
-func (s *ClinicService) DeleteClinic(ctx context.Context, id uuid.UUID) error {
+func (s *ClinicService) DeleteClinic(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *ClinicService) GetAllClinics(ctx context.Context) ([]domain.Clinic, error) {
+func (s *ClinicService) GetAllClinics(ctx context.Context) ([]clinic.Clinic, error) {
 	return s.repo.List(ctx)
 }
 
-func (s *ClinicService) GetClinicByABNNumber(ctx context.Context, abnNumber string) (*domain.Clinic, error) {
+func (s *ClinicService) GetClinicByABNNumber(ctx context.Context, abnNumber string) (*clinic.Clinic, error) {
 	return s.repo.GetByABN(ctx, abnNumber)
 }

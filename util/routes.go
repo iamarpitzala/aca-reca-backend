@@ -8,20 +8,20 @@ const (
 
 // Route group paths
 const (
-	RouteAuth                      = "/auth"
-	RouteUser                      = "/user"
-	RouteClinic                    = "/clinic"
-	RoutePayslip                   = "/payslip"
-	RouteUserClinic                = "/user-clinic"
-	RouteCustomForm                = "/custom-form"
-	RouteQuarter                   = "/quarter"
-	RouteExpense                   = "/expense"
-	RouteAOC                       = "/aoc"
-	RouteUpload                    = "/upload"
-	RouteClinicFinancialSettings   = "/clinic-financial-settings"
-	RouteEntry                     = "/entry"
-	RouteTransaction               = "/transaction"
-	RouteReports                   = "/reports"
+	RouteAuth                    = "/auth"
+	RouteUser                    = "/user"
+	RouteClinic                  = "/clinic"
+	RoutePayslip                 = "/payslip"
+	RouteUserClinic              = "/user-clinic"
+	RouteCustomForm              = "/custom-form"
+	RouteQuarter                 = "/quarter"
+	RouteExpense                 = "/expense"
+	RouteAOC                     = "/coa"
+	RouteUpload                  = "/upload"
+	RouteClinicFinancialSettings = "/clinic-financial-settings"
+	RouteEntry                   = "/entry"
+	RouteTransaction             = "/transaction"
+	RouteReports                 = "/reports"
 )
 
 // Upload route paths

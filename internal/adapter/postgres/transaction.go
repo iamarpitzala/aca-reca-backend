@@ -6,7 +6,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 	"github.com/jmoiron/sqlx"
@@ -57,7 +56,7 @@ func (r *transactionRepo) CreateLedgerLines(ctx context.Context, lines []domain.
 	return err
 }
 
-func (r *transactionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Transaction, error) {
+func (r *transactionRepo) GetByID(ctx context.Context, id string) (*domain.Transaction, error) {
 	q := `
 		SELECT id, clinic_id, source_entry_id, reference_number,
 		       description, transaction_date, status, created_by,
@@ -76,7 +75,7 @@ func (r *transactionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Tr
 	return &txn, nil
 }
 
-func (r *transactionRepo) GetLedgerByTransactionID(ctx context.Context, transactionID uuid.UUID) ([]domain.TransactionLedger, error) {
+func (r *transactionRepo) GetLedgerByTransactionID(ctx context.Context, transactionID string) ([]domain.TransactionLedger, error) {
 	q := `
 		SELECT id, transaction_id, coa_id, entry_type,
 		       amount, gst_amount, net_amount,
@@ -92,7 +91,7 @@ func (r *transactionRepo) GetLedgerByTransactionID(ctx context.Context, transact
 	return lines, nil
 }
 
-func (r *transactionRepo) GetByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.Transaction, error) {
+func (r *transactionRepo) GetByClinicID(ctx context.Context, clinicID string) ([]domain.Transaction, error) {
 	q := `
 		SELECT id, clinic_id, source_entry_id, reference_number,
 		       description, transaction_date, status, created_by,
@@ -130,7 +129,7 @@ func (r *transactionRepo) Update(ctx context.Context, txn *domain.Transaction) e
 	return nil
 }
 
-func (r *transactionRepo) DeleteLedgerByTransactionID(ctx context.Context, transactionID uuid.UUID) error {
+func (r *transactionRepo) DeleteLedgerByTransactionID(ctx context.Context, transactionID string) error {
 	_, err := r.db.ExecContext(ctx,
 		`DELETE FROM tbl_transaction_ledger WHERE transaction_id = $1`,
 		transactionID,
@@ -138,7 +137,7 @@ func (r *transactionRepo) DeleteLedgerByTransactionID(ctx context.Context, trans
 	return err
 }
 
-func (r *transactionRepo) VoidTransaction(ctx context.Context, id uuid.UUID, reason string) error {
+func (r *transactionRepo) VoidTransaction(ctx context.Context, id string, reason string) error {
 	now := time.Now()
 	q := `
 		UPDATE tbl_transaction SET
@@ -158,7 +157,7 @@ func (r *transactionRepo) VoidTransaction(ctx context.Context, id uuid.UUID, rea
 	return nil
 }
 
-func (r *transactionRepo) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *transactionRepo) Delete(ctx context.Context, id string) error {
 	q := `
 		UPDATE tbl_transaction SET
 			deleted_at = CURRENT_TIMESTAMP,

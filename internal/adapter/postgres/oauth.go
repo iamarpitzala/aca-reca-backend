@@ -5,9 +5,8 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/auth"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/oauth2"
 )
@@ -20,8 +19,8 @@ func NewOAuthProviderRepository(db *sqlx.DB) port.OAuthProviderRepository {
 	return &oauthProviderRepo{db: db}
 }
 
-func (r *oauthProviderRepo) GetByProviderAndProviderUserID(ctx context.Context, provider, providerUserID string) (*domain.OAuthProvider, error) {
-	var oauthProvider domain.OAuthProvider
+func (r *oauthProviderRepo) GetByProviderAndProviderUserID(ctx context.Context, provider, providerUserID string) (*auth.OAuthProvider, error) {
+	var oauthProvider auth.OAuthProvider
 	err := r.db.GetContext(ctx, &oauthProvider,
 		`SELECT id, user_id, provider, provider_user_id, provider_email, access_token, refresh_token, token_expires_at, created_at, updated_at FROM tbl_auth_provider WHERE provider = $1 AND provider_user_id = $2 AND deleted_at IS NULL`,
 		provider, providerUserID)
@@ -34,21 +33,21 @@ func (r *oauthProviderRepo) GetByProviderAndProviderUserID(ctx context.Context, 
 	return &oauthProvider, nil
 }
 
-func (r *oauthProviderRepo) Create(ctx context.Context, provider *domain.OAuthProvider) error {
+func (r *oauthProviderRepo) Create(ctx context.Context, provider *auth.OAuthProvider) error {
 	query := `INSERT INTO tbl_auth_provider (id, user_id, provider, provider_user_id, provider_email, access_token, refresh_token, token_expires_at, created_at, updated_at)
 		VALUES (:id, :user_id, :provider, :provider_user_id, :provider_email, :access_token, :refresh_token, :token_expires_at, :created_at, :updated_at)`
 	_, err := r.db.NamedExecContext(ctx, query, provider)
 	return err
 }
 
-func (r *oauthProviderRepo) Update(ctx context.Context, provider *domain.OAuthProvider) error {
+func (r *oauthProviderRepo) Update(ctx context.Context, provider *auth.OAuthProvider) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE tbl_auth_provider SET provider_email = $1, updated_at = $2 WHERE id = $3`,
 		provider.ProviderEmail, time.Now(), provider.ID)
 	return err
 }
 
-func (r *oauthProviderRepo) UpdateOrCreate(ctx context.Context, provider *domain.OAuthProvider, providerName, providerUserID string, userID uuid.UUID, token *oauth2.Token) (bool, error) {
+func (r *oauthProviderRepo) UpdateOrCreate(ctx context.Context, provider *auth.OAuthProvider, providerName, providerUserID string, userID string, token *oauth2.Token) (bool, error) {
 	err := r.db.GetContext(ctx, provider,
 		`SELECT id, user_id, provider, provider_user_id, provider_email, access_token, refresh_token, token_expires_at, created_at, updated_at FROM tbl_auth_provider WHERE provider = $1 AND provider_user_id = $2 AND deleted_at IS NULL`,
 		providerName, providerUserID)

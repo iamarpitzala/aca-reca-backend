@@ -2,20 +2,18 @@ package domain
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // Transaction represents tbl_transaction (header)
 type Transaction struct {
-	ID              uuid.UUID  `db:"id" json:"id"`
-	ClinicID        uuid.UUID  `db:"clinic_id" json:"clinicId"`
-	SourceEntryID   *uuid.UUID `db:"source_entry_id" json:"sourceEntryId,omitempty"`
+	ID              string     `db:"id" json:"id"`
+	ClinicID        string     `db:"clinic_id" json:"clinicId"`
+	SourceEntryID   *string    `db:"source_entry_id" json:"sourceEntryId,omitempty"`
 	ReferenceNumber *string    `db:"reference_number" json:"referenceNumber,omitempty"`
 	Description     *string    `db:"description" json:"description,omitempty"`
 	TransactionDate time.Time  `db:"transaction_date" json:"transactionDate"`
 	Status          string     `db:"status" json:"status"`
-	CreatedBy       uuid.UUID  `db:"created_by" json:"createdBy"`
+	CreatedBy       string     `db:"created_by" json:"createdBy"`
 	PostedAt        *time.Time `db:"posted_at" json:"postedAt,omitempty"`
 	VoidedAt        *time.Time `db:"voided_at" json:"voidedAt,omitempty"`
 	VoidReason      *string    `db:"void_reason" json:"voidReason,omitempty"`
@@ -26,9 +24,9 @@ type Transaction struct {
 
 // TransactionLedger represents tbl_transaction_ledger (line item)
 type TransactionLedger struct {
-	ID              uuid.UUID `db:"id" json:"id"`
-	TransactionID   uuid.UUID `db:"transaction_id" json:"transactionId"`
-	COAID           uuid.UUID `db:"coa_id" json:"coaId"`
+	ID              string    `db:"id" json:"id"`
+	TransactionID   string    `db:"transaction_id" json:"transactionId"`
+	COAID           string    `db:"coa_id" json:"coaId"`
 	EntryType       string    `db:"entry_type" json:"entryType"`
 	Amount          float64   `db:"amount" json:"amount"`
 	GSTAmount       float64   `db:"gst_amount" json:"gstAmount"`
@@ -48,18 +46,18 @@ type TransactionWithLedger struct {
 
 // LedgerLineRequest represents a single ledger line in a create/update request
 type LedgerLineRequest struct {
-	COAID       uuid.UUID `json:"coaId" validate:"required"`
-	EntryType   string    `json:"entryType" validate:"required,oneof=DEBIT CREDIT"`
-	Amount      float64   `json:"amount" validate:"required,gte=0"`
-	GSTAmount   float64   `json:"gstAmount" validate:"gte=0"`
-	NetAmount   float64   `json:"netAmount"`
-	Description *string   `json:"description" validate:"omitempty,max=500"`
+	COAID       string  `json:"coaId" validate:"required"`
+	EntryType   string  `json:"entryType" validate:"required,oneof=DEBIT CREDIT"`
+	Amount      float64 `json:"amount" validate:"required,gte=0"`
+	GSTAmount   float64 `json:"gstAmount" validate:"gte=0"`
+	NetAmount   float64 `json:"netAmount"`
+	Description *string `json:"description" validate:"omitempty,max=500"`
 }
 
 // CreateTransactionRequest is the request body for POST /transaction
 type CreateTransactionRequest struct {
-	ClinicID        uuid.UUID           `json:"clinicId" validate:"required"`
-	SourceEntryID   *uuid.UUID          `json:"sourceEntryId" validate:"omitempty"`
+	ClinicID        string              `json:"clinicId" validate:"required"`
+	SourceEntryID   *string             `json:"sourceEntryId" validate:"omitempty"`
 	ReferenceNumber *string             `json:"referenceNumber" validate:"omitempty,max=50"`
 	Description     *string             `json:"description" validate:"omitempty,max=500"`
 	TransactionDate string              `json:"transactionDate" validate:"required"`

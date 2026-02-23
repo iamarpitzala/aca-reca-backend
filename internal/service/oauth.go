@@ -10,7 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/config"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/auth"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/user"
 	"golang.org/x/oauth2"
 )
 
@@ -73,7 +74,7 @@ func (os *OAuthService) ExchangeCode(ctx context.Context, provider string, code 
 	return token, nil
 }
 
-func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token *oauth2.Token) (*domain.OAuthUserInfo, error) {
+func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token *oauth2.Token) (*auth.OAuthUserInfo, error) {
 	providerCfg, ok := os.config.Providers[provider]
 	if !ok {
 		return nil, fmt.Errorf("oauth provider %s not configured", provider)
@@ -88,7 +89,7 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 	if err != nil {
 		return nil, fmt.Errorf("failed to read user info response: %w", err)
 	}
-	var userInfo domain.OAuthUserInfo
+	var userInfo auth.OAuthUserInfo
 	switch provider {
 	case "google":
 		var googleUser struct {
@@ -103,7 +104,7 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 		if err := json.Unmarshal(body, &googleUser); err != nil {
 			return nil, fmt.Errorf("failed to parse Google user info: %w", err)
 		}
-		userInfo = domain.OAuthUserInfo{
+		userInfo = auth.OAuthUserInfo{
 			ID:            googleUser.ID,
 			Email:         googleUser.Email,
 			FirstName:     googleUser.GivenName,
@@ -126,7 +127,7 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 		if email == "" {
 			email = msUser.UserPrincipalName
 		}
-		userInfo = domain.OAuthUserInfo{
+		userInfo = auth.OAuthUserInfo{
 			ID:            msUser.ID,
 			Email:         email,
 			FirstName:     msUser.GivenName,
@@ -139,8 +140,8 @@ func (os *OAuthService) GetUserInfo(ctx context.Context, provider string, token 
 	return &userInfo, nil
 }
 
-func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, provider string, providerUserID string, providerEmail string, token *oauth2.Token) error {
-	var oauthProvider domain.OAuthProvider
+func (os *OAuthService) LinkProvider(ctx context.Context, userID string, provider string, providerUserID string, providerEmail string, token *oauth2.Token) error {
+	var oauthProvider auth.OAuthProvider
 	existed, err := os.providerRepo.UpdateOrCreate(ctx, &oauthProvider, provider, providerUserID, userID, token)
 	if err != nil {
 		return fmt.Errorf("failed to update OAuth provider: %w", err)
@@ -156,8 +157,8 @@ func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, prov
 		return nil
 	}
 	expiresAt := token.Expiry
-	oauthProvider = domain.OAuthProvider{
-		ID:             uuid.New(),
+	oauthProvider = auth.OAuthProvider{
+		ID:             uuid.New().String(),
 		UserID:         userID,
 		Provider:       provider,
 		ProviderUserID: providerUserID,
@@ -174,7 +175,7 @@ func (os *OAuthService) LinkProvider(ctx context.Context, userID uuid.UUID, prov
 	return nil
 }
 
-func (os *OAuthService) FindUserByProvider(ctx context.Context, provider string, providerUserID string) (*domain.User, error) {
+func (os *OAuthService) FindUserByProvider(ctx context.Context, provider string, providerUserID string) (*user.User, error) {
 	oauthProvider, err := os.providerRepo.GetByProviderAndProviderUserID(ctx, provider, providerUserID)
 	if err != nil {
 		return nil, err
@@ -185,9 +186,9 @@ func (os *OAuthService) FindUserByProvider(ctx context.Context, provider string,
 	return os.userRepo.GetByID(ctx, oauthProvider.UserID)
 }
 
-func (os *OAuthService) CreateUserFromOAuth(ctx context.Context, userInfo *domain.OAuthUserInfo) (*domain.User, error) {
-	user := domain.User{
-		ID:              uuid.New(),
+func (os *OAuthService) CreateUserFromOAuth(ctx context.Context, userInfo *auth.OAuthUserInfo) (*user.User, error) {
+	user := user.User{
+		ID:              uuid.New().String(),
 		Email:           userInfo.Email,
 		FirstName:       userInfo.FirstName,
 		LastName:        userInfo.LastName,

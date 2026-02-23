@@ -2,14 +2,17 @@
 -- +goose StatementBegin
 
 CREATE TABLE IF NOT EXISTS tbl_custom_form_entry (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    form_id UUID NOT NULL REFERENCES tbl_custom_form(id) ON DELETE CASCADE,
-    tbl_custom_form_field_id UUID NOT NULL REFERENCES tbl_custom_form_field(id) ON DELETE CASCADE,
-    value NUMERIC(14,2) NOT NULL DEFAULT 0,
-    created_by UUID NOT NULL REFERENCES tbl_user(id),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL
+    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
+    clinic_id VARCHAR(40) NOT NULL REFERENCES tbl_clinic(id),
+    form_id VARCHAR(40) NOT NULL REFERENCES tbl_custom_form(id),
+    form_version_id VARCHAR(40) NOT NULL REFERENCES tbl_custom_form_version(id),
+    field_id VARCHAR(40) NOT NULL REFERENCES tbl_custom_form_field(id),
+    value NUMERIC(14,2) NOT NULL,
+    gst_amount NUMERIC(14,2) NULL,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ NULL
 );
 
 -- +goose StatementEnd

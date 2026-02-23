@@ -23,7 +23,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/aoc": {
+        "/coa": {
             "get": {
                 "description": "Get all chart of accounts entries",
                 "tags": [
@@ -43,7 +43,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Create a new aoc with the given information",
+                "description": "Create a new coa with the given information",
                 "consumes": [
                     "application/json"
                 ],
@@ -53,11 +53,11 @@ const docTemplate = `{
                 "tags": [
                     "AOC"
                 ],
-                "summary": "Create a new aoc",
+                "summary": "Create a new coa",
                 "parameters": [
                     {
                         "description": "AOC information",
-                        "name": "aoc",
+                        "name": "coa",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -87,7 +87,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/aoc/account-types": {
+        "/coa/account-types": {
             "get": {
                 "description": "Get all accounts. Query params: sort (code|name, default code), order (asc|desc, default asc)",
                 "tags": [
@@ -121,7 +121,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/aoc/tax": {
+        "/coa/tax": {
             "get": {
                 "description": "Get all account tax types",
                 "consumes": [

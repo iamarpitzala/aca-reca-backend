@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 
 CREATE TABLE IF NOT EXISTS tbl_clinic (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
 
     name VARCHAR(255) NOT NULL,
     abn_number VARCHAR(11) NOT NULL,
@@ -19,33 +19,23 @@ CREATE TABLE IF NOT EXISTS tbl_clinic (
     logo_url TEXT,
     description TEXT,
 
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL
+    share_type VARCHAR(50) NOT NULL DEFAULT 'PERCENTAGE',
+    clinic_share INT NOT NULL DEFAULT 50,
+    owner_share INT NOT NULL DEFAULT 50,
+    method_type VARCHAR(50) NOT NULL DEFAULT 'NET' CHECK (method_type IN ('NET', 'GROSS')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    with_holding_tax BOOLEAN NOT NULL DEFAULT FALSE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ NULL,
+
+    CONSTRAINT chk_share_type CHECK (share_type IN ('FIXED', 'PERCENTAGE')),
+    CONSTRAINT chk_share_percentage CHECK (
+        share_type != 'PERCENTAGE'
+        OR (clinic_share + owner_share = 100)
+    )
 );
-
--- UNIQUE (ACTIVE CLINICS ONLY)
-CREATE UNIQUE INDEX ux_clinic_abn_active
-ON tbl_clinic (abn_number)
-WHERE deleted_at IS NULL;
-
--- COMMON LOOKUPS
-CREATE INDEX idx_clinic_active
-ON tbl_clinic (id)
-WHERE deleted_at IS NULL;
-
-CREATE INDEX idx_clinic_name_active
-ON tbl_clinic (LOWER(name))
-WHERE deleted_at IS NULL;
-
-CREATE INDEX idx_clinic_city_state_active
-ON tbl_clinic (city, state)
-WHERE deleted_at IS NULL;
-
-CREATE TRIGGER trg_clinic_updated_at
-BEFORE UPDATE ON tbl_clinic
-FOR EACH ROW
-EXECUTE FUNCTION set_updated_at();
 
 -- +goose StatementEnd
 

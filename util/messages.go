@@ -12,13 +12,13 @@ const (
 	ErrInvalidAccountTaxID  = "invalid account tax id"
 	ErrInvalidAccountTypeID = "invalid account type id"
 	ErrInvalidID            = "invalid id"
-	ErrInvalidYearsBack    = "invalid yearsBack parameter"
+	ErrInvalidYearsBack     = "invalid yearsBack parameter"
 	ErrInvalidYearsForward  = "invalid yearsForward parameter"
 	ErrInvalidDateFormat    = "invalid date format. Use RFC3339 (2006-01-02T15:04:05Z07:00) or date (2006-01-02)"
 	ErrDateRequired         = "date parameter is required"
 
 	// Authentication errors
-	ErrUnauthorized           = "unauthorized"
+	ErrUnauthorized          = "unauthorized"
 	ErrInvalidUserContext    = "invalid user context"
 	ErrUserNotAuthenticated  = "user not authenticated"
 	ErrRefreshTokenRequired  = "refreshToken is required"
@@ -34,21 +34,17 @@ const (
 	ErrAccessDeniedOwnClinicsOnly      = "access denied: you can only view your own clinics"
 
 	// Not found errors
-	ErrClinicNotFound              = "clinic not found"
-	ErrAOCNotFound                 = "aoc not found"
-	ErrClinicAOCAssociationNotFound = "clinic AOC association not found"
+	ErrClinicNotFound                = "clinic not found"
+	ErrAOCNotFound                   = "coa not found"
 	ErrUserClinicAssociationNotFound = "user-clinic association not found"
-	ErrNetDetailsNotFound          = "net details not found for this entry"
-	ErrGrossDetailsNotFound        = "gross details not found for this entry"
-	ErrSessionNotFound             = "session not found or does not belong to user"
-	ErrTransactionNotFound         = "transaction not found"
+	ErrNetDetailsNotFound            = "net details not found for this entry"
+	ErrGrossDetailsNotFound          = "gross details not found for this entry"
+	ErrSessionNotFound               = "session not found or does not belong to user"
+	ErrTransactionNotFound           = "transaction not found"
 
 	// Request validation errors
-	ErrCOAIDRequired              = "invalid request: coaId required"
-	ErrCOAFieldsRequired          = "invalid request: code, name, accountTypeId, accountTaxId required"
-	ErrIDsRequired                = "invalid request: ids required"
-	ErrIDsMustNotBeEmpty          = "ids must not be empty"
-	ErrAssociationNotBelongsToClinic = "association does not belong to this clinic"
+	ErrIDsRequired       = "invalid request: ids required"
+	ErrIDsMustNotBeEmpty = "ids must not be empty"
 
 	// Upload errors
 	ErrUploadServiceNotConfigured = "upload service is not configured"
@@ -68,39 +64,35 @@ const (
 // Success messages for HTTP responses
 const (
 	// Custom form messages
-	MsgCustomFormCreated   = "custom form created"
-	MsgCustomFormRetrieved = "custom form retrieved"
-	MsgCustomFormsRetrieved = "custom forms retrieved"
+	MsgCustomFormCreated             = "custom form created"
+	MsgCustomFormRetrieved           = "custom form retrieved"
+	MsgCustomFormsRetrieved          = "custom forms retrieved"
 	MsgPublishedCustomFormsRetrieved = "published custom forms retrieved"
-	MsgCustomFormUpdated   = "custom form updated"
-	MsgFormPublished       = "form published"
-	MsgFormUnpublished     = "form unpublished"
-	MsgFormArchived        = "form archived"
-	MsgCustomFormDeleted   = "custom form deleted"
-	MsgFormDuplicated     = "form duplicated"
+	MsgCustomFormUpdated             = "custom form updated"
+	MsgFormPublished                 = "form published"
+	MsgFormUnpublished               = "form unpublished"
+	MsgFormArchived                  = "form archived"
+	MsgCustomFormDeleted             = "custom form deleted"
+	MsgFormDuplicated                = "form duplicated"
 
 	// Entry messages
-	MsgEntryCreated         = "entry created"
-	MsgFieldEntryRetrieved  = "field entry retrieved"
+	MsgEntryCreated          = "entry created"
+	MsgFieldEntryRetrieved   = "field entry retrieved"
 	MsgFieldEntriesRetrieved = "field entries retrieved"
-	MsgNetDetailsRetrieved  = "net details retrieved"
+	MsgNetDetailsRetrieved   = "net details retrieved"
 	MsgGrossDetailsRetrieved = "gross details retrieved"
-	MsgFieldEntryUpdated    = "field entry updated"
-	MsgFieldEntryDeleted    = "field entry deleted"
+	MsgFieldEntryUpdated     = "field entry updated"
+	MsgFieldEntryDeleted     = "field entry deleted"
 
 	// Clinic messages
-	MsgClinicCreatedSuccessfully = "clinic created successfully"
-	MsgClinicDeletedSuccessfully = "clinic deleted successfully"
+	MsgClinicCreatedSuccessfully    = "clinic created successfully"
+	MsgClinicDeletedSuccessfully    = "clinic deleted successfully"
 	MsgClinicsRetrievedSuccessfully = "clinics retrieved successfully"
-	MsgClinicAOCAddedSuccessfully = "clinic AOC added successfully"
-	MsgClinicAOCCreatedAndAssigned = "chart of accounts entry created and assigned to clinic"
-	MsgClinicAOCRemovedSuccessfully = "clinic AOC removed successfully"
-
 	// User clinic messages
-	MsgUserAssociatedWithClinic = "user associated with clinic successfully"
+	MsgUserAssociatedWithClinic         = "user associated with clinic successfully"
 	MsgUserClinicsRetrievedSuccessfully = "user clinics retrieved successfully"
 	MsgClinicUsersRetrievedSuccessfully = "clinic users retrieved successfully"
-	MsgUserRemovedFromClinic = "user removed from clinic successfully"
+	MsgUserRemovedFromClinic            = "user removed from clinic successfully"
 
 	// Transaction messages
 	MsgTransactionCreated    = "transaction created"
@@ -118,16 +110,6 @@ const (
 	MsgPnlReportFinalized   = "P&L report finalized"
 	MsgPnlReportRegenerated = "P&L report regenerated"
 	MsgPnlReportDeleted     = "P&L report deleted"
-
-	// BAS snapshot messages
-	MsgBASSnapshotGenerated  = "BAS snapshot generated"
-	MsgBASSnapshotCreated    = "BAS snapshot created"
-	MsgBASSnapshotRetrieved  = "BAS snapshot retrieved"
-	MsgBASSnapshotsRetrieved = "BAS snapshots retrieved"
-	MsgBASSnapshotUpdated    = "BAS snapshot updated"
-	MsgBASSnapshotFinalised  = "BAS snapshot finalised"
-	MsgBASSnapshotLocked     = "BAS snapshot locked"
-	MsgBASSnapshotDeleted    = "BAS snapshot deleted"
 
 	// Auth messages
 	MsgLoggedOutSuccessfully = "logged out successfully"

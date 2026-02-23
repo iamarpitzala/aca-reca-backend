@@ -21,7 +21,7 @@
     "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
-        "/aoc": {
+        "/coa": {
             "get": {
                 "description": "Get all chart of accounts entries",
                 "tags": [
@@ -41,7 +41,7 @@
                 }
             },
             "post": {
-                "description": "Create a new aoc with the given information",
+                "description": "Create a new coa with the given information",
                 "consumes": [
                     "application/json"
                 ],
@@ -51,11 +51,11 @@
                 "tags": [
                     "AOC"
                 ],
-                "summary": "Create a new aoc",
+                "summary": "Create a new coa",
                 "parameters": [
                     {
                         "description": "AOC information",
-                        "name": "aoc",
+                        "name": "coa",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -85,7 +85,7 @@
                 }
             }
         },
-        "/aoc/account-types": {
+        "/coa/account-types": {
             "get": {
                 "description": "Get all accounts. Query params: sort (code|name, default code), order (asc|desc, default asc)",
                 "tags": [
@@ -119,7 +119,7 @@
                 }
             }
         },
-        "/aoc/tax": {
+        "/coa/tax": {
             "get": {
                 "description": "Get all account tax types",
                 "consumes": [

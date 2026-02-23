@@ -1,83 +1,92 @@
 -- +goose Up
 -- +goose StatementBegin
 
+CREATE TABLE tbl_tax_type (
+    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('INCLUSIVE', 'EXCLUSIVE', 'MANUAL')),
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ NULL
+);
+
+INSERT INTO tbl_tax_type (name, type, description) VALUES
+    ('Inclusive', 'INCLUSIVE', 'Inclusive tax type'),
+    ('Exclusive', 'EXCLUSIVE', 'Exclusive tax type'),
+    ('Manual', 'MANUAL', 'Manual tax type')
+ON CONFLICT (name) DO NOTHING;
+
+CREATE TABLE tbl_section_type (
+    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('INCOME', 'EXPENSE')),
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ NULL
+);
+
+INSERT INTO tbl_section_type (name, type, description) VALUES
+    ('INCOME', 'INCOME', 'Income section'),
+    ('EXPENSE', 'EXPENSE', 'Expense section')
+ON CONFLICT (name) DO NOTHING;
+
+
 CREATE TABLE tbl_custom_form (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    clinic_id UUID NOT NULL REFERENCES tbl_clinic(id) ON DELETE CASCADE,
+    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
+    clinic_id VARCHAR(40) NOT NULL REFERENCES tbl_clinic(id),
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    form_type VARCHAR(50) NOT NULL CHECK (form_type IN ('INCOME', 'EXPENSE', 'REDUCTION')),
     status VARCHAR(50) NOT NULL DEFAULT 'DRAFT'
         CHECK (status IN ('DRAFT', 'PUBLISHED', 'ARCHIVED')),
-    calculation_method VARCHAR(50) NOT NULL CHECK (calculation_method IN ('NET', 'GROSS')),
-    default_payment_responsibility VARCHAR(50) NOT NULL CHECK (default_payment_responsibility IN ('OWNER', 'CLINIC')),
-    created_by UUID NOT NULL REFERENCES tbl_user(id),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL
+    calculation_method VARCHAR(50) NOT NULL CHECK (calculation_method IN ('NET', 'GROSS')) DEFAULT 'NET',
+    created_by VARCHAR(40) NOT NULL REFERENCES tbl_user(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ NULL
 );
 
 CREATE TABLE tbl_custom_form_version (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    form_id UUID NOT NULL REFERENCES tbl_custom_form(id) ON DELETE CASCADE,
+    id SERIAL PRIMARY KEY NOT NULL UNIQUE,
+    form_id VARCHAR(40) NOT NULL REFERENCES tbl_custom_form(id),
     version INTEGER NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES tbl_user(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by VARCHAR(40) NOT NULL REFERENCES tbl_user(id),
     UNIQUE (form_id, version)
 );
 
 CREATE TABLE tbl_custom_form_field (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    form_version_id UUID NOT NULL REFERENCES tbl_custom_form_version(id) ON DELETE CASCADE,
-    form_id UUID NOT NULL REFERENCES tbl_custom_form(id) ON DELETE CASCADE,
-    field_key VARCHAR(100) NOT NULL,
+    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
+    form_version_id VARCHAR(40) NOT NULL REFERENCES tbl_custom_form_version(id),
+    form_id VARCHAR(40) NOT NULL REFERENCES tbl_custom_form(id),
     label VARCHAR(255) NOT NULL,
-    field_type VARCHAR(50) NOT NULL,
-    section VARCHAR(50) NOT NULL CHECK (section IN ('INCOME', 'EXPENSE', 'REDUCTION')),
+    section_type_id VARCHAR(40) NOT NULL REFERENCES tbl_section_type(id),
+    description TEXT NULL,
     is_required BOOLEAN NOT NULL DEFAULT FALSE,
-    coa_id UUID NOT NULL REFERENCES tbl_account(id) ON DELETE RESTRICT,
-    placeholder VARCHAR(255) NOT NULL,
-    min_value NUMERIC(14,2),
-    max_value NUMERIC(14,2),
+    coa_id VARCHAR(40) NOT NULL REFERENCES tbl_account(id),
+
+    placeholder VARCHAR(255) NULL,
+    min_value NUMERIC(14,2) NULL,
+    max_value NUMERIC(14,2) NULL,
     field_order INTEGER NOT NULL,
-    gst_config BOOLEAN NOT NULL DEFAULT FALSE,
-    gst_rate NUMERIC(5,2),
-    gst_type VARCHAR(50) NULL CHECK (gst_type IN ('INCLUSIVE', 'EXCLUSIVE', 'MANUAL')),
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (form_version_id, field_key)
+    tax_type_id VARCHAR(40) NULL REFERENCES tbl_tax_type(id),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ NULL
 );
 
-CREATE TABLE tbl_custom_form_calculation (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    form_version_id UUID NOT NULL REFERENCES tbl_custom_form_version(id) ON DELETE CASCADE,
-    form_id UUID NOT NULL REFERENCES tbl_custom_form(id) ON DELETE CASCADE,
-    calculation_method VARCHAR(50) NOT NULL
-        CHECK (calculation_method IN ('NET', 'GROSS')),
-    default_payment_responsibility VARCHAR(50)
-        CHECK (default_payment_responsibility IN ('OWNER', 'CLINIC')),
-    service_facility_fee_percent NUMERIC(5,2),
-    outwork_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-    outwork_rate_percent NUMERIC(5,2),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE tbl_custom_form_publish (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    form_version_id UUID NOT NULL REFERENCES tbl_custom_form_version(id),
-    form_id UUID NOT NULL REFERENCES tbl_custom_form(id) ON DELETE CASCADE,
-    published_by UUID NOT NULL REFERENCES tbl_user(id),
-    published_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
 
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS tbl_custom_form_publish;
-DROP TABLE IF EXISTS tbl_custom_form_calculation;
 DROP TABLE IF EXISTS tbl_custom_form_field;
 DROP TABLE IF EXISTS tbl_custom_form_version;
 DROP TABLE IF EXISTS tbl_custom_form;
+DROP TABLE IF EXISTS tbl_tax_type;
+DROP TABLE IF EXISTS tbl_section_type;
+DROP TABLE IF EXISTS tbl_tax_method;
 -- +goose StatementEnd

@@ -1,7 +1,6 @@
 package form
 
 import (
-	"encoding/json"
 	"errors"
 	"time"
 
@@ -9,128 +8,129 @@ import (
 )
 
 type FieldRequest struct {
-	ID          *string `json:"id" validate:"omitempty,required"`
-	Name        string  `json:"name" validate:"required,min=3,max=255"`
-	DisplayName string  `json:"displayName" validate:"omitempty,required,min=3,max=255"`
-	Placeholder string  `json:"placeholder" validate:"omitempty,required,min=3,max=255"`
-	HelpText    string  `json:"helpText" validate:"omitempty,required,min=3,max=255"`
+	ID            *string `json:"id" validate:"omitempty,required"`
+	FormVersionID string  `json:"formVersionId" validate:"required"`
+	FormID        string  `json:"formId" validate:"required"`
 
-	Required        bool             `json:"required" validate:"required"`
-	ValidationRules []ValidationRule `json:"validationRules" validate:"omitempty,required,oneof=REQUIRED MIN MAX PATTERN CUSTOM"`
+	Label         string  `json:"label" validate:"required,min=3,max=255"`
+	SectionTypeID string  `json:"sectionTypeId" validate:"required"`
+	Description   *string `json:"description" validate:"omitempty,min=3,max=500"`
+	IsRequired    bool    `json:"isRequired" validate:"required"`
+	CoaID         string  `json:"coaId" validate:"required"`
 
-	Value json.RawMessage `json:"value" validate:"omitempty,required"`
-
-	Section     Section `json:"section" validate:"required,oneof=INCOME EXPENSE"`
-	CoaID       string  `json:"coaId" validate:"required"`
-	TaxConfigID string  `json:"taxConfigId" validate:"required"`
+	Placeholder *string  `json:"placeholder" validate:"omitempty,min=1,max=255"`
+	MinValue    *float64 `json:"minValue" validate:"omitempty"`
+	MaxValue    *float64 `json:"maxValue" validate:"omitempty"`
+	FieldOrder  int      `json:"fieldOrder" validate:"required,min=1"`
+	TaxTypeID   *string  `json:"taxTypeId" validate:"omitempty"`
 
 	CreatedAt time.Time  `json:"createdAt" validate:"required"`
 	UpdatedAt *time.Time `json:"updatedAt" validate:"required_with=CreatedAt"`
-	DeletedAt *time.Time `json:"deletedAt" validate:"required_with=UpdatedAt"`
+	DeletedAt *time.Time `json:"deletedAt" validate:"omitempty"`
 }
 
 func (f *FieldRequest) Validate() error {
-	// If ValidationRules contains REQUIRED, value must be present (not nil or empty).
-	if f.ValidationRules != nil {
-		for _, rule := range f.ValidationRules {
-			if rule == ValidationRuleRequired {
-				if f.Value == nil || len(f.Value) == 0 {
-					return errors.New("value is required due to REQUIRED validation rule")
-				}
-				// If REQUIRED is found, no need to check f.Required - we already require value.
-				return nil
-			}
+	if f.IsRequired {
+		if f.MinValue != nil && f.MaxValue != nil && *f.MinValue > *f.MaxValue {
+			return errors.New("minValue cannot be greater than maxValue")
 		}
 	}
-	// Otherwise, if the Required field is set, also require value.
-	if f.Required {
-		if f.Value == nil || len(f.Value) == 0 {
-			return errors.New("value is required")
-		}
+	if f.Label == "" {
+		return errors.New("label is required")
+	}
+	if f.FormID == "" || f.FormVersionID == "" {
+		return errors.New("formId and formVersionId are required")
 	}
 	return nil
 }
 
 type Field struct {
-	ID uuid.UUID `db:"id"`
+	ID            string  `db:"id"`
+	FormVersionID string  `db:"form_version_id"`
+	FormID        string  `db:"form_id"`
+	Label         string  `db:"label"`
+	SectionTypeID string  `db:"section_type_id"`
+	Description   *string `db:"description"`
+	IsRequired    bool    `db:"is_required"`
+	CoaID         string  `db:"coa_id"`
 
-	Name        string `db:"name"`
-	DisplayName string `db:"displayName"`
-	Placeholder string `db:"placeholder"`
+	Placeholder *string  `db:"placeholder"`
+	MinValue    *float64 `db:"min_value"`
+	MaxValue    *float64 `db:"max_value"`
+	FieldOrder  int      `db:"field_order"`
+	TaxTypeID   *string  `db:"tax_type_id"`
 
-	Required        bool             `db:"required"`
-	ValidationRules []ValidationRule `db:"validationRules"`
-
-	Value json.RawMessage `db:"value"`
-
-	Section     Section    `db:"section"`
-	CoaID       uuid.UUID  `db:"coaId"`
-	TaxConfigID uuid.UUID  `db:"taxConfigId"`
-	CreatedAt   time.Time  `db:"createdAt"`
-	UpdatedAt   *time.Time `db:"updatedAt"`
-	DeletedAt   *time.Time `db:"deletedAt"`
+	CreatedAt time.Time  `db:"created_at"`
+	UpdatedAt time.Time  `db:"updated_at"`
+	DeletedAt *time.Time `db:"deleted_at"`
 }
 
-func (f *Field) ToFieldDB(field *FieldRequest) {
-	if field.ID != nil && *field.ID != "" {
-		f.ID = uuid.MustParse(*field.ID)
+func (f *Field) ToFieldDB(req *FieldRequest) {
+	if req.ID != nil && *req.ID != "" {
+		f.ID = *req.ID
+	} else {
+		f.ID = uuid.New().String()
 	}
-	f.Name = field.Name
-	f.DisplayName = field.DisplayName
-	f.Placeholder = field.Placeholder
-	f.Required = field.Required
-	f.ValidationRules = field.ValidationRules
-	f.Value = field.Value
-	f.Section = field.Section
-	if field.CoaID != "" {
-		f.CoaID = uuid.MustParse(field.CoaID)
+	f.FormVersionID = req.FormVersionID
+	f.FormID = req.FormID
+	f.Label = req.Label
+	f.SectionTypeID = req.SectionTypeID
+	f.Description = req.Description
+	f.IsRequired = req.IsRequired
+	f.CoaID = req.CoaID
+	f.Placeholder = req.Placeholder
+	f.MinValue = req.MinValue
+	f.MaxValue = req.MaxValue
+	f.FieldOrder = req.FieldOrder
+	f.TaxTypeID = req.TaxTypeID
+	f.CreatedAt = req.CreatedAt
+	if req.UpdatedAt != nil {
+		f.UpdatedAt = *req.UpdatedAt
+	} else {
+		f.UpdatedAt = req.CreatedAt
 	}
-	if field.TaxConfigID != "" {
-		f.TaxConfigID = uuid.MustParse(field.TaxConfigID)
-	}
-	f.CreatedAt = field.CreatedAt
-	f.UpdatedAt = field.UpdatedAt
-	f.DeletedAt = field.DeletedAt
+	f.DeletedAt = req.DeletedAt
 }
 
 type FieldResponse struct {
-	ID              string           `json:"id"`
-	Name            string           `json:"name"`
-	DisplayName     string           `json:"displayName"`
-	Placeholder     string           `json:"placeholder"`
-	HelpText        string           `json:"helpText"`
-	Required        bool             `json:"required"`
-	ValidationRules []ValidationRule `json:"validationRules"`
+	ID            string `json:"id"`
+	FormVersionID string `json:"formVersionId"`
+	FormID        string `json:"formId"`
 
-	Value json.RawMessage `json:"value"`
+	Label         string  `json:"label"`
+	SectionTypeID string  `json:"sectionTypeId"`
+	Description   *string `json:"description"`
+	IsRequired    bool    `json:"isRequired"`
+	CoaID         string  `json:"coaId"`
 
-	Section   Section            `json:"section"`
-	CoaID     string             `json:"coaId"`
-	TaxConfig *TaxConfigResponse `json:"taxConfig"`
-	CreatedAt time.Time          `json:"createdAt"`
-	UpdatedAt *time.Time         `json:"updatedAt"`
-	DeletedAt *time.Time         `json:"deletedAt"`
+	Placeholder *string  `json:"placeholder"`
+	MinValue    *float64 `json:"minValue"`
+	MaxValue    *float64 `json:"maxValue"`
+	FieldOrder  int      `json:"fieldOrder"`
+	TaxTypeID   *string  `json:"taxTypeId"`
+
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	DeletedAt *time.Time `json:"deletedAt"`
 }
 
-func (f *Field) ToFieldResponse(taxConfig *TaxConfig) *FieldResponse {
-	var taxConfigResp *TaxConfigResponse
-	if taxConfig != nil {
-		taxConfigResp = taxConfig.ToTaxConfigResponse()
-	}
+func (f *Field) ToFieldResponse() *FieldResponse {
 	return &FieldResponse{
-		ID:              f.ID.String(),
-		Name:            f.Name,
-		DisplayName:     f.DisplayName,
-		Placeholder:     f.Placeholder,
-		HelpText:        "", // HelpText is not present on Field model; adjust as needed if logic changes
-		Required:        f.Required,
-		ValidationRules: f.ValidationRules,
-		Value:           f.Value,
-		Section:         f.Section,
-		CoaID:           f.CoaID.String(),
-		TaxConfig:       taxConfigResp,
-		CreatedAt:       f.CreatedAt,
-		UpdatedAt:       f.UpdatedAt,
-		DeletedAt:       f.DeletedAt,
+		ID:            f.ID,
+		FormVersionID: f.FormVersionID,
+		FormID:        f.FormID,
+		Label:         f.Label,
+		SectionTypeID: f.SectionTypeID,
+		Description:   f.Description,
+		IsRequired:    f.IsRequired,
+		CoaID:         f.CoaID,
+		Placeholder:   f.Placeholder,
+		MinValue:      f.MinValue,
+		MaxValue:      f.MaxValue,
+		FieldOrder:    f.FieldOrder,
+		TaxTypeID:     f.TaxTypeID,
+		CreatedAt:     f.CreatedAt,
+		UpdatedAt:     f.UpdatedAt,
+		DeletedAt:     f.DeletedAt,
 	}
 }

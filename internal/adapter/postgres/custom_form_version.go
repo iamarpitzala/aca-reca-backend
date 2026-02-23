@@ -6,9 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/form"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -20,7 +19,7 @@ func NewCustomFormVersionRepository(db *sqlx.DB) port.CustomFormVersionRepositor
 	return &customFormVersionRepo{db: db}
 }
 
-func (r *customFormVersionRepo) Create(ctx context.Context, version *domain.CustomFormVersion) error {
+func (r *customFormVersionRepo) Create(ctx context.Context, version *form.FormVersion) error {
 	q := `INSERT INTO tbl_custom_form_version (
 		id, form_id, version, is_active, created_by, created_at
 	) VALUES (
@@ -30,7 +29,7 @@ func (r *customFormVersionRepo) Create(ctx context.Context, version *domain.Cust
 	return err
 }
 
-func (r *customFormVersionRepo) GetLatestByFormID(ctx context.Context, formID uuid.UUID) (*domain.CustomFormVersion, error) {
+func (r *customFormVersionRepo) GetLatestByFormID(ctx context.Context, formID string) (*form.FormVersion, error) {
 	q := `
 		SELECT id, form_id, version, is_active, created_by, created_at
 		FROM tbl_custom_form_version
@@ -38,7 +37,7 @@ func (r *customFormVersionRepo) GetLatestByFormID(ctx context.Context, formID uu
 		ORDER BY version DESC
 		LIMIT 1
 	`
-	var version domain.CustomFormVersion
+	var version form.FormVersion
 	err := r.db.GetContext(ctx, &version, q, formID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -49,21 +48,21 @@ func (r *customFormVersionRepo) GetLatestByFormID(ctx context.Context, formID uu
 	return &version, nil
 }
 
-func (r *customFormVersionRepo) GetByFormID(ctx context.Context, formID uuid.UUID) ([]domain.CustomFormVersion, error) {
+func (r *customFormVersionRepo) GetByFormID(ctx context.Context, formID string) ([]form.FormVersion, error) {
 	q := `
 		SELECT id, form_id, version, is_active, created_by, created_at
 		FROM tbl_custom_form_version
 		WHERE form_id = $1
 		ORDER BY version DESC
 	`
-	var versions []domain.CustomFormVersion
+	var versions []form.FormVersion
 	if err := r.db.SelectContext(ctx, &versions, q, formID); err != nil {
 		return nil, fmt.Errorf("failed to get form versions: %w", err)
 	}
 	return versions, nil
 }
 
-func (r *customFormVersionRepo) SetActive(ctx context.Context, formID uuid.UUID, versionID uuid.UUID) error {
+func (r *customFormVersionRepo) SetActive(ctx context.Context, formID string, versionID string) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err

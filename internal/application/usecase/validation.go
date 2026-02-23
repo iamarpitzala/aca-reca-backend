@@ -5,13 +5,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/clinic"
 )
 
 // ValidateState validates that the state is a valid Australian state/territory.
 func ValidateState(state string) error {
 	state = strings.ToUpper(strings.TrimSpace(state))
-	for _, validState := range domain.ValidStates {
+	for _, validState := range clinic.ValidStates {
 		if state == validState {
 			return nil
 		}

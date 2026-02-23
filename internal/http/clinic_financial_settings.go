@@ -4,10 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
-	utils "github.com/iamarpitzala/aca-reca-backend/util"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/clinic"
 )
 
 type ClinicFinancialSettingsHandler struct {
@@ -23,13 +21,7 @@ func NewClinicFinancialSettingsHandler(settingsUC *usecase.ClinicFinancialSettin
 // GetFinancialSettings retrieves financial settings for a clinic
 // GET /api/v1/clinic/:id/financial-settings
 func (h *ClinicFinancialSettingsHandler) GetFinancialSettings(c *gin.Context) {
-	clinicIDStr := c.Param("id")
-	clinicID, err := uuid.Parse(clinicIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
-		return
-	}
-
+	clinicID := c.Param("id")
 	settings, err := h.settingsUC.GetByClinicID(c.Request.Context(), clinicID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -42,14 +34,8 @@ func (h *ClinicFinancialSettingsHandler) GetFinancialSettings(c *gin.Context) {
 // CreateOrUpdateFinancialSettings creates or updates financial settings for a clinic
 // PUT /api/v1/clinic/:id/financial-settings
 func (h *ClinicFinancialSettingsHandler) CreateOrUpdateFinancialSettings(c *gin.Context) {
-	clinicIDStr := c.Param("id")
-	clinicID, err := uuid.Parse(clinicIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidClinicID})
-		return
-	}
-
-	var req domain.ClinicFinancialSettingsRequest
+	clinicID := c.Param("id")
+	var req clinic.ClinicFinancialSettingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

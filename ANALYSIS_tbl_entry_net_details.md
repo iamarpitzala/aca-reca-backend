@@ -5,7 +5,7 @@
 ```sql
 CREATE TABLE IF NOT EXISTS tbl_entry_net_details (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    source_entry_id UUID NOT NULL UNIQUE REFERENCES tbl_custom_form_entry(id) ON DELETE CASCADE,
+    source_entry_id UUID NOT NULL UNIQUE REFERENCES tbl_custom_form_entry(id),
     commission_percent NUMERIC(5,2) NOT NULL,
     commission NUMERIC(14,2) NOT NULL DEFAULT 0,
     gst_on_commission NUMERIC(14,2) NOT NULL DEFAULT 0,

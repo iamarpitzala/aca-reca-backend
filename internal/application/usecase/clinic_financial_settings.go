@@ -3,22 +3,23 @@ package usecase
 import (
 	"context"
 	"errors"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/clinic"
+	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 var ErrFinancialSettingsNotFound = errors.New("financial settings not found")
 var ErrFinancialSettingsLocked = errors.New("cannot modify financial settings: financial year start is locked once transactions exist")
 
 type ClinicFinancialSettingsService struct {
-	repo       port.ClinicFinancialSettingsRepository
-	clinicRepo port.ClinicRepository
+	repo                 port.ClinicFinancialSettingRepository
+	clinicRepo           port.ClinicRepository
+	financialYearRepo    port.FinancialYearRepository
+	financialQuarterRepo port.FinancialQuarterRepository
 }
 
-func NewClinicFinancialSettingsService(repo port.ClinicFinancialSettingsRepository, clinicRepo port.ClinicRepository) *ClinicFinancialSettingsService {
+func NewClinicFinancialSettingsService(repo port.ClinicFinancialSettingRepository, clinicRepo port.ClinicRepository) *ClinicFinancialSettingsService {
 	return &ClinicFinancialSettingsService{
 		repo:       repo,
 		clinicRepo: clinicRepo,
@@ -26,7 +27,7 @@ func NewClinicFinancialSettingsService(repo port.ClinicFinancialSettingsReposito
 }
 
 // GetByClinicID retrieves financial settings for a clinic, creating defaults if none exist
-func (s *ClinicFinancialSettingsService) GetByClinicID(ctx context.Context, clinicID uuid.UUID) (*domain.ClinicFinancialSettings, error) {
+func (s *ClinicFinancialSettingsService) GetByClinicID(ctx context.Context, clinicID string) (*clinic.ClinicFinancialSetting, error) {
 	// Verify clinic exists
 	_, err := s.clinicRepo.GetByID(ctx, clinicID)
 	if err != nil {
@@ -37,7 +38,7 @@ func (s *ClinicFinancialSettingsService) GetByClinicID(ctx context.Context, clin
 	if err != nil {
 		// If not found, return defaults (caller can create if needed)
 		if err.Error() == "financial settings not found" {
-			return s.getDefaultSettings(clinicID), nil
+			return s.getDefaultSettings(ctx, clinicID), nil
 		}
 		return nil, err
 	}
@@ -45,7 +46,7 @@ func (s *ClinicFinancialSettingsService) GetByClinicID(ctx context.Context, clin
 }
 
 // CreateOrUpdate creates or updates financial settings for a clinic
-func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, clinicID uuid.UUID, req *domain.ClinicFinancialSettingsRequest) (*domain.ClinicFinancialSettings, error) {
+func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, clinicID string, req *clinic.ClinicFinancialSettingRequest) (*clinic.ClinicFinancialSetting, error) {
 	// Verify clinic exists
 	_, err := s.clinicRepo.GetByID(ctx, clinicID)
 	if err != nil {
@@ -59,7 +60,7 @@ func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, cli
 
 	if existing == nil {
 		// Create new settings
-		settings, err := req.ToClinicFinancialSettings(clinicID)
+		settings, err := req.ToClinicFinancialSetting(clinicID)
 		if err != nil {
 			return nil, err
 		}
@@ -70,12 +71,11 @@ func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, cli
 	}
 
 	// Update existing settings
-	// Check if financial_year_start can be changed (should be locked if transactions exist)
-	// For now, we'll allow updates but this should be checked against transaction table
-	if req.FinancialYearStart != "" && req.FinancialYearStart != existing.FinancialYearStart {
-		// TODO: Check if transactions exist - if so, lock financial_year_start
-		// For MVP, we'll allow the change
-		existing.FinancialYearStart = req.FinancialYearStart
+	if req.FinancialYearID != existing.FinancialYearID {
+		existing.FinancialYearID = req.FinancialYearID
+	}
+	if req.FinancialQuarterID != existing.FinancialQuarterID {
+		existing.FinancialQuarterID = req.FinancialQuarterID
 	}
 	if req.AccountingMethod != "" {
 		existing.AccountingMethod = req.AccountingMethod
@@ -90,11 +90,6 @@ func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, cli
 	if req.LockDate != nil {
 		existing.LockDate = req.LockDate
 	}
-	if req.GSTDefaults != nil {
-		if err := existing.SetGSTDefaultsMap(req.GSTDefaults); err != nil {
-			return nil, err
-		}
-	}
 
 	if err := s.repo.Update(ctx, existing); err != nil {
 		return nil, err
@@ -103,30 +98,26 @@ func (s *ClinicFinancialSettingsService) CreateOrUpdate(ctx context.Context, cli
 }
 
 // getDefaultSettings returns default financial settings
-func (s *ClinicFinancialSettingsService) getDefaultSettings(clinicID uuid.UUID) *domain.ClinicFinancialSettings {
-	now := time.Now()
-	// Default lock date: end of last financial year (assuming July-June)
-	lockDate := time.Date(now.Year()-1, 6, 30, 0, 0, 0, 0, now.Location())
-	if now.Month() >= 7 {
-		lockDate = time.Date(now.Year(), 6, 30, 0, 0, 0, 0, now.Location())
+func (s *ClinicFinancialSettingsService) getDefaultSettings(ctx context.Context, clinicID string) *clinic.ClinicFinancialSetting {
+	financialYear, err := s.financialYearRepo.GetByClinicID(ctx, clinicID)
+	if err != nil {
+		return nil
+	}
+	financialQuarter, err := s.financialQuarterRepo.GetByFinancialYearID(ctx, financialYear.ID)
+	if err != nil {
+		return nil
 	}
 
-	gstDefaults := map[string]string{
-		"patient_fees": "GST_FREE",
-		"service_fees": "GST_10",
-		"lab_fees":     "GST_FREE",
-	}
-
-	settings := &domain.ClinicFinancialSettings{
+	settings := &clinic.ClinicFinancialSetting{
 		ClinicID:              clinicID,
-		FinancialYearStart:    domain.FinancialYearStartJuly,
-		AccountingMethod:      domain.AccountingMethodCash,
+		FinancialYearID:       financialYear.ID,
+		FinancialQuarterID:    financialQuarter.ID,
+		AccountingMethod:      util.AccountingMethodAccrual,
 		GSTRegistered:         true,
-		GSTReportingFrequency: domain.GSTReportingFrequencyQuarterly,
-		DefaultAmountMode:     domain.DefaultAmountModeGSTInclusive,
-		LockDate:              &lockDate,
+		GSTReportingFrequency: util.PeriodQuarterly,
+		DefaultAmountMode:     util.Inclusive,
+		LockDate:              &financialQuarter.EndDate,
 	}
-	settings.SetGSTDefaultsMap(gstDefaults)
 
 	return settings
 }

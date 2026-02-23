@@ -5,20 +5,21 @@ CREATE TABLE IF NOT EXISTS tbl_account_type (
     id SMALLSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ NULL
 );
 
--- Account Tax Master
 CREATE TABLE IF NOT EXISTS tbl_account_tax (
     id SMALLSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     rate NUMERIC(5,2) NOT NULL DEFAULT 0,
     description TEXT,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ NULL
 );
 
 -- Seed Account Types (Idempotent)
@@ -34,21 +35,21 @@ ON CONFLICT (name) DO NOTHING;
 -- Seed Tax Types (Xero-style)
 INSERT INTO tbl_account_tax (name, rate, description)
 VALUES
-    ('GST on Income', 0.00, 'Taxable sales / revenue'),
-    ('GST on Expenses', 0.00, 'Taxable purchases / expenses'),
+    ('GST on Income', 10.00, 'Taxable sales / revenue'),
+    ('GST on Expenses', 10.00, 'Taxable purchases / expenses'),
     ('GST Free Expenses', 0.00, 'GST free expenses'),
-    ('BAS Excluded', 0.00, 'Balance sheet items')
+    ('BAS Excluded', 0.00, 'Balance sheet items'),
+    ('GST Free Income', 0.00, 'GST free income'),
 ON CONFLICT (name) DO NOTHING;
+
 
 -- Chart of Accounts
 CREATE TABLE IF NOT EXISTS tbl_account (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
 
-    account_type_id SMALLINT NOT NULL
-        REFERENCES tbl_account_type(id),
+    account_type_id SMALLINT NOT NULL REFERENCES tbl_account_type(id),
 
-    account_tax_id SMALLINT NOT NULL
-        REFERENCES tbl_account_tax(id),
+    account_tax_id SMALLINT NOT NULL REFERENCES tbl_account_tax(id),
 
     code VARCHAR(10) NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -56,17 +57,12 @@ CREATE TABLE IF NOT EXISTS tbl_account (
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ NULL,
 
     CONSTRAINT uq_account_code UNIQUE (code),
     CONSTRAINT uq_account_name UNIQUE (name)
 );
 
-CREATE INDEX IF NOT EXISTS idx_account_type
-    ON tbl_account(account_type_id);
-
-CREATE INDEX IF NOT EXISTS idx_account_tax
-    ON tbl_account(account_tax_id);
 
 -- +goose StatementEnd
 

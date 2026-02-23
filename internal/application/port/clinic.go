@@ -3,15 +3,14 @@ package port
 import (
 	"context"
 
-	"github.com/google/uuid"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/clinic"
 )
 
 type ClinicRepository interface {
-	Create(ctx context.Context, clinic *domain.Clinic) error
-	GetByID(ctx context.Context, id uuid.UUID) (*domain.Clinic, error)
-	Update(ctx context.Context, clinic *domain.Clinic) error
-	Delete(ctx context.Context, id uuid.UUID) error
-	List(ctx context.Context) ([]domain.Clinic, error)
-	GetByABN(ctx context.Context, abnNumber string) (*domain.Clinic, error)
+	Create(ctx context.Context, clinic *clinic.Clinic) error
+	GetByID(ctx context.Context, id string) (*clinic.Clinic, error)
+	Update(ctx context.Context, clinic *clinic.Clinic) error
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context) ([]clinic.Clinic, error)
+	GetByABN(ctx context.Context, abnNumber string) (*clinic.Clinic, error)
 }

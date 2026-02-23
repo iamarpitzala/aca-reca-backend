@@ -24,8 +24,8 @@ func (a AuthProvider) IsValid() bool {
 }
 
 type AuthIdentity struct {
-	ID             uuid.UUID    `db:"id"`
-	UserID         uuid.UUID    `db:"user_id"`
+	ID             string       `db:"id"`
+	UserID         string       `db:"user_id"`
 	Provider       AuthProvider `db:"provider"`
 	ProviderUserID *string      `db:"provider_user_id"`
 	Email          *string      `db:"email"`
@@ -39,8 +39,16 @@ type AuthIdentity struct {
 }
 
 func (a *AuthIdentity) ToAuthIdentityDB(authIdentity *AuthIdentityRequest) {
-	a.ID = uuid.MustParse(*authIdentity.ID)
-	a.UserID = uuid.MustParse(*authIdentity.UserID)
+	if authIdentity.ID != nil && *authIdentity.ID != "" {
+		a.ID = *authIdentity.ID
+	} else {
+		a.ID = uuid.New().String()
+	}
+	if authIdentity.UserID != nil && *authIdentity.UserID != "" {
+		a.UserID = *authIdentity.UserID
+	} else {
+		a.UserID = uuid.New().String()
+	}
 	a.Provider = authIdentity.Provider
 	a.ProviderUserID = authIdentity.ProviderUserID
 	a.Email = authIdentity.Email
@@ -99,7 +107,7 @@ func (a *AuthIdentityRequest) Validate() error {
 
 type AuthIdentityResponse struct {
 	ID             string       `json:"id"`
-	UserID         uuid.UUID    `json:"userId"`
+	UserID         string       `json:"userId"`
 	Provider       AuthProvider `json:"provider"`
 	ProviderUserID *string      `json:"providerUserId"`
 	Email          *string      `json:"email"`
@@ -114,7 +122,7 @@ type AuthIdentityResponse struct {
 
 func (a *AuthIdentity) ToAuthIdentityResponse() *AuthIdentityResponse {
 	return &AuthIdentityResponse{
-		ID:             a.ID.String(),
+		ID:             a.ID,
 		UserID:         a.UserID,
 		Provider:       a.Provider,
 		ProviderUserID: a.ProviderUserID,
@@ -127,4 +135,13 @@ func (a *AuthIdentity) ToAuthIdentityResponse() *AuthIdentityResponse {
 		UpdatedAt:      a.UpdatedAt,
 		DeletedAt:      a.DeletedAt,
 	}
+}
+
+type OAuthUserInfo struct {
+	ID            string
+	Email         string
+	FirstName     string
+	LastName      string
+	AvatarURL     string
+	EmailVerified bool
 }

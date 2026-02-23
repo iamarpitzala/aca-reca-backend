@@ -7,25 +7,25 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/user"
 	"github.com/iamarpitzala/aca-reca-backend/util"
 )
 
 type UserClinicService struct {
-	ucRepo   port.UserClinicRepository
+	ucRepo     port.UserClinicRepository
 	clinicRepo port.ClinicRepository
-	userRepo port.UserRepository
+	userRepo   port.UserRepository
 }
 
 func NewUserClinicService(ucRepo port.UserClinicRepository, clinicRepo port.ClinicRepository, userRepo port.UserRepository) *UserClinicService {
 	return &UserClinicService{
-		ucRepo:    ucRepo,
+		ucRepo:     ucRepo,
 		clinicRepo: clinicRepo,
-		userRepo:  userRepo,
+		userRepo:   userRepo,
 	}
 }
 
-func (s *UserClinicService) AssociateUserWithClinic(ctx context.Context, userID, clinicID uuid.UUID, role string) (*domain.UserClinic, error) {
+func (s *UserClinicService) AssociateUserWithClinic(ctx context.Context, userID, clinicID string, role string) (*user.UserClinic, error) {
 	existing, err := s.ucRepo.GetByUserAndClinic(ctx, userID, clinicID)
 	if err != nil {
 		return nil, err
@@ -36,17 +36,17 @@ func (s *UserClinicService) AssociateUserWithClinic(ctx context.Context, userID,
 	if _, err := s.clinicRepo.GetByID(ctx, clinicID); err != nil {
 		return nil, errors.New("clinic not found")
 	}
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil || user == nil {
+	us, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
 		return nil, errors.New("user not found")
 	}
 	if role == "" {
 		role = util.RoleOwner
 	}
 	now := time.Now()
-	uc := &domain.UserClinic{
-		ID:        uuid.New(),
-		UserID:    userID,
+	uc := &user.UserClinic{
+		ID:        uuid.New().String(),
+		UserID:    us.ID,
 		ClinicID:  clinicID,
 		Role:      role,
 		CreatedAt: now,
@@ -58,19 +58,19 @@ func (s *UserClinicService) AssociateUserWithClinic(ctx context.Context, userID,
 	return uc, nil
 }
 
-func (s *UserClinicService) GetUserClinics(ctx context.Context, userID uuid.UUID) ([]domain.UserClinicWithClinic, error) {
+func (s *UserClinicService) GetUserClinics(ctx context.Context, userID string) ([]user.UserClinicWithClinic, error) {
 	return s.ucRepo.GetUserClinics(ctx, userID)
 }
 
-func (s *UserClinicService) GetClinicUsers(ctx context.Context, clinicID uuid.UUID) ([]domain.UserClinicWithUser, error) {
+func (s *UserClinicService) GetClinicUsers(ctx context.Context, clinicID string) ([]user.UserClinicWithUser, error) {
 	return s.ucRepo.GetClinicUsers(ctx, clinicID)
 }
 
-func (s *UserClinicService) GetByID(ctx context.Context, id uuid.UUID) (*domain.UserClinic, error) {
+func (s *UserClinicService) GetByID(ctx context.Context, id string) (*user.UserClinic, error) {
 	return s.ucRepo.GetByID(ctx, id)
 }
 
-func (s *UserClinicService) RemoveUserFromClinic(ctx context.Context, id uuid.UUID) error {
+func (s *UserClinicService) RemoveUserFromClinic(ctx context.Context, id string) error {
 	_, err := s.ucRepo.GetByID(ctx, id)
 	if err != nil {
 		return errors.New("user-clinic association not found")
@@ -78,7 +78,7 @@ func (s *UserClinicService) RemoveUserFromClinic(ctx context.Context, id uuid.UU
 	return s.ucRepo.Delete(ctx, id)
 }
 
-func (s *UserClinicService) UserHasAccessToClinic(ctx context.Context, userID, clinicID uuid.UUID) (bool, error) {
+func (s *UserClinicService) UserHasAccessToClinic(ctx context.Context, userID, clinicID string) (bool, error) {
 	uc, err := s.ucRepo.GetByUserAndClinic(ctx, userID, clinicID)
 	if err != nil {
 		return false, err
@@ -86,9 +86,7 @@ func (s *UserClinicService) UserHasAccessToClinic(ctx context.Context, userID, c
 	return uc != nil, nil
 }
 
-// UserRoleInClinic returns the authenticated user's role for the clinic (e.g. "owner", "member").
-// Returns empty string if the user is not associated with the clinic.
-func (s *UserClinicService) UserRoleInClinic(ctx context.Context, userID, clinicID uuid.UUID) (string, error) {
+func (s *UserClinicService) UserRoleInClinic(ctx context.Context, userID, clinicID string) (string, error) {
 	uc, err := s.ucRepo.GetByUserAndClinic(ctx, userID, clinicID)
 	if err != nil || uc == nil {
 		return "", err

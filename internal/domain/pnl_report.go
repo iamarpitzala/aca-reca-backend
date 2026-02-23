@@ -2,15 +2,13 @@ package domain
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // PnlReport represents tbl_pnl_report (header)
 type PnlReport struct {
-	ID                uuid.UUID  `db:"id" json:"id"`
-	ClinicID          uuid.UUID  `db:"clinic_id" json:"clinicId"`
-	QuarterID         *uuid.UUID `db:"quarter_id" json:"quarterId,omitempty"`
+	ID                string     `db:"id" json:"id"`
+	ClinicID          string     `db:"clinic_id" json:"clinicId"`
+	QuarterID         *string    `db:"quarter_id" json:"quarterId,omitempty"`
 	ReportName        string     `db:"report_name" json:"reportName"`
 	PeriodStart       time.Time  `db:"period_start" json:"periodStart"`
 	PeriodEnd         time.Time  `db:"period_end" json:"periodEnd"`
@@ -23,7 +21,7 @@ type PnlReport struct {
 	TotalGSTPaid      float64    `db:"total_gst_paid" json:"totalGstPaid"`
 	NetGST            float64    `db:"net_gst" json:"netGst"`
 	Status            string     `db:"status" json:"status"`
-	GeneratedBy       uuid.UUID  `db:"generated_by" json:"generatedBy"`
+	GeneratedBy       string     `db:"generated_by" json:"generatedBy"`
 	FinalizedAt       *time.Time `db:"finalized_at" json:"finalizedAt,omitempty"`
 	Notes             *string    `db:"notes" json:"notes,omitempty"`
 	CreatedAt         time.Time  `db:"created_at" json:"createdAt"`
@@ -33,9 +31,9 @@ type PnlReport struct {
 
 // PnlReportLine represents tbl_pnl_report_line (line item)
 type PnlReportLine struct {
-	ID               uuid.UUID `db:"id" json:"id"`
-	PnlReportID      uuid.UUID `db:"pnl_report_id" json:"pnlReportId"`
-	COAID            uuid.UUID `db:"coa_id" json:"coaId"`
+	ID               string    `db:"id" json:"id"`
+	PnlReportID      string    `db:"pnl_report_id" json:"pnlReportId"`
+	COAID            string    `db:"coa_id" json:"coaId"`
 	AccountCode      string    `db:"account_code" json:"accountCode"`
 	AccountName      string    `db:"account_name" json:"accountName"`
 	LineCategory     string    `db:"line_category" json:"lineCategory"`
@@ -58,12 +56,12 @@ type PnlReportWithLines struct {
 
 // GeneratePnlRequest is the request body for POST /reports/pnl/generate
 type GeneratePnlRequest struct {
-	ClinicID    uuid.UUID  `json:"clinicId" validate:"required"`
-	QuarterID   *uuid.UUID `json:"quarterId" validate:"omitempty"`
-	ReportName  string     `json:"reportName" validate:"required,max=255"`
-	PeriodStart string     `json:"periodStart" validate:"required"`
-	PeriodEnd   string     `json:"periodEnd" validate:"required"`
-	Notes       *string    `json:"notes" validate:"omitempty,max=1000"`
+	ClinicID    string  `json:"clinicId" validate:"required"`
+	QuarterID   *string `json:"quarterId" validate:"omitempty"`
+	ReportName  string  `json:"reportName" validate:"required,max=255"`
+	PeriodStart string  `json:"periodStart" validate:"required"`
+	PeriodEnd   string  `json:"periodEnd" validate:"required"`
+	Notes       *string `json:"notes" validate:"omitempty,max=1000"`
 }
 
 // ---- Response DTOs ----
@@ -82,13 +80,13 @@ type PnlReportListResponse struct {
 
 // LedgerAggRow is used internally to aggregate ledger data during report generation
 type LedgerAggRow struct {
-	COAID            uuid.UUID `db:"coa_id"`
-	AccountCode      string    `db:"account_code"`
-	AccountName      string    `db:"account_name"`
-	AccountType      string    `db:"account_type"`
-	DebitTotal       float64   `db:"debit_total"`
-	CreditTotal      float64   `db:"credit_total"`
-	NetAmount        float64   `db:"net_amount"`
-	GSTAmount        float64   `db:"gst_amount"`
-	TransactionCount int       `db:"transaction_count"`
+	COAID            string  `db:"coa_id"`
+	AccountCode      string  `db:"account_code"`
+	AccountName      string  `db:"account_name"`
+	AccountType      string  `db:"account_type"`
+	DebitTotal       float64 `db:"debit_total"`
+	CreditTotal      float64 `db:"credit_total"`
+	NetAmount        float64 `db:"net_amount"`
+	GSTAmount        float64 `db:"gst_amount"`
+	TransactionCount int     `db:"transaction_count"`
 }

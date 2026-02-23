@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 
 CREATE TABLE IF NOT EXISTS tbl_user (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
 
     email VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
@@ -14,30 +14,11 @@ CREATE TABLE IF NOT EXISTS tbl_user (
 
     is_email_verified BOOLEAN DEFAULT FALSE,
 
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    deleted_at TIMESTAMP NULL
+    deleted_at TIMESTAMPTZ NULL
 );
-
--- UNIQUE (ACTIVE USERS ONLY)
-CREATE UNIQUE INDEX ux_user_email_active
-ON tbl_user (LOWER(email))
-WHERE deleted_at IS NULL;
-
--- COMMON LOOKUPS
-CREATE INDEX idx_user_active
-ON tbl_user (id)
-WHERE deleted_at IS NULL;
-
-CREATE INDEX idx_user_email_lookup
-ON tbl_user (LOWER(email))
-WHERE deleted_at IS NULL;
-
-CREATE TRIGGER trg_user_updated_at
-BEFORE UPDATE ON tbl_user
-FOR EACH ROW
-EXECUTE FUNCTION set_updated_at();
 
 -- +goose StatementEnd
 

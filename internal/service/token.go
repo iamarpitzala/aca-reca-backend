@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/config"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
+	"github.com/iamarpitzala/aca-reca-backend/internal/domain/auth"
 )
 
 type TokenService struct {
@@ -26,11 +25,10 @@ func NewTokenService(cfg config.JWTConfig) *TokenService {
 	}
 }
 
-func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessionID uuid.UUID) (*domain.TokenPair, error) {
+func (ts *TokenService) GenerateTokenPair(userID string, email string, sessionID string) (*auth.TokenPair, error) {
 	now := time.Now()
 
-	// Access token
-	accessClaims := &domain.TokenClaims{
+	accessClaims := &auth.TokenClaims{
 		UserID:    userID,
 		Email:     email,
 		SessionID: sessionID,
@@ -39,7 +37,7 @@ func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessio
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    ts.issuer,
-			Subject:   userID.String(),
+			Subject:   userID,
 		},
 	}
 
@@ -49,8 +47,7 @@ func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessio
 		return nil, err
 	}
 
-	// Refresh token (longer TTL, stored in database)
-	refreshClaims := &domain.TokenClaims{
+	refreshClaims := &auth.TokenClaims{
 		UserID:    userID,
 		Email:     email,
 		SessionID: sessionID,
@@ -59,7 +56,7 @@ func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessio
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    ts.issuer,
-			Subject:   userID.String(),
+			Subject:   userID,
 		},
 	}
 
@@ -69,7 +66,7 @@ func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessio
 		return nil, err
 	}
 
-	return &domain.TokenPair{
+	return &auth.TokenPair{
 		AccessToken:  accessTokenString,
 		RefreshToken: refreshTokenString,
 		TokenType:    "Bearer",
@@ -77,8 +74,8 @@ func (ts *TokenService) GenerateTokenPair(userID uuid.UUID, email string, sessio
 	}, nil
 }
 
-func (ts *TokenService) ValidateToken(tokenString string) (*domain.TokenClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &domain.TokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+func (ts *TokenService) ValidateToken(tokenString string) (*auth.TokenClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &auth.TokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
@@ -89,12 +86,11 @@ func (ts *TokenService) ValidateToken(tokenString string) (*domain.TokenClaims, 
 		return nil, err
 	}
 
-	claims, ok := token.Claims.(*domain.TokenClaims)
+	claims, ok := token.Claims.(*auth.TokenClaims)
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid token claims")
 	}
 
-	// Check expiration
 	if claims.ExpiresAt != nil && time.Now().After(claims.ExpiresAt.Time) {
 		return nil, errors.New("token expired")
 	}
@@ -102,7 +98,6 @@ func (ts *TokenService) ValidateToken(tokenString string) (*domain.TokenClaims, 
 	return claims, nil
 }
 
-// RefreshTokenTTL returns the refresh token TTL for session creation (implements port.TokenProvider).
 func (ts *TokenService) RefreshTokenTTL() time.Duration {
 	return ts.refreshTokenTTL
 }

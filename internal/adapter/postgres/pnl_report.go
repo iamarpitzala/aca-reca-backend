@@ -6,7 +6,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain"
 	"github.com/jmoiron/sqlx"
@@ -65,7 +64,7 @@ func (r *pnlReportRepo) CreateLines(ctx context.Context, lines []domain.PnlRepor
 	return err
 }
 
-func (r *pnlReportRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.PnlReport, error) {
+func (r *pnlReportRepo) GetByID(ctx context.Context, id string) (*domain.PnlReport, error) {
 	q := `
 		SELECT id, clinic_id, quarter_id, report_name,
 		       period_start, period_end,
@@ -87,7 +86,7 @@ func (r *pnlReportRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.PnlR
 	return &report, nil
 }
 
-func (r *pnlReportRepo) GetLinesByReportID(ctx context.Context, reportID uuid.UUID) ([]domain.PnlReportLine, error) {
+func (r *pnlReportRepo) GetLinesByReportID(ctx context.Context, reportID string) ([]domain.PnlReportLine, error) {
 	q := `
 		SELECT id, pnl_report_id, coa_id,
 		       account_code, account_name, line_category,
@@ -104,7 +103,7 @@ func (r *pnlReportRepo) GetLinesByReportID(ctx context.Context, reportID uuid.UU
 	return lines, nil
 }
 
-func (r *pnlReportRepo) GetByClinicID(ctx context.Context, clinicID uuid.UUID) ([]domain.PnlReport, error) {
+func (r *pnlReportRepo) GetByClinicID(ctx context.Context, clinicID string) ([]domain.PnlReport, error) {
 	q := `
 		SELECT id, clinic_id, quarter_id, report_name,
 		       period_start, period_end,
@@ -124,7 +123,7 @@ func (r *pnlReportRepo) GetByClinicID(ctx context.Context, clinicID uuid.UUID) (
 	return reports, nil
 }
 
-func (r *pnlReportRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status string, finalizedAt *time.Time) error {
+func (r *pnlReportRepo) UpdateStatus(ctx context.Context, id string, status string, finalizedAt *time.Time) error {
 	q := `
 		UPDATE tbl_pnl_report SET
 			status = $1,
@@ -142,7 +141,7 @@ func (r *pnlReportRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status s
 	return nil
 }
 
-func (r *pnlReportRepo) DeleteLinesByReportID(ctx context.Context, reportID uuid.UUID) error {
+func (r *pnlReportRepo) DeleteLinesByReportID(ctx context.Context, reportID string) error {
 	_, err := r.db.ExecContext(ctx,
 		`DELETE FROM tbl_pnl_report_line WHERE pnl_report_id = $1`,
 		reportID,
@@ -175,7 +174,7 @@ func (r *pnlReportRepo) UpdateReport(ctx context.Context, report *domain.PnlRepo
 	return nil
 }
 
-func (r *pnlReportRepo) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *pnlReportRepo) Delete(ctx context.Context, id string) error {
 	q := `
 		UPDATE tbl_pnl_report SET
 			deleted_at = CURRENT_TIMESTAMP,
@@ -194,7 +193,7 @@ func (r *pnlReportRepo) Delete(ctx context.Context, id uuid.UUID) error {
 
 // AggregateLedger queries the transaction ledger for POSTED transactions
 // in the given date range and aggregates by COA account.
-func (r *pnlReportRepo) AggregateLedger(ctx context.Context, clinicID uuid.UUID, periodStart, periodEnd time.Time) ([]domain.LedgerAggRow, error) {
+func (r *pnlReportRepo) AggregateLedger(ctx context.Context, clinicID string, periodStart, periodEnd time.Time) ([]domain.LedgerAggRow, error) {
 	q := `
 		SELECT
 			tl.coa_id,

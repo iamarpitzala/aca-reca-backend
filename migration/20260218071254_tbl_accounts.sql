@@ -39,7 +39,7 @@ VALUES
     ('GST on Expenses', 10.00, 'Taxable purchases / expenses'),
     ('GST Free Expenses', 0.00, 'GST free expenses'),
     ('BAS Excluded', 0.00, 'Balance sheet items'),
-    ('GST Free Income', 0.00, 'GST free income'),
+    ('GST Free Income', 0.00, 'GST free income')
 ON CONFLICT (name) DO NOTHING;
 
 

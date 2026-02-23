@@ -7,7 +7,7 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
-func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFormHandler, tokenService *service.TokenService) {
+func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFormHandler, entryHandler *httpHandler.FieldEntryHandler, tokenService *service.TokenService) {
 	g := e.Group("/custom-form")
 	g.Use(middleware.AuthMiddleware(tokenService))
 
@@ -23,13 +23,11 @@ func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFor
 	g.POST("/:id/duplicate", handler.Duplicate)
 
 	// Entries under /entries to avoid conflicting with form :id
-	// entries := g.Group("/entries")
-	// entries.POST("/preview", handler.PreviewCalculations)
-	// entries.POST("", handler.CreateEntry)
-	// entries.GET("/form/:formId", handler.GetEntriesByFormID)
-	// entries.GET("/clinic/:clinicId", handler.GetEntriesByClinicID)
-	// entries.GET("/:entryId", handler.GetEntryByID)
-	// entries.PUT("/:entryId", handler.UpdateEntry)
-	// entries.POST("/:entryId/recalculate", handler.RecalculateEntry)
-	// entries.DELETE("/:entryId", handler.DeleteEntry)
+	entries := g.Group("/entries")
+	entries.POST("", entryHandler.Create)
+	entries.GET("/form/:formId", entryHandler.GetByFormID)
+	entries.GET("/clinic/:clinicId", entryHandler.GetByClinicID)
+	entries.GET("/:entryId", entryHandler.GetByID)
+	entries.PUT("/:entryId", entryHandler.Update)
+	entries.DELETE("/:entryId", entryHandler.Delete)
 }

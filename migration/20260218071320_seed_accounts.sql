@@ -2,6 +2,7 @@
 -- +goose StatementBegin
 
 INSERT INTO tbl_account (
+    id,
     account_type_id,
     account_tax_id,
     code,
@@ -9,44 +10,45 @@ INSERT INTO tbl_account (
     description
 )
 SELECT
+    accounts.code,
     account_type.id,
     account_tax.id,
     accounts.code,
     accounts.name,
     accounts.description
 FROM (
-    SELECT 'Revenue' AS account_type, 'GST on Income' AS account_tax, '200' AS code, 'Sales' AS name, 'Sales Revenue' AS description UNION ALL
-    SELECT 'Revenue', 'GST Free Income', '222', 'Demo Sales', 'GST Free Income' UNION ALL
-    SELECT 'Revenue', 'GST on Income', '260', 'Other Revenue', 'Other Revenue' UNION ALL
-    SELECT 'Revenue', 'GST Free Income', '270', 'Interest Income', 'Interest Income' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '310', 'Cost of Goods Sold', 'Direct Costs' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '400', 'Advertising', 'Advertising Expenses' UNION ALL
-    SELECT 'Expense', 'GST Free Expenses', '404', 'Bank Fees', 'Bank Fees' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '408', 'Cleaning', 'Cleaning Expenses' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '412', 'Consulting & Accounting', 'Consulting & Accounting' UNION ALL
-    SELECT 'Expense', 'BAS Excluded', '416', 'Depreciation', 'Depreciation' UNION ALL
-    SELECT 'Expense', 'GST Free Expenses', '420', 'Entertainment', 'Entertainment' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '425', 'Freight & Courier', 'Freight & Courier' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '429', 'General Expenses', 'General Expenses' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '433', 'Insurance', 'Insurance' UNION ALL
-    SELECT 'Expense', 'GST Free Expenses', '437', 'Interest Expense', 'Interest Expense' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '441', 'Legal Expenses', 'Legal Expenses' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '445', 'Light, Power & Heating', 'Utilities' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '449', 'Motor Vehicle Expenses', 'Motor Vehicle' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '453', 'Office Expenses', 'Office Expenses' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '461', 'Printing & Stationery', 'Printing & Stationery' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '469', 'Rent', 'Rent' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '473', 'Repairs & Maintenance', 'Repairs & Maintenance' UNION ALL
-    SELECT 'Expense', 'BAS Excluded', '477', 'Wages & Salaries', 'Payroll' UNION ALL
-    SELECT 'Expense', 'BAS Excluded', '478', 'Superannuation', 'Superannuation' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '485', 'Subscriptions', 'Subscriptions' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '489', 'Telephone & Internet', 'Telephone & Internet' UNION ALL
-    SELECT 'Expense', 'GST on Expenses', '493', 'Travel - National', 'Travel National' UNION ALL
-    SELECT 'Expense', 'GST Free Expenses', '494', 'Travel - International', 'Travel International' UNION ALL
-    SELECT 'Expense', 'BAS Excluded', '497', 'Bank Revaluations', 'Bank Revaluations' UNION ALL
-    SELECT 'Expense', 'BAS Excluded', '498', 'Unrealised Currency Gains', 'Unrealised Currency Gains' UNION ALL
-    SELECT 'Expense', 'BAS Excluded', '499', 'Realised Currency Gains', 'Realised Currency Gains' UNION ALL
-    SELECT 'Expense', 'BAS Excluded', '505', 'Income Tax Expense', 'Income Tax' UNION ALL
+    -- Revenue Accounts (Updated list - only Patient Fee Account, Commission Received, Other Income)
+    SELECT 'Revenue' AS account_type, 'GST Free Income' AS account_tax, '200' AS code, 'Patient Fee Account' AS name, 'Patient Fee Account' AS description UNION ALL
+    SELECT 'Revenue', 'GST on Income' AS account_tax, '201' AS code, 'Commission Received' AS name, 'Commission Received' AS description UNION ALL
+    SELECT 'Revenue', 'GST on Income' AS account_tax, '202' AS code, 'Other Income' AS name, 'Other Income' AS description UNION ALL
+    -- Expense Accounts (Updated list - Computer expense removed)
+    SELECT 'Expense', 'GST on Expenses', '400', 'Home Office (GST)', 'Home Office Expenses (GST)' UNION ALL
+    SELECT 'Expense', 'GST Free Expenses', '401', 'Home Office (GST Free)', 'Home Office Expenses (GST Free)' UNION ALL
+    SELECT 'Expense', 'GST Free Expenses', '402', 'Laboratory Work (GST Free)', 'Laboratory Work Expenses (GST Free)' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '403', 'Laboratory Work (GST)', 'Laboratory Work Expenses (GST)' UNION ALL
+    SELECT 'Expense', 'GST Free Expenses', '404', 'Subscription/Membership (GST Free)', 'Subscription/Membership Expenses (GST Free)' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '405', 'Subscription/Membership (GST)', 'Subscription/Membership Expenses (GST)' UNION ALL
+    SELECT 'Expense', 'GST Free Expenses', '406', 'Bank Fees', 'Bank Fees' UNION ALL
+    SELECT 'Expense', 'GST Free Expenses', '407', 'Merchant Fees', 'Merchant Fees' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '408', 'Motor Vehicle - Set Rate', 'Motor Vehicle Expenses - Set Rate' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '409', 'M/V Insurance', 'Motor Vehicle Insurance' UNION ALL
+    SELECT 'Expense', 'GST Free Expenses', '410', 'M/V Registration', 'Motor Vehicle Registration' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '411', 'M/V Fuel', 'Motor Vehicle Fuel' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '412', 'M/V Repairs/Maintenance', 'Motor Vehicle Repairs and Maintenance' UNION ALL
+    SELECT 'Expense', 'BAS Excluded', '413', 'Management Fee (Gross Up)', 'Management Fee (Gross Up)' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '414', 'Materials/Dental Supplies', 'Materials and Dental Supplies' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '415', 'Office Supplies', 'Office Supplies' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '416', 'Postage', 'Postage Expenses' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '417', 'Protective Clothing', 'Protective Clothing Expenses' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '418', 'Internet', 'Internet Expenses' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '419', 'Telephone', 'Telephone Expenses' UNION ALL
+    SELECT 'Expense', 'GST Free Expenses', '420', 'Telephone and Internet (GST Free)', 'Telephone and Internet Expenses (GST Free)' UNION ALL
+    SELECT 'Expense', 'GST Free Expenses', '421', 'Travel/Accommodation (GST Free)', 'Travel and Accommodation Expenses (GST Free)' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '422', 'Travel/Accommodation (GST)', 'Travel and Accommodation Expenses (GST)' UNION ALL
+    SELECT 'Expense', 'GST Free Expenses', '423', 'Tolls / Parking', 'Tolls and Parking Expenses' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '424', 'Waste Disposal', 'Waste Disposal Expenses' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '425', 'Repairs and Maintenance', 'Repairs and Maintenance Expenses' UNION ALL
+    SELECT 'Expense', 'GST on Expenses', '426', 'Sundries', 'Sundry Expenses' UNION ALL
     SELECT 'Asset', 'BAS Excluded', '610', 'Accounts Receivable', 'Current Asset' UNION ALL
     SELECT 'Asset', 'BAS Excluded', '620', 'Prepayments', 'Current Asset' UNION ALL
     SELECT 'Asset', 'BAS Excluded', '630', 'Inventory', 'Current Asset' UNION ALL

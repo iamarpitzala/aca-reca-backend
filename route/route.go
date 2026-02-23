@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/iamarpitzala/aca-reca-backend/config"
 	_ "github.com/iamarpitzala/aca-reca-backend/docs" // swagger docs
-	"github.com/iamarpitzala/aca-reca-backend/internal/adapter/calculation"
 	"github.com/iamarpitzala/aca-reca-backend/internal/adapter/postgres"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	httpHandler "github.com/iamarpitzala/aca-reca-backend/internal/http"
@@ -20,7 +19,6 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/route/entry"
 	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payslip"
-	"github.com/iamarpitzala/aca-reca-backend/route/quarter"
 	reports_route "github.com/iamarpitzala/aca-reca-backend/route/reports"
 	transaction_route "github.com/iamarpitzala/aca-reca-backend/route/transaction"
 	upload_route "github.com/iamarpitzala/aca-reca-backend/route/upload"
@@ -52,25 +50,24 @@ func InitRouter(e *gin.Engine) {
 	customFormRepo := postgres.NewCustomFormRepository(sqlxDB)
 	customFormFieldRepo := postgres.NewCustomFormFieldRepository(sqlxDB)
 	customFormVersionRepo := postgres.NewCustomFormVersionRepository(sqlxDB)
-	clinicFinancialSettingsRepo := postgres.NewClinicFinancialSettingsRepository(sqlxDB)
+	financialYearRepo := postgres.NewFinancialYearRepository(sqlxDB)
+	financialQuarterRepo := postgres.NewFinancialQuarterRepository(sqlxDB)
+	clinicFinancialSettingsRepo := postgres.NewClinicFinancialSettingRepository(sqlxDB, financialYearRepo, financialQuarterRepo)
+
 	fieldEntryRepo := postgres.NewFieldEntryRepository(sqlxDB)
 
 	transactionRepo := postgres.NewTransactionRepository(sqlxDB)
 	pnlReportRepo := postgres.NewPnlReportRepository(sqlxDB)
 	ChartOfAccountsRepo := postgres.NewChartOfAccountsRepository(sqlxDB)
 
-	// Calculation engine (decoupled for accounting accuracy)
-	calcEngine := calculation.NewEntryCalculationEngine()
-
 	// Use cases (application layer)
 	clinicUC := usecase.NewClinicService(clinicRepo)
 	userClinicUC := usecase.NewUserClinicService(userClinicRepo, clinicRepo, userRepo)
 	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService, clinicUC, userClinicUC)
-	quarterUC := usecase.NewQuarterService(clinicFinancialSettingsRepo)
 	expensesUC := usecase.NewExpensesService(expenseRepo)
-	customFormUC := usecase.NewCustomFormService(customFormRepo, customFormFieldRepo, customFormVersionRepo, clinicRepo, calcEngine)
+	customFormUC := usecase.NewCustomFormService(customFormRepo, customFormFieldRepo, customFormVersionRepo, clinicRepo)
 	clinicFinancialSettingsUC := usecase.NewClinicFinancialSettingsService(clinicFinancialSettingsRepo, clinicRepo)
-	fieldEntryUC := usecase.NewFieldEntryService(fieldEntryRepo, customFormRepo, customFormFieldRepo, clinicRepo, clinicFinancialSettingsRepo, transactionRepo, calcEngine)
+	fieldEntryUC := usecase.NewFieldEntryService(fieldEntryRepo, customFormRepo, customFormFieldRepo, clinicRepo, clinicFinancialSettingsRepo, transactionRepo)
 	transactionUC := usecase.NewTransactionService(transactionRepo, clinicRepo)
 	pnlReportUC := usecase.NewPnlReportService(pnlReportRepo, clinicRepo)
 	coaUC := usecase.NewCOAService(ChartOfAccountsRepo)
@@ -82,13 +79,12 @@ func InitRouter(e *gin.Engine) {
 	userClinicHandler := httpHandler.NewUserClinicHandler(userClinicUC)
 	customFormHandler := httpHandler.NewCustomFormHandler(customFormUC, userClinicUC)
 	expensesHandler := httpHandler.NewExpensesHandler(expensesUC)
-	quarterHandler := httpHandler.NewQuarterHandler(quarterUC)
 	clinicFinancialSettingsHandler := httpHandler.NewClinicFinancialSettingsHandler(clinicFinancialSettingsUC)
-	fieldEntryHandler := httpHandler.NewFieldEntryHandler(fieldEntryUC, userClinicUC)
+	fieldEntryHandler := httpHandler.NewFieldEntryHandler(fieldEntryUC, userClinicUC, customFormRepo)
 	transactionHandler := httpHandler.NewTransactionHandler(transactionUC)
 	pnlReportHandler := httpHandler.NewPnlReportHandler(pnlReportUC)
 	coaHandler := httpHandler.NewCOAHandler(coaUC)
-	// Cloudinary upload (optional: nil if env not set)
+
 	cloudinarySvc, _ := cloudinary.NewService(cfg.Cloudinary)
 	uploadHandler := httpHandler.NewUploadHandler(cloudinarySvc)
 
@@ -101,11 +97,10 @@ func InitRouter(e *gin.Engine) {
 	clinic.RegisterClinicRoutes(v1, clinicHandler, tokenService)
 	payslip.RegisterPayslipRoutes(v1, payslipHandler)
 	user_clinic.RegisterUserClinicRoutes(v1, userClinicHandler, tokenService)
-	custom_form.RegisterCustomFormRoutes(v1, customFormHandler, tokenService)
-	quarter.RegisterQuarterRoutes(v1, quarterHandler, tokenService)
+	custom_form.RegisterCustomFormRoutes(v1, customFormHandler, fieldEntryHandler, tokenService)
 	expense.RegisterExpensesRoutes(v1, expensesHandler, tokenService)
 	upload_route.RegisterUploadRoutes(v1, uploadHandler, tokenService)
-	clinic_financial_settings.RegisterClinicFinancialSettingsRoutes(v1, clinicFinancialSettingsHandler, tokenService)
+	clinic_financial_settings.RegisterClinicFinancialSettingRoutes(v1, clinicFinancialSettingsHandler, tokenService)
 	entry.RegisterEntryRoutes(v1, fieldEntryHandler, tokenService)
 	transaction_route.RegisterTransactionRoutes(v1, transactionHandler, tokenService)
 	reports_route.RegisterReportsRoutes(v1, pnlReportHandler, tokenService)

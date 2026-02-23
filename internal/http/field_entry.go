@@ -15,13 +15,14 @@ import (
 type FieldEntryHandler struct {
 	entryUC      *usecase.FieldEntryService
 	userClinicUC *usecase.UserClinicService
-	clinicRepo   port.ClinicRepository
+	formRepo     port.CustomFormRepository
 }
 
-func NewFieldEntryHandler(entryUC *usecase.FieldEntryService, userClinicUC *usecase.UserClinicService) *FieldEntryHandler {
+func NewFieldEntryHandler(entryUC *usecase.FieldEntryService, userClinicUC *usecase.UserClinicService, formRepo port.CustomFormRepository) *FieldEntryHandler {
 	return &FieldEntryHandler{
 		entryUC:      entryUC,
 		userClinicUC: userClinicUC,
+		formRepo:     formRepo,
 	}
 }
 
@@ -38,17 +39,14 @@ func (h *FieldEntryHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Validate form ID
-	formID := req.FormID
-
-	// Get clinic ID from form for access control
-	clinic, err := h.clinicRepo.GetByID(c.Request.Context(), formID)
-	if err != nil || clinic == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Get form to resolve clinic for access control
+	fm, err := h.formRepo.GetByID(c.Request.Context(), req.FormID)
+	if err != nil || fm == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "form not found"})
 		return
 	}
 
-	if !RequireClinicAccess(c, h.userClinicUC, clinic.ID) {
+	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
 		return
 	}
 
@@ -65,20 +63,13 @@ func (h *FieldEntryHandler) Create(c *gin.Context) {
 func (h *FieldEntryHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 
-	// Get clinic ID for access control
-	clinic, err := h.clinicRepo.GetByID(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-
-	if !RequireClinicAccess(c, h.userClinicUC, clinic.ID) {
-		return
-	}
-
 	resp, err := h.entryUC.GetByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !RequireClinicAccess(c, h.userClinicUC, resp.ClinicID) {
 		return
 	}
 
@@ -89,14 +80,13 @@ func (h *FieldEntryHandler) GetByID(c *gin.Context) {
 func (h *FieldEntryHandler) GetByFormID(c *gin.Context) {
 	formID := c.Param("formId")
 
-	// Get clinic ID for access control
-	clinic, err := h.clinicRepo.GetByID(c.Request.Context(), formID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	fm, err := h.formRepo.GetByID(c.Request.Context(), formID)
+	if err != nil || fm == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
 		return
 	}
 
-	if !RequireClinicAccess(c, h.userClinicUC, clinic.ID) {
+	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
 		return
 	}
 
@@ -130,14 +120,13 @@ func (h *FieldEntryHandler) GetByClinicID(c *gin.Context) {
 func (h *FieldEntryHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 
-	// Get clinic ID for access control
-	clinic, err := h.clinicRepo.GetByID(c.Request.Context(), id)
+	existing, err := h.entryUC.GetByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	if !RequireClinicAccess(c, h.userClinicUC, clinic.ID) {
+	if !RequireClinicAccess(c, h.userClinicUC, existing.ClinicID) {
 		return
 	}
 
@@ -162,14 +151,13 @@ func (h *FieldEntryHandler) Update(c *gin.Context) {
 func (h *FieldEntryHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 
-	// Get clinic ID for access control
-	clinic, err := h.clinicRepo.GetByID(c.Request.Context(), id)
+	existing, err := h.entryUC.GetByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	if !RequireClinicAccess(c, h.userClinicUC, clinic.ID) {
+	if !RequireClinicAccess(c, h.userClinicUC, existing.ClinicID) {
 		return
 	}
 

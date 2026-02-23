@@ -11,17 +11,17 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type clinicFinancialSettingsRepo struct {
+type clinicFinancialSettingRepo struct {
 	db                   *sqlx.DB
 	financialYearRepo    port.FinancialYearRepository
 	financialQuarterRepo port.FinancialQuarterRepository
 }
 
-func NewClinicFinancialSettingsRepository(db *sqlx.DB, financialYearRepo port.FinancialYearRepository, financialQuarterRepo port.FinancialQuarterRepository) port.ClinicFinancialSettingRepository {
-	return &clinicFinancialSettingsRepo{db: db, financialYearRepo: financialYearRepo, financialQuarterRepo: financialQuarterRepo}
+func NewClinicFinancialSettingRepository(db *sqlx.DB, financialYearRepo port.FinancialYearRepository, financialQuarterRepo port.FinancialQuarterRepository) port.ClinicFinancialSettingRepository {
+	return &clinicFinancialSettingRepo{db: db, financialYearRepo: financialYearRepo, financialQuarterRepo: financialQuarterRepo}
 }
 
-func (r *clinicFinancialSettingsRepo) Create(ctx context.Context, settings *clinic.ClinicFinancialSetting) error {
+func (r *clinicFinancialSettingRepo) Create(ctx context.Context, settings *clinic.ClinicFinancialSetting) error {
 	financialYear, err := r.financialYearRepo.GetByClinicID(ctx, settings.ClinicID)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (r *clinicFinancialSettingsRepo) Create(ctx context.Context, settings *clin
 	return err
 }
 
-func (r *clinicFinancialSettingsRepo) GetByClinicID(ctx context.Context, clinicID string) (*clinic.ClinicFinancialSetting, error) {
+func (r *clinicFinancialSettingRepo) GetByClinicID(ctx context.Context, clinicID string) (*clinic.ClinicFinancialSetting, error) {
 	query := `SELECT id, clinic_id, financial_year_id, financial_quarter_id, accounting_method, gst_registered, gst_reporting_frequency, default_amount_mode, lock_date, created_at, updated_at, deleted_at
 		FROM tbl_clinic_financial_settings 
 		WHERE clinic_id = $1 AND deleted_at IS NULL`
@@ -55,7 +55,7 @@ func (r *clinicFinancialSettingsRepo) GetByClinicID(ctx context.Context, clinicI
 	return &settings, nil
 }
 
-func (r *clinicFinancialSettingsRepo) Update(ctx context.Context, settings *clinic.ClinicFinancialSetting) error {
+func (r *clinicFinancialSettingRepo) Update(ctx context.Context, settings *clinic.ClinicFinancialSetting) error {
 	query := `UPDATE tbl_clinic_financial_settings SET
 		financial_year_id = :financial_year_id,
 		financial_quarter_id = :financial_quarter_id,
@@ -70,7 +70,7 @@ func (r *clinicFinancialSettingsRepo) Update(ctx context.Context, settings *clin
 	return err
 }
 
-func (r *clinicFinancialSettingsRepo) Delete(ctx context.Context, clinicID string) error {
+func (r *clinicFinancialSettingRepo) Delete(ctx context.Context, clinicID string) error {
 	query := `UPDATE tbl_clinic_financial_settings SET deleted_at = $1 WHERE clinic_id = $2`
 	_, err := r.db.ExecContext(ctx, query, time.Now(), clinicID)
 	return err

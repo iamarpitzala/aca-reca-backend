@@ -2,8 +2,8 @@
 -- +goose StatementBegin
 
 CREATE TABLE tbl_tax_type (
-    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
-    name VARCHAR(255) NOT NULL,
+    id SERIAL PRIMARY KEY NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL UNIQUE,
     type VARCHAR(50) NOT NULL CHECK (type IN ('INCLUSIVE', 'EXCLUSIVE', 'MANUAL')),
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -11,15 +11,15 @@ CREATE TABLE tbl_tax_type (
     deleted_at TIMESTAMPTZ NULL
 );
 
-INSERT INTO tbl_tax_type (name, type, description) VALUES
-    ('Inclusive', 'INCLUSIVE', 'Inclusive tax type'),
-    ('Exclusive', 'EXCLUSIVE', 'Exclusive tax type'),
-    ('Manual', 'MANUAL', 'Manual tax type')
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO tbl_tax_type (id, name, type, description) VALUES
+    (1, 'Inclusive', 'INCLUSIVE', 'Inclusive tax type'),
+    (2, 'Exclusive', 'EXCLUSIVE', 'Exclusive tax type'),
+    (3, 'Manual', 'MANUAL', 'Manual tax type')
+ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE tbl_section_type (
-    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
-    name VARCHAR(255) NOT NULL,
+    id SERIAL PRIMARY KEY NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL UNIQUE,
     type VARCHAR(50) NOT NULL CHECK (type IN ('INCOME', 'EXPENSE')),
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -27,10 +27,10 @@ CREATE TABLE tbl_section_type (
     deleted_at TIMESTAMPTZ NULL
 );
 
-INSERT INTO tbl_section_type (name, type, description) VALUES
-    ('INCOME', 'INCOME', 'Income section'),
-    ('EXPENSE', 'EXPENSE', 'Expense section')
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO tbl_section_type (id, name, type, description) VALUES
+    (1, 'INCOME', 'INCOME', 'Income section'),
+    (2, 'EXPENSE', 'EXPENSE', 'Expense section')
+ON CONFLICT (id) DO NOTHING;
 
 
 CREATE TABLE tbl_custom_form (
@@ -59,10 +59,10 @@ CREATE TABLE tbl_custom_form_version (
 
 CREATE TABLE tbl_custom_form_field (
     id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
-    form_version_id VARCHAR(40) NOT NULL REFERENCES tbl_custom_form_version(id),
+    form_version_id INTEGER NOT NULL REFERENCES tbl_custom_form_version(id),
     form_id VARCHAR(40) NOT NULL REFERENCES tbl_custom_form(id),
     label VARCHAR(255) NOT NULL,
-    section_type_id VARCHAR(40) NOT NULL REFERENCES tbl_section_type(id),
+    section_type_id INTEGER NOT NULL REFERENCES tbl_section_type(id),
     description TEXT NULL,
     is_required BOOLEAN NOT NULL DEFAULT FALSE,
     coa_id VARCHAR(40) NOT NULL REFERENCES tbl_account(id),
@@ -71,7 +71,7 @@ CREATE TABLE tbl_custom_form_field (
     min_value NUMERIC(14,2) NULL,
     max_value NUMERIC(14,2) NULL,
     field_order INTEGER NOT NULL,
-    tax_type_id VARCHAR(40) NULL REFERENCES tbl_tax_type(id),
+    tax_type_id INTEGER NULL REFERENCES tbl_tax_type(id),
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),

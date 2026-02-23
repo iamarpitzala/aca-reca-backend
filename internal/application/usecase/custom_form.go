@@ -16,16 +16,14 @@ type CustomFormService struct {
 	fieldRepo   port.CustomFormFieldRepository
 	versionRepo port.CustomFormVersionRepository
 	clinicRepo  port.ClinicRepository
-	calcEngine  port.EntryCalculationEngine
 }
 
-func NewCustomFormService(repo port.CustomFormRepository, fieldRepo port.CustomFormFieldRepository, versionRepo port.CustomFormVersionRepository, clinicRepo port.ClinicRepository, calcEngine port.EntryCalculationEngine) *CustomFormService {
+func NewCustomFormService(repo port.CustomFormRepository, fieldRepo port.CustomFormFieldRepository, versionRepo port.CustomFormVersionRepository, clinicRepo port.ClinicRepository) *CustomFormService {
 	return &CustomFormService{
 		repo:        repo,
 		fieldRepo:   fieldRepo,
 		versionRepo: versionRepo,
 		clinicRepo:  clinicRepo,
-		calcEngine:  calcEngine,
 	}
 }
 

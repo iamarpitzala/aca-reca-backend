@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS tbl_financial_quarter (
     id SERIAL PRIMARY KEY NOT NULL UNIQUE,
-    financial_year_id VARCHAR(40) NOT NULL REFERENCES tbl_financial_year(id),
+    financial_year_id INTEGER NOT NULL REFERENCES tbl_financial_year(id),
     name VARCHAR(5) NOT NULL, -- Q1, Q2, Q3, Q4
 
     quarter_number SMALLINT NOT NULL CHECK (quarter_number BETWEEN 1 AND 4),

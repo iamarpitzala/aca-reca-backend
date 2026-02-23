@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE tbl_arrangement (
+CREATE TABLE IF NOT EXISTS tbl_arrangement (
     id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
     method VARCHAR(50) NOT NULL CHECK (method IN ('GROSS', 'NET')) DEFAULT 'GROSS',
     name VARCHAR(255) NOT NULL,

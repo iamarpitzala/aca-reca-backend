@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS tbl_financial_setting (
     id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
     clinic_id VARCHAR(40) NOT NULL REFERENCES tbl_clinic(id),
 
-    financial_year_id VARCHAR(40) NOT NULL REFERENCES tbl_financial_year(id),
+    financial_year_id INTEGER NOT NULL REFERENCES tbl_financial_year(id),
     financial_quarter_id INTEGER NOT NULL REFERENCES tbl_financial_quarter(id),
     accounting_method VARCHAR(20) NOT NULL DEFAULT 'ACCRUAL' CHECK (accounting_method IN ('CASH', 'ACCRUAL')),
     

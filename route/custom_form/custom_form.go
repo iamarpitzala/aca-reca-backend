@@ -20,7 +20,7 @@ func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFor
 	g.POST("/:id/unpublish", handler.Unpublish)
 	g.POST("/:id/archive", handler.Archive)
 	g.DELETE("/:id", handler.Delete)
-	g.POST("/:id/duplicate", handler.Duplicate)
+	// g.POST("/:id/duplicate", handler.Duplicate)
 
 	// Entries under /entries to avoid conflicting with form :id
 	entries := g.Group("/entries")

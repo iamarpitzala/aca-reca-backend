@@ -88,5 +88,4 @@ DROP TABLE IF EXISTS tbl_custom_form_version;
 DROP TABLE IF EXISTS tbl_custom_form;
 DROP TABLE IF EXISTS tbl_tax_type;
 DROP TABLE IF EXISTS tbl_section_type;
-DROP TABLE IF EXISTS tbl_tax_method;
 -- +goose StatementEnd

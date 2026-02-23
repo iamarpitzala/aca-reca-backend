@@ -8,7 +8,7 @@ import (
 )
 
 func RegisterClinicFinancialSettingRoutes(e *gin.RouterGroup, handler *httpHandler.ClinicFinancialSettingsHandler, tokenService *service.TokenService) {
-	settings := e.Group("/clinic/:id/financial-settings")
+	settings := e.Group("/clinic/:id/financial-setting")
 	settings.Use(middleware.AuthMiddleware(tokenService))
 
 	settings.GET("", handler.GetFinancialSettings)

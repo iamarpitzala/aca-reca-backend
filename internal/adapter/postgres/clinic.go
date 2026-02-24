@@ -20,14 +20,14 @@ func NewClinicRepository(db *sqlx.DB) port.ClinicRepository {
 }
 
 func (r *clinicRepo) Create(ctx context.Context, clinic *clinic.Clinic) error {
-	query := `INSERT INTO tbl_clinic (id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, with_holding_tax, created_at, updated_at)
-		VALUES (:id, :name, :abn_number, :address, :city, :state, :postcode, :phone, :email, :website, :logo_url, :description, :share_type, :clinic_share, :owner_share, :method_type, :is_active, :with_holding_tax, :created_at, :updated_at)`
+	query := `INSERT INTO tbl_clinic (id, user_id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, created_at, updated_at)
+		VALUES (:id, :user_id, :name, :abn_number, :address, :city, :state, :postcode, :phone, :email, :website, :logo_url, :description, :share_type, :clinic_share, :owner_share, :method_type, :is_active, :created_at, :updated_at)`
 	_, err := r.db.NamedExecContext(ctx, query, clinic)
 	return err
 }
 
 func (r *clinicRepo) GetByID(ctx context.Context, id string) (*clinic.Clinic, error) {
-	query := `SELECT id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, with_holding_tax, created_at, updated_at FROM tbl_clinic WHERE id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, user_id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, created_at, updated_at FROM tbl_clinic WHERE id = $1 AND deleted_at IS NULL`
 	var clinic clinic.Clinic
 	err := r.db.GetContext(ctx, &clinic, query, id)
 	if err != nil {
@@ -40,7 +40,7 @@ func (r *clinicRepo) GetByID(ctx context.Context, id string) (*clinic.Clinic, er
 }
 
 func (r *clinicRepo) Update(ctx context.Context, clinic *clinic.Clinic) error {
-	query := `UPDATE tbl_clinic SET name = :name, abn_number = :abn_number, address = :address, city = :city, state = :state, postcode = :postcode, phone = :phone, email = :email, website = :website, logo_url = :logo_url, description = :description, share_type = :share_type, clinic_share = :clinic_share, owner_share = :owner_share, method_type = :method_type, is_active = :is_active, with_holding_tax = :with_holding_tax, updated_at = :updated_at WHERE id = :id`
+	query := `UPDATE tbl_clinic SET user_id = :user_id, name = :name, abn_number = :abn_number, address = :address, city = :city, state = :state, postcode = :postcode, phone = :phone, email = :email, website = :website, logo_url = :logo_url, description = :description, share_type = :share_type, clinic_share = :clinic_share, owner_share = :owner_share, method_type = :method_type, is_active = :is_active, updated_at = :updated_at WHERE id = :id`
 	_, err := r.db.NamedExecContext(ctx, query, clinic)
 	return err
 }
@@ -65,7 +65,7 @@ func (r *clinicRepo) Delete(ctx context.Context, id string) error {
 }
 
 func (r *clinicRepo) List(ctx context.Context) ([]clinic.Clinic, error) {
-	query := `SELECT id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, with_holding_tax, created_at, updated_at FROM tbl_clinic WHERE deleted_at IS NULL`
+	query := `SELECT id, user_id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, created_at, updated_at FROM tbl_clinic WHERE deleted_at IS NULL`
 	var clinics []clinic.Clinic
 	err := r.db.SelectContext(ctx, &clinics, query)
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *clinicRepo) ABNExists(ctx context.Context, abnNumber string) (bool, err
 }
 
 func (r *clinicRepo) GetByABN(ctx context.Context, abnNumber string) (*clinic.Clinic, error) {
-	query := `SELECT id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, with_holding_tax, created_at, updated_at FROM tbl_clinic WHERE abn_number = $1 AND deleted_at IS NULL`
+	query := `SELECT id, user_id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, created_at, updated_at FROM tbl_clinic WHERE abn_number = $1 AND deleted_at IS NULL`
 	var clinic clinic.Clinic
 	err := r.db.GetContext(ctx, &clinic, query, abnNumber)
 	if err != nil {

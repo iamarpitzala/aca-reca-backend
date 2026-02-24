@@ -13,9 +13,9 @@ import (
 )
 
 type ClinicHandler struct {
-	clinicUC       *usecase.ClinicService
-	userClinicUC   *usecase.UserClinicService
-	settingsUC     *usecase.ClinicFinancialSettingsService
+	clinicUC     *usecase.ClinicService
+	userClinicUC *usecase.UserClinicService
+	settingsUC   *usecase.ClinicFinancialSettingsService
 }
 
 func NewClinicHandler(clinicUC *usecase.ClinicService, userClinicUC *usecase.UserClinicService, settingsUC *usecase.ClinicFinancialSettingsService) *ClinicHandler {
@@ -48,6 +48,7 @@ func (h *ClinicHandler) CreateClinic(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	clinic.UserID = userID
 	err := h.clinicUC.CreateClinic(c.Request.Context(), &clinic)
 	if err != nil {
 		if errors.Is(err, usecase.ErrDuplicateABN) {
@@ -113,13 +114,17 @@ func (h *ClinicHandler) checkOwnerRequire(c *gin.Context, clinicID string) bool 
 // @Router /clinic/{id} [get]
 func (h *ClinicHandler) GetClinic(c *gin.Context) {
 	id := c.Param("id")
-
-	if !RequireClinicAccess(c, h.userClinicUC, id) {
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "clinic id required"})
 		return
 	}
+
 	clinic, err := h.clinicUC.GetClinicByID(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	if err != nil || clinic == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "clinic not found"})
+		return
+	}
+	if !RequireClinicAccess(c, h.userClinicUC, id) {
 		return
 	}
 	// Include current user's role so frontend can show owner-only actions
@@ -157,6 +162,7 @@ func (h *ClinicHandler) UpdateClinic(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	clinic, err := h.clinicUC.UpdateClinicPartial(c.Request.Context(), id, &req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -169,6 +175,15 @@ func (h *ClinicHandler) UpdateClinic(c *gin.Context) {
 // PATCH /api/v1/clinic/:id/activate
 func (h *ClinicHandler) ActivateClinic(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "clinic id required"})
+		return
+	}
+	cl, err := h.clinicUC.GetClinicByID(c.Request.Context(), id)
+	if err != nil || cl == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrClinicNotFound})
+		return
+	}
 	if !RequireClinicAccess(c, h.userClinicUC, id) {
 		return
 	}
@@ -187,6 +202,16 @@ func (h *ClinicHandler) ActivateClinic(c *gin.Context) {
 // PATCH /api/v1/clinic/:id/deactivate
 func (h *ClinicHandler) DeactivateClinic(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "clinic id required"})
+		return
+	}
+
+	cl, err := h.clinicUC.GetClinicByID(c.Request.Context(), id)
+	if err != nil || cl == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrClinicNotFound})
+		return
+	}
 	if !RequireClinicAccess(c, h.userClinicUC, id) {
 		return
 	}
@@ -255,26 +280,25 @@ func (h *ClinicHandler) GetAllClinics(c *gin.Context) {
 	clinics := make([]clinic.Clinic, 0, len(userClinics))
 	for _, uc := range userClinics {
 		clinics = append(clinics, clinic.Clinic{
-			ID:             uc.C_ID,
-			Name:           uc.C_Name,
-			ABNNumber:      uc.C_ABNNumber,
-			Address:        uc.C_Address,
-			City:           uc.C_City,
-			State:          uc.C_State,
-			Postcode:       uc.C_Postcode,
-			Phone:          uc.C_Phone,
-			Email:          uc.C_Email,
-			Website:        uc.C_Website,
-			LogoURL:        uc.C_LogoURL,
-			Description:    uc.C_Description,
-			ShareType:      uc.C_ShareType,
-			MethodType:     uc.C_MethodType,
-			ClinicShare:    uc.C_ClinicShare,
-			OwnerShare:     uc.C_OwnerShare,
-			IsActive:       uc.C_IsActive,
-			WithHoldingTax: uc.C_WithHoldingTax,
-			CreatedAt:      uc.C_CreatedAt,
-			UpdatedAt:      uc.C_UpdatedAt,
+			ID:          uc.C_ID,
+			Name:        uc.C_Name,
+			ABNNumber:   uc.C_ABNNumber,
+			Address:     uc.C_Address,
+			City:        uc.C_City,
+			State:       uc.C_State,
+			Postcode:    uc.C_Postcode,
+			Phone:       uc.C_Phone,
+			Email:       uc.C_Email,
+			Website:     uc.C_Website,
+			LogoURL:     uc.C_LogoURL,
+			Description: uc.C_Description,
+			ShareType:   uc.C_ShareType,
+			MethodType:  uc.C_MethodType,
+			ClinicShare: uc.C_ClinicShare,
+			OwnerShare:  uc.C_OwnerShare,
+			IsActive:    uc.C_IsActive,
+			CreatedAt:   uc.C_CreatedAt,
+			UpdatedAt:   uc.C_UpdatedAt,
 		})
 	}
 	if clinics == nil {

@@ -70,8 +70,8 @@ FROM tbl_financial_year WHERE deleted_at IS NULL ORDER BY start_date DESC`
 }
 
 func (f *financialYearRepo) Update(ctx context.Context, year *clinic.FinancialYear) error {
-	query := `UPDATE tbl_financial_year SET fy_label = :fy_label, start_date = :start_date, end_date = :end_date, is_active = :is_active, updated_at = :updated_at WHERE id = :id`
-	_, err := f.db.NamedExecContext(ctx, query, year)
+	query := `UPDATE tbl_financial_year SET fy_label = $1, start_date = $2, end_date = $3, is_active = $4, updated_at = now() WHERE id = $5`
+	_, err := f.db.ExecContext(ctx, query, year.FYLabel, year.StartDate, year.EndDate, year.IsActive, year.ID)
 	return err
 }
 

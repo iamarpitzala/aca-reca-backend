@@ -24,7 +24,6 @@ CREATE TABLE IF NOT EXISTS tbl_clinic (
     owner_share INT NOT NULL DEFAULT 50,
     method_type VARCHAR(50) NOT NULL DEFAULT 'NET' CHECK (method_type IN ('NET', 'GROSS')),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    with_holding_tax BOOLEAN NOT NULL DEFAULT FALSE,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -14,9 +14,10 @@ func RegisterClinicRoutes(e *gin.RouterGroup, clinicHandler *httpHandler.ClinicH
 	clinic.POST("", clinicHandler.CreateClinic)
 	clinic.GET("", clinicHandler.GetAllClinics)
 	clinic.GET("/abn/:abnNumber", clinicHandler.GetClinicByABNNumber)
-	clinic.GET("/:id", clinicHandler.GetClinic)
-	clinic.PUT("/:id", clinicHandler.UpdateClinic)
+	// More specific paths first so /:id does not capture "id/activate" or "id/deactivate"
 	clinic.PATCH("/:id/activate", clinicHandler.ActivateClinic)
 	clinic.PATCH("/:id/deactivate", clinicHandler.DeactivateClinic)
+	clinic.GET("/:id", clinicHandler.GetClinic)
+	clinic.PUT("/:id", clinicHandler.UpdateClinic)
 	clinic.DELETE("/:id", clinicHandler.DeleteClinic)
 }

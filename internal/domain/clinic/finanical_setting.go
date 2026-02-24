@@ -105,3 +105,11 @@ func (f *ClinicFinancialSetting) ToClinicFinancialSettingResponse() *ClinicFinan
 		DeletedAt:             f.DeletedAt,
 	}
 }
+
+// ClinicFinancialSettingWithFY is the API response including financial year dates and label for display.
+type ClinicFinancialSettingWithFY struct {
+	ClinicFinancialSettingResponse
+	FinancialYearLabel string    `json:"financialYearLabel"`
+	FinancialYearStart time.Time `json:"financialYearStart"`
+	FinancialYearEnd   time.Time `json:"financialYearEnd"`
+}

@@ -20,9 +20,9 @@ func NewFieldEntryRepository(db *sqlx.DB) port.FieldEntryRepository {
 // Create implements [port.FieldEntryRepository].
 func (f *fieldEntryRepo) Create(ctx context.Context, entry *form.FieldEntry) error {
 	q := `INSERT INTO tbl_custom_form_entry (
-		id, form_id, form_version_id, tbl_custom_form_field_id, value, created_by, created_at, updated_at, deleted_at
+		id, clinic_id, form_id, form_version_id, field_id, value, gst_amount, created_at, updated_at, deleted_at
 	) VALUES (
-		:id, :form_id, :form_version_id, :tbl_custom_form_field_id, :value, :created_by, :created_at, :updated_at, :deleted_at
+		:id, :clinic_id, :form_id, :form_version_id, :field_id, :value, :gst_amount, :created_at, :updated_at, :deleted_at
 	)`
 	_, err := f.db.NamedExecContext(ctx, q, entry)
 	return err
@@ -39,15 +39,16 @@ func (f *fieldEntryRepo) Delete(ctx context.Context, id string) error {
 func (f *fieldEntryRepo) GetByClinicID(ctx context.Context, clinicID string) ([]form.FieldEntry, error) {
 	q := `
 		SELECT 
-			cfe.id, 
+			cfe.id,
+			cfe.clinic_id,
 			cfe.form_id,
 			cfe.form_version_id,
-			cfe.tbl_custom_form_field_id, 
-			cfe.value, 
-			cfe.created_by, 
-			cfe.created_at, 
-			cfe.updated_at, 
-			cfe.deleted_at 
+			cfe.field_id,
+			cfe.value,
+			cfe.gst_amount,
+			cfe.created_at,
+			cfe.updated_at,
+			cfe.deleted_at
 		FROM tbl_custom_form_entry cfe
 		INNER JOIN tbl_custom_form cf ON cfe.form_id = cf.id
 		WHERE cf.clinic_id = $1 AND cfe.deleted_at IS NULL
@@ -62,7 +63,7 @@ func (f *fieldEntryRepo) GetByClinicID(ctx context.Context, clinicID string) ([]
 
 // GetByFormID implements [port.FieldEntryRepository].
 func (f *fieldEntryRepo) GetByFormID(ctx context.Context, formID string) ([]form.FieldEntry, error) {
-	q := `SELECT id, form_id, form_version_id, tbl_custom_form_field_id, value, created_by, created_at, updated_at, deleted_at FROM tbl_custom_form_entry WHERE form_id = $1 AND deleted_at IS NULL`
+	q := `SELECT id, clinic_id, form_id, form_version_id, field_id, value, gst_amount, created_at, updated_at, deleted_at FROM tbl_custom_form_entry WHERE form_id = $1 AND deleted_at IS NULL`
 	var entries []form.FieldEntry
 	err := f.db.SelectContext(ctx, &entries, q, formID)
 	if err != nil {
@@ -73,7 +74,7 @@ func (f *fieldEntryRepo) GetByFormID(ctx context.Context, formID string) ([]form
 
 // GetByID implements [port.FieldEntryRepository].
 func (f *fieldEntryRepo) GetByID(ctx context.Context, id string) (*form.FieldEntry, error) {
-	q := `SELECT id, form_id, form_version_id, tbl_custom_form_field_id, value, created_by, created_at, updated_at, deleted_at FROM tbl_custom_form_entry WHERE id = $1 AND deleted_at IS NULL`
+	q := `SELECT id, clinic_id, form_id, form_version_id, field_id, value, gst_amount, created_at, updated_at, deleted_at FROM tbl_custom_form_entry WHERE id = $1 AND deleted_at IS NULL`
 	var entry form.FieldEntry
 	err := f.db.GetContext(ctx, &entry, q, id)
 	if err != nil {

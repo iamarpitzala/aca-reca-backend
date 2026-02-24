@@ -27,8 +27,18 @@ func (s *ClinicService) CreateClinic(ctx context.Context, clinic *clinic.Clinic)
 	if err := ValidateABN(clinic.ABNNumber); err != nil {
 		return err
 	}
-	clinic.ID = uuid.NewString()
-	return s.repo.Create(ctx, clinic)
+	existing, err := s.repo.GetByABN(ctx, clinic.ABNNumber)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return ErrDuplicateABN
+	}
+	clinic.ID = uuid.New().String()
+	if err := s.repo.Create(ctx, clinic); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *ClinicService) GetClinicByID(ctx context.Context, id string) (*clinic.Clinic, error) {
@@ -105,6 +115,13 @@ func (s *ClinicService) UpdateClinicPartial(ctx context.Context, id string, req 
 		return nil, err
 	}
 	return existing, nil
+}
+
+func (s *ClinicService) SetActiveStatus(ctx context.Context, id string, active bool) (*clinic.Clinic, error) {
+	if err := s.repo.SetActive(ctx, id, active); err != nil {
+		return nil, err
+	}
+	return s.repo.GetByID(ctx, id)
 }
 
 func (s *ClinicService) DeleteClinic(ctx context.Context, id string) error {

@@ -33,20 +33,13 @@ func (s *UserClinicService) AssociateUserWithClinic(ctx context.Context, userID,
 	if existing != nil {
 		return nil, errors.New("user is already associated with this clinic")
 	}
-	if _, err := s.clinicRepo.GetByID(ctx, clinicID); err != nil {
-		return nil, errors.New("clinic not found")
-	}
-	us, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
-		return nil, errors.New("user not found")
-	}
 	if role == "" {
 		role = util.RoleOwner
 	}
 	now := time.Now()
 	uc := &user.UserClinic{
 		ID:        uuid.New().String(),
-		UserID:    us.ID,
+		UserID:    userID,
 		ClinicID:  clinicID,
 		Role:      role,
 		CreatedAt: now,
@@ -62,14 +55,6 @@ func (s *UserClinicService) GetUserClinics(ctx context.Context, userID string) (
 	return s.ucRepo.GetUserClinics(ctx, userID)
 }
 
-func (s *UserClinicService) GetClinicUsers(ctx context.Context, clinicID string) ([]user.UserClinicWithUser, error) {
-	return s.ucRepo.GetClinicUsers(ctx, clinicID)
-}
-
-func (s *UserClinicService) GetByID(ctx context.Context, id string) (*user.UserClinic, error) {
-	return s.ucRepo.GetByID(ctx, id)
-}
-
 func (s *UserClinicService) RemoveUserFromClinic(ctx context.Context, id string) error {
 	_, err := s.ucRepo.GetByID(ctx, id)
 	if err != nil {
@@ -79,17 +64,27 @@ func (s *UserClinicService) RemoveUserFromClinic(ctx context.Context, id string)
 }
 
 func (s *UserClinicService) UserHasAccessToClinic(ctx context.Context, userID, clinicID string) (bool, error) {
-	uc, err := s.ucRepo.GetByUserAndClinic(ctx, userID, clinicID)
+	userClinics, err := s.ucRepo.GetUserClinics(ctx, userID)
 	if err != nil {
 		return false, err
 	}
-	return uc != nil, nil
+	for _, uc := range userClinics {
+		if uc.UC_ClinicID == clinicID {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (s *UserClinicService) UserRoleInClinic(ctx context.Context, userID, clinicID string) (string, error) {
-	uc, err := s.ucRepo.GetByUserAndClinic(ctx, userID, clinicID)
-	if err != nil || uc == nil {
+	userClinics, err := s.ucRepo.GetUserClinics(ctx, userID)
+	if err != nil {
 		return "", err
 	}
-	return uc.Role, nil
+	for _, uc := range userClinics {
+		if uc.UC_ClinicID == clinicID {
+			return uc.UC_Role, nil
+		}
+	}
+	return "", errors.New("user not associated with this clinic")
 }

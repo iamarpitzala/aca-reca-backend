@@ -45,6 +45,19 @@ func (r *clinicRepo) Update(ctx context.Context, clinic *clinic.Clinic) error {
 	return err
 }
 
+func (r *clinicRepo) SetActive(ctx context.Context, id string, active bool) error {
+	query := `UPDATE tbl_clinic SET is_active = $1, updated_at = $2 WHERE id = $3 AND deleted_at IS NULL`
+	res, err := r.db.ExecContext(ctx, query, active, time.Now(), id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errors.New("clinic not found")
+	}
+	return nil
+}
+
 func (r *clinicRepo) Delete(ctx context.Context, id string) error {
 	query := `UPDATE tbl_clinic SET deleted_at = $1 WHERE id = $2`
 	_, err := r.db.ExecContext(ctx, query, time.Now(), id)

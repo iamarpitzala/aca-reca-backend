@@ -53,6 +53,7 @@ type AccountTaxCOA struct {
 
 type COA struct {
 	ID            string     `db:"id"`
+	OwnerUserID   string     `db:"owner_user_id"`
 	AccountTypeID int        `db:"account_type_id"`
 	AccountTaxID  int        `db:"account_tax_id"`
 	Code          string     `db:"code"`

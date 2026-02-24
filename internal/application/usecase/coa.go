@@ -16,9 +16,10 @@ func NewCOAService(repo port.ChartOfAccountsRepository) *COAService {
 	return &COAService{repo: repo}
 }
 
-func (s *COAService) CreateCOA(ctx context.Context, req *coa.COARequest) error {
+func (s *COAService) CreateCOA(ctx context.Context, req *coa.COARequest, ownerUserID string) error {
 	coa := req.ToRepo()
-	existing, err := s.repo.GetByCode(ctx, coa.Code)
+	coa.OwnerUserID = ownerUserID
+	existing, err := s.repo.GetByCodeAndOwner(ctx, coa.Code, ownerUserID)
 	if err != nil {
 		return err
 	}

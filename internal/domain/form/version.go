@@ -3,12 +3,11 @@ package form
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/samber/lo"
 )
 
 type FormVersionRequest struct {
-	ID        *string    `json:"id" validate:"omitempty,required"`
+	ID        *int       `json:"id" validate:"omitempty,required"`
 	FormID    string     `json:"formId" validate:"required"`
 	Version   int        `json:"version" validate:"required,min=1"`
 	IsActive  bool       `json:"isActive" validate:"required"`
@@ -18,8 +17,9 @@ type FormVersionRequest struct {
 	DeletedAt *time.Time `json:"deletedAt" validate:"omitempty,required_with=UpdatedAt"`
 }
 
+// FormVersion maps to tbl_custom_form_version; id is SERIAL (integer) in DB.
 type FormVersion struct {
-	ID        string     `db:"id"`
+	ID        int        `db:"id"`
 	FormID    string     `db:"form_id"`
 	Version   int        `db:"version"`
 	IsActive  bool       `db:"is_active"`
@@ -32,9 +32,8 @@ type FormVersion struct {
 func (f *FormVersion) ToFormVersionDB(formVersion *FormVersionRequest) {
 	if formVersion.ID != nil {
 		f.ID = *formVersion.ID
-	} else {
-		f.ID = uuid.New().String()
 	}
+	// When creating new version, leave ID as 0; DB SERIAL will assign it.
 	f.FormID = formVersion.FormID
 	f.Version = formVersion.Version
 	f.IsActive = formVersion.IsActive
@@ -43,7 +42,7 @@ func (f *FormVersion) ToFormVersionDB(formVersion *FormVersionRequest) {
 }
 
 type FormVersionResponse struct {
-	ID       string `json:"id"`
+	ID       int    `json:"id"`
 	FormID   string `json:"formId"`
 	Version  int    `json:"version"`
 	IsActive bool   `json:"isActive"`

@@ -37,9 +37,8 @@ CREATE TABLE IF NOT EXISTS tbl_custom_form (
     clinic_id VARCHAR(40) NOT NULL REFERENCES tbl_clinic(id),
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    status VARCHAR(50) NOT NULL DEFAULT 'DRAFT'
-        CHECK (status IN ('DRAFT', 'PUBLISHED', 'ARCHIVED')),
-    calculation_method VARCHAR(50) NOT NULL CHECK (calculation_method IN ('NET', 'GROSS')) DEFAULT 'NET',
+    status VARCHAR(50) NOT NULL, -- DRAFT, PUBLISHED, ARCHIVED
+    calculation_method VARCHAR(50) NOT NULL, -- NET, GROSS
     created_by VARCHAR(40) NOT NULL REFERENCES tbl_user(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -89,7 +88,7 @@ CREATE TABLE IF NOT EXISTS tbl_custom_form_field_config (
     tax_type_id INTEGER NOT NULL REFERENCES tbl_tax_type(id),
     arrangement_id VARCHAR(40) NULL REFERENCES tbl_arrangement(id),
     is_formula BOOLEAN NOT NULL DEFAULT FALSE,
-    operator VARCHAR(10) CHECK (operator IN ('+', '-', '*', '/')),
+    operator VARCHAR(10) NOT NULL, -- +, -, *, /
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at TIMESTAMPTZ NULL
@@ -101,8 +100,7 @@ CREATE TABLE IF NOT EXISTS tbl_custom_form_field_formula_source (
         REFERENCES tbl_custom_form_field_config(id),
     source_field_id VARCHAR(40) NOT NULL
         REFERENCES tbl_custom_form_field(id),
-    source_role VARCHAR(20) NOT NULL
-        CHECK (source_role IN ('PRIMARY', 'SECONDARY')),
+    source_role VARCHAR(20) NOT NULL, -- PRIMARY, SECONDARY
     source_order INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),

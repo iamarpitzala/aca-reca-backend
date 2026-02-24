@@ -34,12 +34,16 @@ func NewCOAHandler(coaUC *usecase.COAService) *COAHandler {
 // @Failure 500 {object} domain.H
 // @Router /coa [post]
 func (h *COAHandler) CreateCOA(c *gin.Context) {
+	userID, ok := GetAuthUserID(c)
+	if !ok {
+		return
+	}
 	var coa coa.COARequest
 	if err := utils.BindAndValidate(c, &coa); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	err := h.coaUC.CreateCOA(c.Request.Context(), &coa)
+	err := h.coaUC.CreateCOA(c.Request.Context(), &coa, userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

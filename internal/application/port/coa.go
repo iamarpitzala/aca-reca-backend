@@ -14,6 +14,7 @@ type ChartOfAccountsRepository interface {
 	BulkUpdateAccountTax(ctx context.Context, ids []string, accountTaxID int) error
 	List(ctx context.Context) ([]coa.COA, error)
 	GetByCode(ctx context.Context, code string) (*coa.COA, error)
+	GetByCodeAndOwner(ctx context.Context, code, ownerUserID string) (*coa.COA, error)
 	GetByAccountTypeID(ctx context.Context, accountTypeID int) ([]coa.COA, error)
 	GetByAccountTypeIDSorted(ctx context.Context, accountTypeID int, sortBy, sortOrder string) ([]coa.COA, error)
 	GetByAccountTypeSorted(ctx context.Context, sortBy, sortOrder string) ([]coa.COA, error)

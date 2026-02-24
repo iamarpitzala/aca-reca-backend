@@ -14,11 +14,13 @@ CREATE TABLE IF NOT EXISTS tbl_account_tax (
     id SMALLSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+    IsTaxable BOOLEAN NOT NULL DEFAULT FALSE,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at TIMESTAMPTZ NULL
 );
+
 
 -- Seed Account Types (Idempotent)
 INSERT INTO tbl_account_type (name, description)
@@ -31,14 +33,16 @@ VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Seed Tax Types (Xero-style)
-INSERT INTO tbl_account_tax (name, rate, description)
+INSERT INTO tbl_account_tax (name, rate, IsTaxable, description)
 VALUES
-    ('GST on Income', 10.00, 'Taxable sales / revenue'),
-    ('GST on Expenses', 10.00, 'Taxable purchases / expenses'),
-    ('GST Free Expenses', 0.00, 'GST free expenses'),
-    ('BAS Excluded', 0.00, 'Balance sheet items'),
-    ('GST Free Income', 0.00, 'GST free income')
+    ('GST on Income', 10.00, TRUE, 'Taxable sales / revenue'),
+    ('GST on Expenses', 10.00, TRUE, 'Taxable purchases / expenses'),
+    ('GST Free Expenses', 0.00, FALSE, 'GST free expenses'),
+    ('BAS Excluded', 0.00, FALSE, 'Balance sheet items'),
+    ('GST Free Income', 0.00, FALSE, 'GST free income')
 ON CONFLICT (name) DO NOTHING;
+
+
 
 
 -- Chart of Accounts

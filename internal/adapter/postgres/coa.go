@@ -20,13 +20,13 @@ func NewChartOfAccountsRepository(db *sqlx.DB) port.ChartOfAccountsRepository {
 }
 
 func (r *coaRepo) Create(ctx context.Context, coa *coa.COA) error {
-	query := `INSERT INTO tbl_account (id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at) VALUES (:id, :account_type_id, :account_tax_id, :code, :name, :description, :created_at, :updated_at, :deleted_at)`
+	query := `INSERT INTO tbl_account (id, owner_user_id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at) VALUES (:id, :owner_user_id, :account_type_id, :account_tax_id, :code, :name, :description, :created_at, :updated_at, :deleted_at)`
 	_, err := r.db.NamedExecContext(ctx, query, coa)
 	return err
 }
 
 func (r *coaRepo) GetByID(ctx context.Context, id string) (*coa.COA, error) {
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, owner_user_id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE id = $1 AND deleted_at IS NULL`
 	var coa coa.COA
 	err := r.db.GetContext(ctx, &coa, query, id)
 	if err != nil {
@@ -67,7 +67,7 @@ func (r *coaRepo) BulkUpdateAccountTax(ctx context.Context, ids []string, accoun
 }
 
 func (r *coaRepo) List(ctx context.Context) ([]coa.COA, error) {
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE deleted_at IS NULL ORDER BY code`
+	query := `SELECT id, owner_user_id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE deleted_at IS NULL ORDER BY code`
 	var coas []coa.COA
 	err := r.db.SelectContext(ctx, &coas, query)
 	if err != nil {
@@ -80,7 +80,7 @@ func (r *coaRepo) List(ctx context.Context) ([]coa.COA, error) {
 }
 
 func (r *coaRepo) GetByCode(ctx context.Context, code string) (*coa.COA, error) {
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE code = $1 AND deleted_at IS NULL`
+	query := `SELECT id, owner_user_id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE code = $1 AND deleted_at IS NULL`
 	var coa coa.COA
 	err := r.db.GetContext(ctx, &coa, query, code)
 	if err != nil {
@@ -88,6 +88,19 @@ func (r *coaRepo) GetByCode(ctx context.Context, code string) (*coa.COA, error) 
 			return nil, nil
 		}
 		return nil, errors.New("failed to get coa by code")
+	}
+	return &coa, nil
+}
+
+func (r *coaRepo) GetByCodeAndOwner(ctx context.Context, code, ownerUserID string) (*coa.COA, error) {
+	query := `SELECT id, owner_user_id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE code = $1 AND owner_user_id = $2 AND deleted_at IS NULL`
+	var coa coa.COA
+	err := r.db.GetContext(ctx, &coa, query, code, ownerUserID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, errors.New("failed to get coa by code and owner")
 	}
 	return &coa, nil
 }
@@ -105,7 +118,7 @@ func (r *coaRepo) GetByAccountTypeIDSorted(ctx context.Context, accountTypeID in
 	if sortOrder == "desc" {
 		dir = "DESC"
 	}
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_type_id = $1 AND deleted_at IS NULL ORDER BY ` + col + " " + dir
+	query := `SELECT id, owner_user_id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_type_id = $1 AND deleted_at IS NULL ORDER BY ` + col + " " + dir
 	var coas []coa.COA
 	err := r.db.SelectContext(ctx, &coas, query, accountTypeID)
 	if err != nil {
@@ -126,7 +139,7 @@ func (r *coaRepo) GetByAccountTypeSorted(ctx context.Context, sortBy, sortOrder 
 	if sortOrder == "desc" {
 		dir = "DESC"
 	}
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE deleted_at IS NULL ORDER BY ` + col + " " + dir
+	query := `SELECT id, owner_user_id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE deleted_at IS NULL ORDER BY ` + col + " " + dir
 	var coas []coa.COA
 	err := r.db.SelectContext(ctx, &coas, query)
 	if err != nil {
@@ -139,7 +152,7 @@ func (r *coaRepo) GetByAccountTypeSorted(ctx context.Context, sortBy, sortOrder 
 }
 
 func (r *coaRepo) GetByAccountTaxID(ctx context.Context, accountTaxID int) ([]coa.COA, error) {
-	query := `SELECT id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_tax_id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, owner_user_id, account_type_id, account_tax_id, code, name, description, created_at, updated_at, deleted_at FROM tbl_account WHERE account_tax_id = $1 AND deleted_at IS NULL`
 	var coas []coa.COA
 	err := r.db.SelectContext(ctx, &coas, query, accountTaxID)
 	if err != nil {

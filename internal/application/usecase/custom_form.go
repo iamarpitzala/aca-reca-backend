@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,6 +35,7 @@ func (s *CustomFormService) Create(ctx context.Context, req *form.FormRequest, u
 
 	formInstance := &form.Form{}
 	formInstance.ToFormDB(req)
+	formInstance.CreatedBy = userID // always use authenticated user for FK and audit
 	if err := s.repo.Create(ctx, formInstance); err != nil {
 		return nil, err
 	}
@@ -146,7 +148,7 @@ func (s *CustomFormService) Publish(ctx context.Context, id, userID string) (*fo
 	}
 
 	// Copy fields if any
-	oldFields, err := s.fieldRepo.GetByFormVersionID(ctx, latestVersion.ID)
+	oldFields, err := s.fieldRepo.GetByFormVersionID(ctx, strconv.Itoa(latestVersion.ID))
 	if err != nil {
 		// If error, treat as no fields
 		oldFields = nil
@@ -156,16 +158,20 @@ func (s *CustomFormService) Publish(ctx context.Context, id, userID string) (*fo
 		for i, old := range oldFields {
 			newField := &form.Field{
 				ID:            uuid.NewString(),
-				FormVersionID: newVersionRecord.ID,
+				FormVersionID: strconv.Itoa(newVersionRecord.ID),
 				FormID:        id,
+				StartDate:     old.StartDate,
+				EndDate:       old.EndDate,
 				Label:         old.Label,
 				SectionTypeID: old.SectionTypeID,
+				Description:   old.Description,
 				IsRequired:    old.IsRequired,
 				CoaID:         old.CoaID,
 				Placeholder:   old.Placeholder,
 				MinValue:      old.MinValue,
 				MaxValue:      old.MaxValue,
 				FieldOrder:    old.FieldOrder,
+				TaxTypeID:     old.TaxTypeID,
 			}
 			newFields[i] = newField
 		}

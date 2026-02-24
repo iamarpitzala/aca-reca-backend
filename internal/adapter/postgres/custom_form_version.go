@@ -21,11 +21,13 @@ func NewCustomFormVersionRepository(db *sqlx.DB) port.CustomFormVersionRepositor
 
 func (r *customFormVersionRepo) Create(ctx context.Context, version *form.FormVersion) error {
 	q := `INSERT INTO tbl_custom_form_version (
-		id, form_id, version, is_active, created_by, created_at
+		form_id, version, is_active, created_by, created_at
 	) VALUES (
-		:id, :form_id, :version, :is_active, :created_by, :created_at
-	)`
-	_, err := r.db.NamedExecContext(ctx, q, version)
+		$1, $2, $3, $4, $5
+	) RETURNING id`
+	err := r.db.QueryRowContext(ctx, q,
+		version.FormID, version.Version, version.IsActive, version.CreatedBy, version.CreatedAt,
+	).Scan(&version.ID)
 	return err
 }
 
@@ -62,7 +64,7 @@ func (r *customFormVersionRepo) GetByFormID(ctx context.Context, formID string) 
 	return versions, nil
 }
 
-func (r *customFormVersionRepo) SetActive(ctx context.Context, formID string, versionID string) error {
+func (r *customFormVersionRepo) SetActive(ctx context.Context, formID string, versionID int) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err

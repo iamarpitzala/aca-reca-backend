@@ -7,7 +7,7 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
-func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFormHandler, entryHandler *httpHandler.FieldEntryHandler, tokenService *service.TokenService) {
+func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFormHandler, entryHandler *httpHandler.FieldEntryHandler, fieldHandler *httpHandler.CustomFormFieldHandler, tokenService *service.TokenService) {
 	g := e.Group("/custom-form")
 	g.Use(middleware.AuthMiddleware(tokenService))
 
@@ -21,6 +21,38 @@ func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFor
 	g.POST("/:id/archive", handler.Archive)
 	g.DELETE("/:id", handler.Delete)
 	// g.POST("/:id/duplicate", handler.Duplicate)
+
+	// Form fields (by form or by version)
+	forms := g.Group("/forms")
+	forms.GET("/:formId/fields", fieldHandler.GetFieldsByFormID)
+	forms.GET("/:formId/versions/:formVersionId/fields", fieldHandler.GetFieldsByFormVersionID)
+	forms.POST("/:formId/fields", fieldHandler.CreateField)
+
+	// Single form field (by field id)
+	fields := g.Group("/fields")
+	fields.GET("/:fieldId", fieldHandler.GetFieldByID)
+	fields.PUT("/:fieldId", fieldHandler.UpdateField)
+	fields.DELETE("/:fieldId", fieldHandler.DeleteField)
+
+	// Field configs (nested under field)
+	fields.POST("/:fieldId/configs", fieldHandler.CreateFieldConfig)
+	fields.GET("/:fieldId/configs", fieldHandler.GetFieldConfigsByFormFieldID)
+
+	// Single field config
+	configs := g.Group("/field-configs")
+	configs.GET("/:configId", fieldHandler.GetFieldConfigByID)
+	configs.PUT("/:configId", fieldHandler.UpdateFieldConfig)
+	configs.DELETE("/:configId", fieldHandler.DeleteFieldConfig)
+
+	// Formula sources (nested under config)
+	configs.POST("/:configId/formula-sources", fieldHandler.CreateFormulaSource)
+	configs.GET("/:configId/formula-sources", fieldHandler.GetFormulaSourcesByFieldConfigID)
+
+	// Single formula source
+	sources := g.Group("/formula-sources")
+	sources.GET("/:sourceId", fieldHandler.GetFormulaSourceByID)
+	sources.PUT("/:sourceId", fieldHandler.UpdateFormulaSource)
+	sources.DELETE("/:sourceId", fieldHandler.DeleteFormulaSource)
 
 	// Entries under /entries to avoid conflicting with form :id
 	entries := g.Group("/entries")

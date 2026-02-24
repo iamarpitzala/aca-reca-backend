@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -79,6 +80,8 @@ func (h *CustomFormHandler) GetPublishedByClinicID(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	fmt.Println("list", list)
 	utils.JSONResponse(c, http.StatusOK, utils.MsgPublishedCustomFormsRetrieved, list, nil)
 }
 

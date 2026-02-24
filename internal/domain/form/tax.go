@@ -2,8 +2,9 @@ package form
 
 import "time"
 
+// TaxType matches tbl_tax_type (id is SERIAL).
 type TaxType struct {
-	ID          string     `db:"id"`
+	ID          int        `db:"id"`
 	Name        string     `db:"name"`
 	Type        string     `db:"type"`
 	Description string     `db:"description"`
@@ -23,7 +24,7 @@ func (t *TaxType) ToTaxTypeDB(taxType *TaxType) {
 }
 
 type TaxTypeResponse struct {
-	ID          string     `json:"id"`
+	ID          int        `json:"id"`
 	Name        string     `json:"name"`
 	Type        string     `json:"type"`
 	Description string     `json:"description"`

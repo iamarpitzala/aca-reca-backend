@@ -20,6 +20,7 @@ import (
 	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payslip"
 	reports_route "github.com/iamarpitzala/aca-reca-backend/route/reports"
+	tax_type_route "github.com/iamarpitzala/aca-reca-backend/route/tax_type"
 	transaction_route "github.com/iamarpitzala/aca-reca-backend/route/transaction"
 	upload_route "github.com/iamarpitzala/aca-reca-backend/route/upload"
 	user_clinic "github.com/iamarpitzala/aca-reca-backend/route/user_clinic"
@@ -50,6 +51,7 @@ func InitRouter(e *gin.Engine) {
 	customFormRepo := postgres.NewCustomFormRepository(sqlxDB)
 	customFormFieldRepo := postgres.NewCustomFormFieldRepository(sqlxDB)
 	customFormVersionRepo := postgres.NewCustomFormVersionRepository(sqlxDB)
+	taxTypeRepo := postgres.NewTaxTypeRepository(sqlxDB)
 	financialYearRepo := postgres.NewFinancialYearRepository(sqlxDB)
 	financialQuarterRepo := postgres.NewFinancialQuarterRepository(sqlxDB)
 	clinicFinancialYearRepo := postgres.NewClinicFinancialYearRepository(sqlxDB)
@@ -68,6 +70,7 @@ func InitRouter(e *gin.Engine) {
 	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService)
 	expensesUC := usecase.NewExpensesService(expenseRepo)
 	customFormUC := usecase.NewCustomFormService(customFormRepo, customFormFieldRepo, customFormVersionRepo, clinicRepo)
+	taxTypeUC := usecase.NewTaxTypeService(taxTypeRepo)
 	clinicFinancialSettingsUC := usecase.NewClinicFinancialSettingsService(clinicFinancialSettingsRepo, clinicRepo, financialYearRepo, financialQuarterRepo, clinicFinancialYearRepo, clinicFinancialQuarterLockRepo)
 	fieldEntryUC := usecase.NewFieldEntryService(fieldEntryRepo, customFormRepo, customFormFieldRepo, clinicRepo, clinicFinancialSettingsRepo, transactionRepo)
 	transactionUC := usecase.NewTransactionService(transactionRepo, clinicRepo)
@@ -80,6 +83,7 @@ func InitRouter(e *gin.Engine) {
 	clinicHandler := httpHandler.NewClinicHandler(clinicUC, userClinicUC, clinicFinancialSettingsUC)
 	userClinicHandler := httpHandler.NewUserClinicHandler(userClinicUC)
 	customFormHandler := httpHandler.NewCustomFormHandler(customFormUC, userClinicUC)
+	taxTypeHandler := httpHandler.NewTaxTypeHandler(taxTypeUC)
 	expensesHandler := httpHandler.NewExpensesHandler(expensesUC)
 	clinicFinancialSettingsHandler := httpHandler.NewClinicFinancialSettingsHandler(clinicFinancialSettingsUC)
 	fieldEntryHandler := httpHandler.NewFieldEntryHandler(fieldEntryUC, userClinicUC, customFormRepo)
@@ -100,6 +104,7 @@ func InitRouter(e *gin.Engine) {
 	payslip.RegisterPayslipRoutes(v1, payslipHandler)
 	user_clinic.RegisterUserClinicRoutes(v1, userClinicHandler, tokenService)
 	custom_form.RegisterCustomFormRoutes(v1, customFormHandler, fieldEntryHandler, tokenService)
+	tax_type_route.RegisterTaxTypeRoutes(v1, taxTypeHandler, tokenService)
 	expense.RegisterExpensesRoutes(v1, expensesHandler, tokenService)
 	upload_route.RegisterUploadRoutes(v1, uploadHandler, tokenService)
 	clinic_financial_settings.RegisterClinicFinancialSettingRoutes(v1, clinicFinancialSettingsHandler, tokenService)

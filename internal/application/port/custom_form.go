@@ -34,3 +34,8 @@ type CustomFormVersionRepository interface {
 	GetByFormID(ctx context.Context, formID string) ([]form.FormVersion, error)
 	SetActive(ctx context.Context, formID string, versionID string) error
 }
+
+// TaxTypeRepository lists tax types (tbl_tax_type) for form field lookups.
+type TaxTypeRepository interface {
+	ListAll(ctx context.Context) ([]form.TaxType, error)
+}

@@ -19,6 +19,7 @@ const (
 var ValidStates = []string{StateNSW, StateVIC, StateQLD, StateSA, StateWA, StateTAS, StateNT, StateACT}
 
 type ClinicRequest struct {
+	UserID      string  `json:"userId" validate:"omitempty,required"`
 	Name        string  `json:"name" validate:"omitempty,required"`
 	ABNNumber   string  `json:"abnNumber" validate:"required, min=11, max=11"`
 	Address     string  `json:"address" validate:"omitempty,required,max=255"`
@@ -46,6 +47,7 @@ type ClinicRequest struct {
 
 func (c *ClinicRequest) ToClinic() *Clinic {
 	return &Clinic{
+		UserID:         c.UserID,
 		Name:           c.Name,
 		ABNNumber:      c.ABNNumber,
 		Address:        c.Address,
@@ -71,6 +73,7 @@ func (c *ClinicRequest) ToClinic() *Clinic {
 
 type Clinic struct {
 	ID          string  `db:"id"`
+	UserID      string  `db:"user_id"`
 	Name        string  `db:"name"`
 	ABNNumber   string  `db:"abn_number"`
 	Address     string  `db:"address"`
@@ -98,6 +101,7 @@ type Clinic struct {
 
 type ClinicResponse struct {
 	ID             string     `json:"id"`
+	UserID         string     `json:"userId"`
 	Name           string     `json:"name"`
 	ABNNumber      string     `json:"abnNumber"`
 	Address        string     `json:"address"`
@@ -123,6 +127,7 @@ type ClinicResponse struct {
 func (c *Clinic) ToClinicResponse() *ClinicResponse {
 	return &ClinicResponse{
 		ID:             c.ID,
+		UserID:         c.UserID,
 		Name:           c.Name,
 		ABNNumber:      c.ABNNumber,
 		Address:        c.Address,
@@ -148,6 +153,7 @@ func (c *Clinic) ToClinicResponse() *ClinicResponse {
 
 // UpdateClinicRequest supports partial updates - nil/omitted fields are not updated
 type UpdateClinicRequest struct {
+	UserID      *string `json:"userId"`
 	Name        *string `json:"name"`
 	ABNNumber   *string `json:"abnNumber"`
 	Address     *string `json:"address"`
@@ -170,6 +176,7 @@ type UpdateClinicRequest struct {
 
 func (u *UpdateClinicRequest) ToClinic() *Clinic {
 	return &Clinic{
+		UserID:         *u.UserID,
 		Name:           *u.Name,
 		ABNNumber:      *u.ABNNumber,
 		Address:        *u.Address,

@@ -43,8 +43,8 @@ func NewClinicFinancialSettingsService(
 	}
 }
 
-// GetByClinicID retrieves financial settings for the clinic's current financial year.
-func (s *ClinicFinancialSettingsService) GetByClinicID(ctx context.Context, clinicID string) (*clinic.ClinicFinancialSetting, error) {
+// GetByClinicID retrieves financial settings for the clinic's current financial year, enriched with financial year start/end dates.
+func (s *ClinicFinancialSettingsService) GetByClinicID(ctx context.Context, clinicID string) (*clinic.ClinicFinancialSettingWithFY, error) {
 	_, err := s.clinicRepo.GetByID(ctx, clinicID)
 	if err != nil {
 		return nil, err
@@ -52,11 +52,37 @@ func (s *ClinicFinancialSettingsService) GetByClinicID(ctx context.Context, clin
 	settings, err := s.repo.GetByClinicID(ctx, clinicID)
 	if err != nil {
 		if err.Error() == "financial settings not found" {
-			return s.getDefaultSettings(ctx, clinicID), nil
+			def := s.getDefaultSettings(ctx, clinicID)
+			if def == nil {
+				return nil, nil
+			}
+			return s.enrichWithFinancialYear(ctx, def)
 		}
 		return nil, err
 	}
-	return settings, nil
+	return s.enrichWithFinancialYear(ctx, settings)
+}
+
+// enrichWithFinancialYear attaches financial year label and start/end from the linked master financial year.
+func (s *ClinicFinancialSettingsService) enrichWithFinancialYear(ctx context.Context, settings *clinic.ClinicFinancialSetting) (*clinic.ClinicFinancialSettingWithFY, error) {
+	cfy, err := s.clinicFinancialYearRepo.GetByID(ctx, settings.ClinicFinancialYearID)
+	if err != nil || cfy == nil {
+		return &clinic.ClinicFinancialSettingWithFY{
+			ClinicFinancialSettingResponse: *settings.ToClinicFinancialSettingResponse(),
+		}, nil
+	}
+	fy, err := s.financialYearRepo.GetByID(ctx, cfy.FinancialYearID)
+	if err != nil || fy == nil {
+		return &clinic.ClinicFinancialSettingWithFY{
+			ClinicFinancialSettingResponse: *settings.ToClinicFinancialSettingResponse(),
+		}, nil
+	}
+	return &clinic.ClinicFinancialSettingWithFY{
+		ClinicFinancialSettingResponse: *settings.ToClinicFinancialSettingResponse(),
+		FinancialYearLabel:             fy.FYLabel,
+		FinancialYearStart:             fy.StartDate,
+		FinancialYearEnd:               fy.EndDate,
+	}, nil
 }
 
 // CreateOrUpdate creates or updates financial settings for a clinic (keyed by clinic_financial_year_id).

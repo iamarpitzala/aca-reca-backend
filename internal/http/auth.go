@@ -144,9 +144,6 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 			c.Redirect(http.StatusTemporaryRedirect, h.frontendURL+"?"+utils.OAuthParamError+"="+utils.OAuthErrorCreateUserFailed)
 			return
 		}
-		if err := h.authUC.EnsureDefaultClinicForUser(ctx, user.ID, user.FirstName); err != nil {
-			// non-fatal: user exists
-		}
 	} else {
 		if err := h.oauthService.LinkProvider(ctx, user.ID, provider, userInfo.ID, userInfo.Email, token); err != nil {
 			// optional: link for future logins

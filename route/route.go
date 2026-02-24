@@ -63,7 +63,7 @@ func InitRouter(e *gin.Engine) {
 	// Use cases (application layer)
 	clinicUC := usecase.NewClinicService(clinicRepo)
 	userClinicUC := usecase.NewUserClinicService(userClinicRepo, clinicRepo, userRepo)
-	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService, clinicUC, userClinicUC)
+	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService)
 	expensesUC := usecase.NewExpensesService(expenseRepo)
 	customFormUC := usecase.NewCustomFormService(customFormRepo, customFormFieldRepo, customFormVersionRepo, clinicRepo)
 	clinicFinancialSettingsUC := usecase.NewClinicFinancialSettingsService(clinicFinancialSettingsRepo, clinicRepo, financialYearRepo, financialQuarterRepo)

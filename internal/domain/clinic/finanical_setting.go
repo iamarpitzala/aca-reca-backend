@@ -7,91 +7,65 @@ import (
 	"github.com/google/uuid"
 )
 
-// ClinicFinancialSettingRequest is used for API interactions with validation
+// ClinicFinancialSettingRequest is used for API interactions with validation.
 type ClinicFinancialSettingRequest struct {
 	ID                    *string    `json:"id" validate:"omitempty,required"`
-	FinancialYearID       int        `json:"financialYearId" validate:"required"`
-	FinancialQuarterID    int        `json:"financialQuarterId" validate:"required"`
+	ClinicFinancialYearID int        `json:"clinicFinancialYearId" validate:"required"`
 	CalculationMethod     string     `json:"calculationMethod" validate:"required,oneof=CASH ACCRUAL"`
 	GSTRegistered         bool       `json:"gstRegistered" validate:"required"`
 	GSTReportingFrequency string     `json:"gstReportingFrequency" validate:"required,oneof=QUARTERLY ANNUALLY"`
 	DefaultAmountMode     string     `json:"defaultAmountMode" validate:"required,oneof=INCLUSIVE EXCLUSIVE"`
 	LockDate              *time.Time `json:"lockDate"`
-	CreatedAt             *time.Time `json:"createdAt" validate:"omitempty,required"`
-	UpdatedAt             *time.Time `json:"updatedAt" validate:"omitempty,required_with=CreatedAt"`
-	DeletedAt             *time.Time `json:"deletedAt" validate:"omitempty"`
 }
 
 // Validate adds business logic validation for ClinicFinancialSettingRequest.
 func (r *ClinicFinancialSettingRequest) Validate() error {
-	if r.FinancialYearID <= 0 {
-		return errors.New("financialYearId must be positive")
+	if r.ClinicFinancialYearID <= 0 {
+		return errors.New("clinicFinancialYearId must be positive")
 	}
-	if r.FinancialQuarterID < 1 || r.FinancialQuarterID > 4 {
-		return errors.New("financialQuarterId must be between 1 and 4")
-	}
-
 	if r.CalculationMethod != "CASH" && r.CalculationMethod != "ACCRUAL" {
 		return errors.New("calculationMethod must be CASH or ACCRUAL")
 	}
-
 	if r.GSTReportingFrequency != "QUARTERLY" && r.GSTReportingFrequency != "ANNUALLY" {
 		return errors.New("gstReportingFrequency must be QUARTERLY or ANNUALLY")
 	}
-
 	if r.DefaultAmountMode != "INCLUSIVE" && r.DefaultAmountMode != "EXCLUSIVE" {
 		return errors.New("defaultAmountMode must be INCLUSIVE or EXCLUSIVE")
 	}
-
-	if r.CreatedAt == nil {
-		now := time.Now()
-		r.CreatedAt = &now
-	}
-	if r.UpdatedAt == nil {
-		r.UpdatedAt = r.CreatedAt
-	}
-
 	return nil
 }
 
-// ToDBModel performs mapping from request to DB model, ensuring fields are properly populated.
+// ToClinicFinancialSetting maps request to DB model.
 func (r *ClinicFinancialSettingRequest) ToClinicFinancialSetting(clinicID string) (*ClinicFinancialSetting, error) {
 	if err := r.Validate(); err != nil {
 		return nil, err
 	}
-
-	id := ""
+	id := uuid.New().String()
 	if r.ID != nil && *r.ID != "" {
 		id = *r.ID
-	} else {
-		id = uuid.New().String()
 	}
-
-	setting := &ClinicFinancialSetting{
+	now := time.Now()
+	return &ClinicFinancialSetting{
 		ID:                    id,
 		ClinicID:              clinicID,
-		FinancialYearID:       r.FinancialYearID,
-		FinancialQuarterID:    r.FinancialQuarterID,
-		CalculationMethod:     r.CalculationMethod,
+		ClinicFinancialYearID: r.ClinicFinancialYearID,
+		AccountingMethod:      r.CalculationMethod,
 		GSTRegistered:         r.GSTRegistered,
 		GSTReportingFrequency: r.GSTReportingFrequency,
 		DefaultAmountMode:     r.DefaultAmountMode,
 		LockDate:              r.LockDate,
-		CreatedAt:             *r.CreatedAt,
-		UpdatedAt:             *r.UpdatedAt,
-		DeletedAt:             r.DeletedAt,
-	}
-
-	return setting, nil
+		CreatedAt:             now,
+		UpdatedAt:             now,
+		DeletedAt:             nil,
+	}, nil
 }
 
-// ClinicFinancialSetting is the DB representation for the financial settings table
+// ClinicFinancialSetting is the DB representation for tbl_clinic_financial_settings.
 type ClinicFinancialSetting struct {
 	ID                    string     `db:"id" json:"id"`
 	ClinicID              string     `db:"clinic_id" json:"clinicId"`
-	FinancialYearID       int        `db:"financial_year_id" json:"financialYearId"`
-	FinancialQuarterID    int        `db:"financial_quarter_id" json:"financialQuarterId"`
-	CalculationMethod     string     `db:"calculation_method" json:"calculationMethod"`
+	ClinicFinancialYearID int        `db:"clinic_financial_year_id" json:"clinicFinancialYearId"`
+	AccountingMethod      string     `db:"accounting_method" json:"calculationMethod"`
 	GSTRegistered         bool       `db:"gst_registered" json:"gstRegistered"`
 	GSTReportingFrequency string     `db:"gst_reporting_frequency" json:"gstReportingFrequency"`
 	DefaultAmountMode     string     `db:"default_amount_mode" json:"defaultAmountMode"`
@@ -101,12 +75,11 @@ type ClinicFinancialSetting struct {
 	DeletedAt             *time.Time `db:"deleted_at" json:"deletedAt"`
 }
 
-// ClinicFinancialSettingResponse is for API response payloads
+// ClinicFinancialSettingResponse for API response.
 type ClinicFinancialSettingResponse struct {
 	ID                    string     `json:"id"`
 	ClinicID              string     `json:"clinicId"`
-	FinancialYearID       int        `json:"financialYearId"`
-	FinancialQuarterID    int        `json:"financialQuarterId"`
+	ClinicFinancialYearID int        `json:"clinicFinancialYearId"`
 	CalculationMethod     string     `json:"calculationMethod"`
 	GSTRegistered         bool       `json:"gstRegistered"`
 	GSTReportingFrequency string     `json:"gstReportingFrequency"`
@@ -114,17 +87,15 @@ type ClinicFinancialSettingResponse struct {
 	LockDate              *time.Time `json:"lockDate"`
 	CreatedAt             time.Time  `json:"createdAt"`
 	UpdatedAt             time.Time  `json:"updatedAt"`
-	DeletedAt             *time.Time `json:"deletedAt"`
+	DeletedAt             *time.Time `json:"deletedAt,omitempty"`
 }
 
-// ToClinicFinancialSettingResponse maps a DB model into an API response
 func (f *ClinicFinancialSetting) ToClinicFinancialSettingResponse() *ClinicFinancialSettingResponse {
 	return &ClinicFinancialSettingResponse{
 		ID:                    f.ID,
 		ClinicID:              f.ClinicID,
-		FinancialYearID:       f.FinancialYearID,
-		FinancialQuarterID:    f.FinancialQuarterID,
-		CalculationMethod:     f.CalculationMethod,
+		ClinicFinancialYearID: f.ClinicFinancialYearID,
+		CalculationMethod:     f.AccountingMethod,
 		GSTRegistered:         f.GSTRegistered,
 		GSTReportingFrequency: f.GSTReportingFrequency,
 		DefaultAmountMode:     f.DefaultAmountMode,

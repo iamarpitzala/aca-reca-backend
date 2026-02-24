@@ -12,38 +12,27 @@ import (
 )
 
 type clinicFinancialSettingRepo struct {
-	db                   *sqlx.DB
-	financialYearRepo    port.FinancialYearRepository
-	financialQuarterRepo port.FinancialQuarterRepository
+	db *sqlx.DB
 }
 
-func NewClinicFinancialSettingRepository(db *sqlx.DB, financialYearRepo port.FinancialYearRepository, financialQuarterRepo port.FinancialQuarterRepository) port.ClinicFinancialSettingRepository {
-	return &clinicFinancialSettingRepo{db: db, financialYearRepo: financialYearRepo, financialQuarterRepo: financialQuarterRepo}
+func NewClinicFinancialSettingRepository(db *sqlx.DB) port.ClinicFinancialSettingRepository {
+	return &clinicFinancialSettingRepo{db: db}
 }
 
 func (r *clinicFinancialSettingRepo) Create(ctx context.Context, settings *clinic.ClinicFinancialSetting) error {
-	financialYear, err := r.financialYearRepo.GetByClinicID(ctx, settings.ClinicID)
-	if err != nil {
-		return err
-	}
-
-	financialQuarter, err := r.financialQuarterRepo.GetByFinancialYearID(ctx, financialYear.ID)
-	if err != nil {
-		return err
-	}
-	settings.FinancialQuarterID = financialQuarter.ID
-
-	query := `INSERT INTO tbl_clinic_financial_settings 
-		(id, clinic_id, financial_year_id, financial_quarter_id, accounting_method, gst_registered, gst_reporting_frequency, default_amount_mode, lock_date, created_at, updated_at)
-		VALUES (:id, :clinic_id, :financial_year_id, :financial_quarter_id, :accounting_method, :gst_registered, :gst_reporting_frequency, :default_amount_mode, :lock_date, :created_at, :updated_at)`
-	_, err = r.db.NamedExecContext(ctx, query, settings)
+	query := `INSERT INTO tbl_clinic_financial_settings
+	(id, clinic_id, clinic_financial_year_id, accounting_method, gst_registered, gst_reporting_frequency, default_amount_mode, lock_date, created_at, updated_at, deleted_at)
+	VALUES (:id, :clinic_id, :clinic_financial_year_id, :accounting_method, :gst_registered, :gst_reporting_frequency, :default_amount_mode, :lock_date, :created_at, :updated_at, :deleted_at)`
+	_, err := r.db.NamedExecContext(ctx, query, settings)
 	return err
 }
 
 func (r *clinicFinancialSettingRepo) GetByClinicID(ctx context.Context, clinicID string) (*clinic.ClinicFinancialSetting, error) {
-	query := `SELECT id, clinic_id, financial_year_id, financial_quarter_id, accounting_method, gst_registered, gst_reporting_frequency, default_amount_mode, lock_date, created_at, updated_at, deleted_at
-		FROM tbl_clinic_financial_settings 
-		WHERE clinic_id = $1 AND deleted_at IS NULL`
+	query := `SELECT s.id, s.clinic_id, s.clinic_financial_year_id, s.accounting_method, s.gst_registered, s.gst_reporting_frequency, s.default_amount_mode, s.lock_date, s.created_at, s.updated_at, s.deleted_at
+FROM tbl_clinic_financial_settings s
+JOIN tbl_clinic_financial_year cfy ON cfy.id = s.clinic_financial_year_id AND cfy.deleted_at IS NULL
+WHERE cfy.clinic_id = $1 AND cfy.is_current = true AND s.deleted_at IS NULL
+LIMIT 1`
 	var settings clinic.ClinicFinancialSetting
 	err := r.db.GetContext(ctx, &settings, query, clinicID)
 	if err != nil {
@@ -55,17 +44,30 @@ func (r *clinicFinancialSettingRepo) GetByClinicID(ctx context.Context, clinicID
 	return &settings, nil
 }
 
+func (r *clinicFinancialSettingRepo) GetByClinicFinancialYearID(ctx context.Context, clinicFinancialYearID int) (*clinic.ClinicFinancialSetting, error) {
+	query := `SELECT id, clinic_id, clinic_financial_year_id, accounting_method, gst_registered, gst_reporting_frequency, default_amount_mode, lock_date, created_at, updated_at, deleted_at
+FROM tbl_clinic_financial_settings WHERE clinic_financial_year_id = $1 AND deleted_at IS NULL`
+	var settings clinic.ClinicFinancialSetting
+	err := r.db.GetContext(ctx, &settings, query, clinicFinancialYearID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &settings, nil
+}
+
 func (r *clinicFinancialSettingRepo) Update(ctx context.Context, settings *clinic.ClinicFinancialSetting) error {
 	query := `UPDATE tbl_clinic_financial_settings SET
-		financial_year_id = :financial_year_id,
-		financial_quarter_id = :financial_quarter_id,
-		accounting_method = :accounting_method,
-		gst_registered = :gst_registered,
-		gst_reporting_frequency = :gst_reporting_frequency,
-		default_amount_mode = :default_amount_mode,
-		lock_date = :lock_date,
-		updated_at = :updated_at
-		WHERE id = :id AND deleted_at IS NULL`
+	clinic_financial_year_id = :clinic_financial_year_id,
+	accounting_method = :accounting_method,
+	gst_registered = :gst_registered,
+	gst_reporting_frequency = :gst_reporting_frequency,
+	default_amount_mode = :default_amount_mode,
+	lock_date = :lock_date,
+	updated_at = :updated_at
+	WHERE id = :id AND deleted_at IS NULL`
 	_, err := r.db.NamedExecContext(ctx, query, settings)
 	return err
 }

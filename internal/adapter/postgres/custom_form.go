@@ -23,10 +23,10 @@ func NewCustomFormRepository(db *sqlx.DB) port.CustomFormRepository {
 
 func (r *customFormRepo) Create(ctx context.Context, form *form.Form) error {
 	q := `INSERT INTO tbl_custom_form (
-		id, clinic_id, name, description, form_type, status,
+		id, clinic_id, name, description, status,
 		calculation_method, created_by, created_at, updated_at, deleted_at
 	) VALUES (
-		:id, :clinic_id, :name, :description, :form_type, :status,
+		:id, :clinic_id, :name, :description, :status,
 		:calculation_method, :created_by, :created_at, :updated_at, :deleted_at
 	)`
 	_, err := r.db.NamedExecContext(ctx, q, form)
@@ -40,7 +40,6 @@ func (r *customFormRepo) GetByID(ctx context.Context, id string) (*form.Form, er
 			clinic_id,
 			name,
 			description,
-			form_type,
 			status,
 			calculation_method,
 			created_by,
@@ -64,7 +63,7 @@ func (r *customFormRepo) GetByID(ctx context.Context, id string) (*form.Form, er
 func (r *customFormRepo) GetByClinicID(ctx context.Context, clinicID string) ([]form.Form, error) {
 	q := `
 		SELECT
-			id, clinic_id, name, description, form_type, status,
+			id, clinic_id, name, description, status,
 			calculation_method,
 			created_by, created_at, updated_at, deleted_at
 		FROM tbl_custom_form
@@ -81,7 +80,7 @@ func (r *customFormRepo) GetByClinicID(ctx context.Context, clinicID string) ([]
 func (r *customFormRepo) GetPublishedByClinicID(ctx context.Context, clinicID string) ([]form.Form, error) {
 	q := `
 		SELECT
-			id, clinic_id, name, description, form_type, status,
+			id, clinic_id, name, description, status,
 			calculation_method,
 			created_by, created_at, updated_at, deleted_at
 		FROM tbl_custom_form

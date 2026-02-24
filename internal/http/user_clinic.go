@@ -92,7 +92,7 @@ func (h *UserClinicHandler) GetUserClinics(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": util.MsgUserClinicsRetrievedSuccessfully, "userClinics": userClinics})
+	c.JSON(http.StatusOK, gin.H{"message": util.MsgUserClinicsRetrievedSuccessfully, "data": userClinics})
 }
 
 // GetClinicUsers retrieves all users for a clinic. Requester must have access to the clinic.
@@ -126,13 +126,13 @@ func (h *UserClinicHandler) GetClinicUsers(c *gin.Context) {
 		return
 	}
 
-	clinicUsers, err := h.userClinicUC.GetClinicUsers(c.Request.Context(), clinicID)
+	userClinics, err := h.userClinicUC.GetUserClinics(c.Request.Context(), clinicID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": util.MsgClinicUsersRetrievedSuccessfully, "clinicUsers": clinicUsers})
+	c.JSON(http.StatusOK, gin.H{"message": util.MsgUserClinicsRetrievedSuccessfully, "data": userClinics})
 }
 
 // RemoveUserFromClinic removes a user-clinic association. Only the clinic owner can remove users.
@@ -161,13 +161,13 @@ func (h *UserClinicHandler) RemoveUserFromClinic(c *gin.Context) {
 		return
 	}
 
-	assoc, err := h.userClinicUC.GetByID(c.Request.Context(), id)
-	if err != nil || assoc == nil {
+	userClinics, err := h.userClinicUC.GetUserClinics(c.Request.Context(), authUserID)
+	if err != nil || len(userClinics) == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": util.ErrUserClinicAssociationNotFound})
 		return
 	}
 
-	role, err := h.userClinicUC.UserRoleInClinic(c.Request.Context(), authUserID, assoc.ClinicID)
+	role, err := h.userClinicUC.UserRoleInClinic(c.Request.Context(), authUserID, userClinics[0].UC_ClinicID)
 	if err != nil || role == "" {
 		c.JSON(http.StatusForbidden, gin.H{"error": util.ErrAccessDenied})
 		return

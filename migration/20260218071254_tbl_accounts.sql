@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS tbl_account_type (
     id SMALLSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at TIMESTAMPTZ NULL
@@ -16,7 +15,6 @@ CREATE TABLE IF NOT EXISTS tbl_account_tax (
     name VARCHAR(50) NOT NULL UNIQUE,
     rate NUMERIC(5,2) NOT NULL DEFAULT 0,
     description TEXT,
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at TIMESTAMPTZ NULL
@@ -45,25 +43,26 @@ ON CONFLICT (name) DO NOTHING;
 
 -- Chart of Accounts
 CREATE TABLE IF NOT EXISTS tbl_account (
-    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
-
+    id VARCHAR(40) PRIMARY KEY,
+    owner_user_id VARCHAR(40) NOT NULL REFERENCES tbl_user(id),
     account_type_id SMALLINT NOT NULL REFERENCES tbl_account_type(id),
-
     account_tax_id SMALLINT NOT NULL REFERENCES tbl_account_tax(id),
-
     code VARCHAR(10) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at TIMESTAMPTZ NULL,
-
-    CONSTRAINT uq_account_code UNIQUE (code),
-    CONSTRAINT uq_account_name UNIQUE (name)
+    deleted_at TIMESTAMPTZ NULL
 );
 
 
+CREATE UNIQUE INDEX uq_account_user_code
+ON tbl_account (owner_user_id, code)
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX uq_account_user_name
+ON tbl_account (owner_user_id, name)
+WHERE deleted_at IS NULL;
 -- +goose StatementEnd
 
 -- +goose Down

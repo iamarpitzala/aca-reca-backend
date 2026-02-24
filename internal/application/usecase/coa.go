@@ -153,3 +153,9 @@ func (s *COAService) GetCOAType(ctx context.Context) ([]coa.AccountTypeCOA, erro
 func (s *COAService) GetAccountTax(ctx context.Context) ([]coa.AccountTaxCOA, error) {
 	return s.repo.GetAllAccountTax(ctx)
 }
+
+// CreateDefaultAccountsForUser creates the default chart of accounts for a user (same set as seed).
+// Call this when a new user is created so they get the standard accounts automatically.
+func (s *COAService) CreateDefaultAccountsForUser(ctx context.Context, userID string) error {
+	return s.repo.CreateDefaultAccountsForUser(ctx, userID)
+}

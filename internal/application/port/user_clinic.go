@@ -11,6 +11,5 @@ type UserClinicRepository interface {
 	GetByID(ctx context.Context, id string) (*user.UserClinic, error)
 	GetByUserAndClinic(ctx context.Context, userID, clinicID string) (*user.UserClinic, error)
 	GetUserClinics(ctx context.Context, userID string) ([]user.UserClinicWithClinic, error)
-	GetClinicUsers(ctx context.Context, clinicID string) ([]user.UserClinicWithUser, error)
 	Delete(ctx context.Context, id string) error
 }

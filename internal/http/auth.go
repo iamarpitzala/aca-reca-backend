@@ -17,14 +17,16 @@ import (
 type AuthHandler struct {
 	authUC       *usecase.AuthService
 	oauthService *service.OAuthService
+	coaUC        *usecase.COAService
 	frontendURL  string
 }
 
 // NewAuthHandler returns a new AuthHandler.
-func NewAuthHandler(authUC *usecase.AuthService, oauthService *service.OAuthService, frontendURL string) *AuthHandler {
+func NewAuthHandler(authUC *usecase.AuthService, oauthService *service.OAuthService, coaUC *usecase.COAService, frontendURL string) *AuthHandler {
 	return &AuthHandler{
 		authUC:       authUC,
 		oauthService: oauthService,
+		coaUC:        coaUC,
 		frontendURL:  frontendURL,
 	}
 }
@@ -46,6 +48,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if err := h.coaUC.CreateDefaultAccountsForUser(c.Request.Context(), resp.User.ID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "account setup failed: " + err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -59,6 +65,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	resp, err := h.authUC.Login(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.coaUC.CreateDefaultAccountsForUser(c.Request.Context(), resp.User.ID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "account setup failed: " + err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -144,8 +154,9 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 			c.Redirect(http.StatusTemporaryRedirect, h.frontendURL+"?"+utils.OAuthParamError+"="+utils.OAuthErrorCreateUserFailed)
 			return
 		}
-		if err := h.authUC.EnsureDefaultClinicForUser(ctx, user.ID, user.FirstName); err != nil {
-			// non-fatal: user exists
+		if err := h.coaUC.CreateDefaultAccountsForUser(ctx, user.ID); err != nil {
+			c.Redirect(http.StatusTemporaryRedirect, h.frontendURL+"?"+utils.OAuthParamError+"="+utils.OAuthErrorCreateUserFailed)
+			return
 		}
 	} else {
 		if err := h.oauthService.LinkProvider(ctx, user.ID, provider, userInfo.ID, userInfo.Email, token); err != nil {

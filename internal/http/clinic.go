@@ -13,14 +13,16 @@ import (
 )
 
 type ClinicHandler struct {
-	clinicUC     *usecase.ClinicService
-	userClinicUC *usecase.UserClinicService
+	clinicUC       *usecase.ClinicService
+	userClinicUC   *usecase.UserClinicService
+	settingsUC     *usecase.ClinicFinancialSettingsService
 }
 
-func NewClinicHandler(clinicUC *usecase.ClinicService, userClinicUC *usecase.UserClinicService) *ClinicHandler {
+func NewClinicHandler(clinicUC *usecase.ClinicService, userClinicUC *usecase.UserClinicService, settingsUC *usecase.ClinicFinancialSettingsService) *ClinicHandler {
 	return &ClinicHandler{
 		clinicUC:     clinicUC,
 		userClinicUC: userClinicUC,
+		settingsUC:   settingsUC,
 	}
 }
 
@@ -62,6 +64,14 @@ func (h *ClinicHandler) CreateClinic(c *gin.Context) {
 		_ = h.clinicUC.DeleteClinic(c.Request.Context(), clinic.ID)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  utils.ErrClinicCreatedButLinkFailed,
+			"detail": err.Error(),
+		})
+		return
+	}
+	if err := h.settingsUC.CreateDefaultFinancialYearForClinic(c.Request.Context(), clinic.ID); err != nil {
+		_ = h.clinicUC.DeleteClinic(c.Request.Context(), clinic.ID)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "clinic created but financial year setup failed",
 			"detail": err.Error(),
 		})
 		return
@@ -155,6 +165,42 @@ func (h *ClinicHandler) UpdateClinic(c *gin.Context) {
 	c.JSON(http.StatusOK, clinic)
 }
 
+// ActivateClinic sets the clinic as active (owner only).
+// PATCH /api/v1/clinic/:id/activate
+func (h *ClinicHandler) ActivateClinic(c *gin.Context) {
+	id := c.Param("id")
+	if !RequireClinicAccess(c, h.userClinicUC, id) {
+		return
+	}
+	if !h.checkOwnerRequire(c, id) {
+		return
+	}
+	clinic, err := h.clinicUC.SetActiveStatus(c.Request.Context(), id, true)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "clinic activated", "clinic": clinic})
+}
+
+// DeactivateClinic sets the clinic as inactive (owner only).
+// PATCH /api/v1/clinic/:id/deactivate
+func (h *ClinicHandler) DeactivateClinic(c *gin.Context) {
+	id := c.Param("id")
+	if !RequireClinicAccess(c, h.userClinicUC, id) {
+		return
+	}
+	if !h.checkOwnerRequire(c, id) {
+		return
+	}
+	clinic, err := h.clinicUC.SetActiveStatus(c.Request.Context(), id, false)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "clinic deactivated", "clinic": clinic})
+}
+
 // DeleteClinic deletes a clinic by ID (requires user to be associated with the clinic)
 // DELETE /api/v1/clinic/:id
 // @Summary Delete a clinic by ID
@@ -208,7 +254,31 @@ func (h *ClinicHandler) GetAllClinics(c *gin.Context) {
 	}
 	clinics := make([]clinic.Clinic, 0, len(userClinics))
 	for _, uc := range userClinics {
-		clinics = append(clinics, uc.Clinic)
+		clinics = append(clinics, clinic.Clinic{
+			ID:             uc.C_ID,
+			Name:           uc.C_Name,
+			ABNNumber:      uc.C_ABNNumber,
+			Address:        uc.C_Address,
+			City:           uc.C_City,
+			State:          uc.C_State,
+			Postcode:       uc.C_Postcode,
+			Phone:          uc.C_Phone,
+			Email:          uc.C_Email,
+			Website:        uc.C_Website,
+			LogoURL:        uc.C_LogoURL,
+			Description:    uc.C_Description,
+			ShareType:      uc.C_ShareType,
+			MethodType:     uc.C_MethodType,
+			ClinicShare:    uc.C_ClinicShare,
+			OwnerShare:     uc.C_OwnerShare,
+			IsActive:       uc.C_IsActive,
+			WithHoldingTax: uc.C_WithHoldingTax,
+			CreatedAt:      uc.C_CreatedAt,
+			UpdatedAt:      uc.C_UpdatedAt,
+		})
+	}
+	if clinics == nil {
+		clinics = []clinic.Clinic{}
 	}
 	c.JSON(http.StatusOK, gin.H{"message": utils.MsgClinicsRetrievedSuccessfully, "clinics": clinics})
 }

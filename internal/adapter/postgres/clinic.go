@@ -45,6 +45,19 @@ func (r *clinicRepo) Update(ctx context.Context, clinic *clinic.Clinic) error {
 	return err
 }
 
+func (r *clinicRepo) SetActive(ctx context.Context, id string, active bool) error {
+	query := `UPDATE tbl_clinic SET is_active = $1, updated_at = $2 WHERE id = $3 AND deleted_at IS NULL`
+	res, err := r.db.ExecContext(ctx, query, active, time.Now(), id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errors.New("clinic not found")
+	}
+	return nil
+}
+
 func (r *clinicRepo) Delete(ctx context.Context, id string) error {
 	query := `UPDATE tbl_clinic SET deleted_at = $1 WHERE id = $2`
 	_, err := r.db.ExecContext(ctx, query, time.Now(), id)
@@ -61,14 +74,24 @@ func (r *clinicRepo) List(ctx context.Context) ([]clinic.Clinic, error) {
 	return clinics, nil
 }
 
+func (r *clinicRepo) ABNExists(ctx context.Context, abnNumber string) (bool, error) {
+	query := `SELECT 1 FROM tbl_clinic WHERE abn_number = $1 AND deleted_at IS NULL LIMIT 1`
+	var exists int
+	err := r.db.GetContext(ctx, &exists, query, abnNumber)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, errors.New("failed to check if abn number exists")
+	}
+	return true, nil
+}
+
 func (r *clinicRepo) GetByABN(ctx context.Context, abnNumber string) (*clinic.Clinic, error) {
 	query := `SELECT id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, with_holding_tax, created_at, updated_at FROM tbl_clinic WHERE abn_number = $1 AND deleted_at IS NULL`
 	var clinic clinic.Clinic
 	err := r.db.GetContext(ctx, &clinic, query, abnNumber)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("clinic not found")
-		}
 		return nil, errors.New("failed to get clinic by abn number")
 	}
 	return &clinic, nil

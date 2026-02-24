@@ -9,27 +9,21 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain/auth"
-	"github.com/iamarpitzala/aca-reca-backend/internal/domain/clinic"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain/user"
-	"github.com/iamarpitzala/aca-reca-backend/util"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	userRepo     port.UserRepository
-	sessionRepo  port.SessionRepository
-	token        port.TokenProvider
-	clinicUC     *ClinicService
-	userClinicUC *UserClinicService
+	userRepo    port.UserRepository
+	sessionRepo port.SessionRepository
+	token       port.TokenProvider
 }
 
-func NewAuthService(userRepo port.UserRepository, sessionRepo port.SessionRepository, token port.TokenProvider, clinicUC *ClinicService, userClinicUC *UserClinicService) *AuthService {
+func NewAuthService(userRepo port.UserRepository, sessionRepo port.SessionRepository, token port.TokenProvider) *AuthService {
 	return &AuthService{
-		userRepo:     userRepo,
-		sessionRepo:  sessionRepo,
-		token:        token,
-		clinicUC:     clinicUC,
-		userClinicUC: userClinicUC,
+		userRepo:    userRepo,
+		sessionRepo: sessionRepo,
+		token:       token,
 	}
 }
 
@@ -57,9 +51,6 @@ func (s *AuthService) Register(ctx context.Context, req *auth.RegisterRequest) (
 	}
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
-	}
-	if err := s.ensureDefaultClinicForUser(ctx, user.ID, user.FirstName); err != nil {
-		return nil, fmt.Errorf("registration succeeded but default clinic setup failed; please log in and create a clinic manually: %w", err)
 	}
 	sessionID := uuid.NewString()
 	tokenPair, err := s.token.GenerateTokenPair(user.ID, user.Email, sessionID)
@@ -160,50 +151,6 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*a
 
 func (s *AuthService) Logout(ctx context.Context, sessionID string) error {
 	return s.sessionRepo.Delete(ctx, sessionID)
-}
-
-// EnsureDefaultClinicForUser creates a default clinic for the user and links them as owner.
-// Idempotent: if the user already has at least one clinic, no-op.
-// Used after registration and OAuth sign-up.
-func (s *AuthService) EnsureDefaultClinicForUser(ctx context.Context, userID string, displayName string) error {
-	return s.ensureDefaultClinicForUser(ctx, userID, displayName)
-}
-
-func (s *AuthService) ensureDefaultClinicForUser(ctx context.Context, userID string, displayName string) error {
-	clinics, err := s.userClinicUC.GetUserClinics(ctx, userID)
-	if err != nil {
-		return err
-	}
-	if len(clinics) > 0 {
-		return nil
-	}
-	name := "My Clinic"
-	if displayName != "" {
-		name = displayName + "'s Clinic"
-	}
-	clinic := &clinic.Clinic{
-		Name:        name,
-		ABNNumber:   "",
-		Address:     "To be updated",
-		City:        "To be updated",
-		State:       clinic.StateNSW,
-		ShareType:   "PERCENTAGE",
-		MethodType:  "NET",
-		ClinicShare: 50,
-		OwnerShare:  50,
-		IsActive:    true,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if err := s.clinicUC.CreateClinic(ctx, clinic); err != nil {
-		return err
-	}
-	_, err = s.userClinicUC.AssociateUserWithClinic(ctx, userID, clinic.ID, util.RoleOwner)
-	if err != nil {
-		_ = s.clinicUC.DeleteClinic(ctx, clinic.ID)
-		return err
-	}
-	return nil
 }
 
 func (s *AuthService) GetUserByID(ctx context.Context, userID string) (*user.User, error) {

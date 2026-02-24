@@ -13,14 +13,16 @@ import (
 )
 
 type ClinicHandler struct {
-	clinicUC     *usecase.ClinicService
-	userClinicUC *usecase.UserClinicService
+	clinicUC       *usecase.ClinicService
+	userClinicUC   *usecase.UserClinicService
+	settingsUC     *usecase.ClinicFinancialSettingsService
 }
 
-func NewClinicHandler(clinicUC *usecase.ClinicService, userClinicUC *usecase.UserClinicService) *ClinicHandler {
+func NewClinicHandler(clinicUC *usecase.ClinicService, userClinicUC *usecase.UserClinicService, settingsUC *usecase.ClinicFinancialSettingsService) *ClinicHandler {
 	return &ClinicHandler{
 		clinicUC:     clinicUC,
 		userClinicUC: userClinicUC,
+		settingsUC:   settingsUC,
 	}
 }
 
@@ -62,6 +64,14 @@ func (h *ClinicHandler) CreateClinic(c *gin.Context) {
 		_ = h.clinicUC.DeleteClinic(c.Request.Context(), clinic.ID)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  utils.ErrClinicCreatedButLinkFailed,
+			"detail": err.Error(),
+		})
+		return
+	}
+	if err := h.settingsUC.CreateDefaultFinancialYearForClinic(c.Request.Context(), clinic.ID); err != nil {
+		_ = h.clinicUC.DeleteClinic(c.Request.Context(), clinic.ID)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "clinic created but financial year setup failed",
 			"detail": err.Error(),
 		})
 		return

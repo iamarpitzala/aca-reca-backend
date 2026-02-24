@@ -74,14 +74,24 @@ func (r *clinicRepo) List(ctx context.Context) ([]clinic.Clinic, error) {
 	return clinics, nil
 }
 
+func (r *clinicRepo) ABNExists(ctx context.Context, abnNumber string) (bool, error) {
+	query := `SELECT 1 FROM tbl_clinic WHERE abn_number = $1 AND deleted_at IS NULL LIMIT 1`
+	var exists int
+	err := r.db.GetContext(ctx, &exists, query, abnNumber)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, errors.New("failed to check if abn number exists")
+	}
+	return true, nil
+}
+
 func (r *clinicRepo) GetByABN(ctx context.Context, abnNumber string) (*clinic.Clinic, error) {
 	query := `SELECT id, name, abn_number, address, city, state, postcode, phone, email, website, logo_url, description, share_type, clinic_share, owner_share, method_type, is_active, with_holding_tax, created_at, updated_at FROM tbl_clinic WHERE abn_number = $1 AND deleted_at IS NULL`
 	var clinic clinic.Clinic
 	err := r.db.GetContext(ctx, &clinic, query, abnNumber)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("clinic not found")
-		}
 		return nil, errors.New("failed to get clinic by abn number")
 	}
 	return &clinic, nil

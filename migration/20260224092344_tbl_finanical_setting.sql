@@ -22,18 +22,30 @@ ON CONFLICT (timezone) DO NOTHING;
 
 -- Application uses tbl_clinic_financial_settings (see clinic_financial_setting adapter/domain).
 CREATE TABLE IF NOT EXISTS tbl_clinic_financial_settings (
-    id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
+    id VARCHAR(40) PRIMARY KEY,
+
     clinic_id VARCHAR(40) NOT NULL REFERENCES tbl_clinic(id),
-    financial_year_id INTEGER NOT NULL REFERENCES tbl_financial_year(id),
-    financial_quarter_id INTEGER NOT NULL REFERENCES tbl_financial_quarter(id),
-    accounting_method VARCHAR(20) NOT NULL DEFAULT 'ACCRUAL' CHECK (accounting_method IN ('CASH', 'ACCRUAL')),
-    gst_registered BOOLEAN NOT NULL DEFAULT true,
-    gst_reporting_frequency VARCHAR(20) NOT NULL DEFAULT 'QUARTERLY' CHECK (gst_reporting_frequency IN ('QUARTERLY', 'ANNUALLY')),
-    default_amount_mode VARCHAR(20) NOT NULL DEFAULT 'INCLUSIVE' CHECK (default_amount_mode IN ('INCLUSIVE', 'EXCLUSIVE')),
-    lock_date TIMESTAMPTZ NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at TIMESTAMPTZ NULL
+    clinic_financial_year_id INTEGER NOT NULL
+        REFERENCES tbl_clinic_financial_year(id),
+
+    accounting_method VARCHAR(20) NOT NULL
+        CHECK (accounting_method IN ('CASH', 'ACCRUAL')),
+
+    gst_registered BOOLEAN DEFAULT true,
+
+    gst_reporting_frequency VARCHAR(20)
+        CHECK (gst_reporting_frequency IN ('QUARTERLY', 'ANNUALLY')),
+
+    default_amount_mode VARCHAR(20)
+        CHECK (default_amount_mode IN ('INCLUSIVE', 'EXCLUSIVE')),
+
+    lock_date DATE NULL,
+
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    deleted_at TIMESTAMPTZ NULL,
+
+    CONSTRAINT uq_clinic_fy_settings UNIQUE (clinic_financial_year_id)
 );
 
 -- +goose StatementEnd

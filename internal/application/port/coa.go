@@ -22,4 +22,5 @@ type ChartOfAccountsRepository interface {
 	GetAccountTypeByID(ctx context.Context, id int) (*coa.AccountTypeCOA, error)
 	GetAllAccountTax(ctx context.Context) ([]coa.AccountTaxCOA, error)
 	GetAccountTaxByID(ctx context.Context, id int) (*coa.AccountTaxCOA, error)
+	CreateDefaultAccountsForUser(ctx context.Context, userID string) error
 }

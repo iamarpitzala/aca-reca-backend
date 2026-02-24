@@ -9,7 +9,8 @@ import (
 type FinancialYearRepository interface {
 	Create(ctx context.Context, year *clinic.FinancialYear) error
 	GetByID(ctx context.Context, id int) (*clinic.FinancialYear, error)
-	GetByClinicID(ctx context.Context, clinicID string) (*clinic.FinancialYear, error)
+	GetByFYLabel(ctx context.Context, fyLabel string) (*clinic.FinancialYear, error)
+	List(ctx context.Context) ([]clinic.FinancialYear, error)
 	Update(ctx context.Context, year *clinic.FinancialYear) error
 	Delete(ctx context.Context, id int) error
 }

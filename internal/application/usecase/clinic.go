@@ -27,11 +27,11 @@ func (s *ClinicService) CreateClinic(ctx context.Context, clinic *clinic.Clinic)
 	if err := ValidateABN(clinic.ABNNumber); err != nil {
 		return err
 	}
-	existing, err := s.repo.GetByABN(ctx, clinic.ABNNumber)
+	exists, err := s.repo.ABNExists(ctx, clinic.ABNNumber)
 	if err != nil {
 		return err
 	}
-	if existing != nil {
+	if exists {
 		return ErrDuplicateABN
 	}
 	clinic.ID = uuid.New().String()
@@ -133,5 +133,12 @@ func (s *ClinicService) GetAllClinics(ctx context.Context) ([]clinic.Clinic, err
 }
 
 func (s *ClinicService) GetClinicByABNNumber(ctx context.Context, abnNumber string) (*clinic.Clinic, error) {
+	exists, err := s.repo.ABNExists(ctx, abnNumber)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.New("clinic not found")
+	}
 	return s.repo.GetByABN(ctx, abnNumber)
 }

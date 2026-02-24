@@ -56,7 +56,7 @@ func (h *FinanicalYearHandler) GetFinancialYearByID(c *gin.Context) {
 	utils.JSONResponse(c, http.StatusOK, "financial year retrieved successfully", fy, nil)
 }
 
-// CreateFinancialYear creates a new financial year
+// CreateFinancialYear creates a link to a master financial year for the clinic, or creates a new master FY if financialYearId is not set.
 // POST /api/v1/clinics/:clinicId/financial-years
 func (h *FinanicalYearHandler) CreateFinancialYear(c *gin.Context) {
 	clinicID := c.Param("clinicId")
@@ -65,19 +65,24 @@ func (h *FinanicalYearHandler) CreateFinancialYear(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	req.ClinicID = clinicID
-
+	if req.FinancialYearID > 0 {
+		cfy, err := h.financialYearUC.CreateLink(c.Request.Context(), clinicID, req.FinancialYearID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		utils.JSONResponse(c, http.StatusCreated, "financial year linked successfully", cfy, nil)
+		return
+	}
 	fy := req.ToFinancialYear()
-	err := h.financialYearUC.Create(c.Request.Context(), fy)
-	if err != nil {
+	if err := h.financialYearUC.Create(c.Request.Context(), fy); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	utils.JSONResponse(c, http.StatusCreated, "financial year created successfully", fy, nil)
 }
 
-// UpdateFinancialYear updates an existing financial year
+// UpdateFinancialYear updates an existing master financial year
 // PUT /api/v1/clinics/:clinicId/financial-years/:id
 func (h *FinanicalYearHandler) UpdateFinancialYear(c *gin.Context) {
 	id := c.Param("id")
@@ -86,18 +91,14 @@ func (h *FinanicalYearHandler) UpdateFinancialYear(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id required"})
 		return
 	}
-	clinicID := c.Param("clinicId")
 	var req clinic.FinancialYearRequest
 	if err := utils.BindAndValidate(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	req.ClinicID = clinicID
 	req.ID = idInt
-
 	fy := req.ToFinancialYear()
-	err = h.financialYearUC.Update(c.Request.Context(), fy)
-	if err != nil {
+	if err := h.financialYearUC.Update(c.Request.Context(), fy); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

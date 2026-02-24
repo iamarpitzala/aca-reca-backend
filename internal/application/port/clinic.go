@@ -13,5 +13,6 @@ type ClinicRepository interface {
 	SetActive(ctx context.Context, id string, active bool) error
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context) ([]clinic.Clinic, error)
+	ABNExists(ctx context.Context, abnNumber string) (bool, error)
 	GetByABN(ctx context.Context, abnNumber string) (*clinic.Clinic, error)
 }

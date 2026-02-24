@@ -33,13 +33,7 @@ CREATE TABLE IF NOT EXISTS tbl_clinic_financial_settings (
     lock_date TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at TIMESTAMPTZ NULL,
-    CONSTRAINT chk_quarter_belongs_to_year CHECK (
-        (SELECT fq.financial_year_id FROM tbl_financial_quarter fq WHERE fq.id = financial_quarter_id AND fq.deleted_at IS NULL LIMIT 1) = financial_year_id
-    ),
-    CONSTRAINT chk_year_belongs_to_clinic CHECK (
-        (SELECT 1 FROM tbl_financial_year fy WHERE fy.id = financial_year_id AND fy.clinic_id = tbl_clinic_financial_settings.clinic_id AND fy.deleted_at IS NULL LIMIT 1) IS NOT NULL
-    )
+    deleted_at TIMESTAMPTZ NULL
 );
 
 -- +goose StatementEnd

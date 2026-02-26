@@ -25,4 +25,5 @@ func RegisterCOARoutes(e *gin.RouterGroup, coaHandler *httpHandler.COAHandler, t
 	coa.PATCH("", coaHandler.DeleteCOA)
 	coa.PATCH("/bulk-tax", coaHandler.BulkUpdateCOATax)
 	coa.PATCH("/archive", coaHandler.ArchiveCOA)
+	coa.GET("/account-type/:id/is-taxable", coaHandler.CheckIfAccountTaxIsTaxable)
 }

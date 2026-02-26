@@ -39,16 +39,6 @@ type CustomFormFieldConfigRepository interface {
 	DeleteByFormFieldID(ctx context.Context, formFieldID string) error
 }
 
-type CustomFormFieldFormulaSourceRepository interface {
-	Create(ctx context.Context, source *form.FormulaSource) error
-	CreateBatch(ctx context.Context, sources []*form.FormulaSource) error
-	GetByID(ctx context.Context, id string) (*form.FormulaSource, error)
-	GetByFieldConfigID(ctx context.Context, fieldConfigID string) ([]form.FormulaSource, error)
-	Update(ctx context.Context, source *form.FormulaSource) error
-	DeleteByID(ctx context.Context, id string) error
-	DeleteByFieldConfigID(ctx context.Context, fieldConfigID string) error
-}
-
 type CustomFormVersionRepository interface {
 	Create(ctx context.Context, version *form.FormVersion) error
 	GetLatestByFormID(ctx context.Context, formID string) (*form.FormVersion, error)

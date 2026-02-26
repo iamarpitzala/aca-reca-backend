@@ -15,12 +15,6 @@ const (
 	FormulaOpDiv = "/"
 )
 
-// SourceRole for formula source (PRIMARY, SECONDARY).
-const (
-	SourceRolePrimary   = "PRIMARY"
-	SourceRoleSecondary = "SECONDARY"
-)
-
 type FieldConfigRequest struct {
 	ID           *string `json:"id" validate:"omitempty,required"`
 	FormFieldID  string  `json:"formFieldId" validate:"required"`
@@ -94,73 +88,5 @@ func (c *FieldConfig) ToResponse() *FieldConfigResponse {
 		CreatedAt:     c.CreatedAt,
 		UpdatedAt:     c.UpdatedAt,
 		DeletedAt:     c.DeletedAt,
-	}
-}
-
-type FormulaSourceRequest struct {
-	ID            *string `json:"id" validate:"omitempty,required"`
-	FieldConfigID string  `json:"fieldConfigId" validate:"required"`
-	SourceFieldID string  `json:"sourceFieldId" validate:"required"`
-	SourceRole    string  `json:"sourceRole" validate:"required,oneof=PRIMARY SECONDARY"`
-	SourceOrder   int     `json:"sourceOrder" validate:"required,min=0"`
-}
-
-func (r *FormulaSourceRequest) Validate() error {
-	if r.FieldConfigID == "" {
-		return errors.New("fieldConfigId is required")
-	}
-	if r.SourceFieldID == "" {
-		return errors.New("sourceFieldId is required")
-	}
-	if r.SourceRole != SourceRolePrimary && r.SourceRole != SourceRoleSecondary {
-		return errors.New("sourceRole must be PRIMARY or SECONDARY")
-	}
-	return nil
-}
-
-type FormulaSource struct {
-	ID            string     `db:"id"`
-	FieldConfigID string     `db:"field_config_id"`
-	SourceFieldID string     `db:"source_field_id"`
-	SourceRole    string     `db:"source_role"`
-	SourceOrder   int        `db:"source_order"`
-	CreatedAt     time.Time  `db:"created_at"`
-	UpdatedAt     time.Time  `db:"updated_at"`
-	DeletedAt     *time.Time `db:"deleted_at"`
-}
-
-func (s *FormulaSource) FromRequest(req *FormulaSourceRequest) {
-	if req.ID != nil && *req.ID != "" {
-		s.ID = *req.ID
-	} else {
-		s.ID = uuid.New().String()
-	}
-	s.FieldConfigID = req.FieldConfigID
-	s.SourceFieldID = req.SourceFieldID
-	s.SourceRole = req.SourceRole
-	s.SourceOrder = req.SourceOrder
-}
-
-type FormulaSourceResponse struct {
-	ID            string     `json:"id"`
-	FieldConfigID string     `json:"fieldConfigId"`
-	SourceFieldID string     `json:"sourceFieldId"`
-	SourceRole    string     `json:"sourceRole"`
-	SourceOrder   int        `json:"sourceOrder"`
-	CreatedAt     time.Time  `json:"createdAt"`
-	UpdatedAt     time.Time  `json:"updatedAt"`
-	DeletedAt     *time.Time `json:"deletedAt,omitempty"`
-}
-
-func (s *FormulaSource) ToResponse() *FormulaSourceResponse {
-	return &FormulaSourceResponse{
-		ID:            s.ID,
-		FieldConfigID: s.FieldConfigID,
-		SourceFieldID: s.SourceFieldID,
-		SourceRole:    s.SourceRole,
-		SourceOrder:   s.SourceOrder,
-		CreatedAt:     s.CreatedAt,
-		UpdatedAt:     s.UpdatedAt,
-		DeletedAt:     s.DeletedAt,
 	}
 }

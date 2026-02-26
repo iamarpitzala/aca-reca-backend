@@ -130,6 +130,20 @@ func (r *coaRepo) GetByAccountTypeIDSorted(ctx context.Context, accountTypeID in
 	return coas, nil
 }
 
+func (r *coaRepo) CheckIfAccountTaxIsTaxable(ctx context.Context, accountTypeID int) (bool, error) {
+	query := `
+		SELECT tax.IsTaxable 
+		FROM tbl_account acc
+		JOIN tbl_account_tax tax ON acc.account_tax_id = tax.id
+		WHERE acc.account_type_id = $1 AND acc.deleted_at IS NULL AND tax.deleted_at IS NULL`
+	var isTaxable bool
+	err := r.db.GetContext(ctx, &isTaxable, query, accountTypeID)
+	if err != nil {
+		return false, err
+	}
+	return isTaxable, nil
+}
+
 func (r *coaRepo) GetByAccountTypeSorted(ctx context.Context, sortBy, sortOrder string) ([]coa.COA, error) {
 	col := "code"
 	if sortBy == "name" {

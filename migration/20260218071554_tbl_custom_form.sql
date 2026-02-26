@@ -89,30 +89,16 @@ CREATE TABLE IF NOT EXISTS tbl_custom_form_field_config (
     arrangement_id VARCHAR(40) NULL REFERENCES tbl_arrangement(id),
     is_formula BOOLEAN NOT NULL DEFAULT FALSE,
     operator VARCHAR(10) NOT NULL, -- +, -, *, /
+    
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at TIMESTAMPTZ NULL
-);
-
-CREATE TABLE IF NOT EXISTS tbl_custom_form_field_formula_source (
-    id VARCHAR(40) PRIMARY KEY,
-    field_config_id VARCHAR(40) NOT NULL
-        REFERENCES tbl_custom_form_field_config(id),
-    source_field_id VARCHAR(40) NOT NULL
-        REFERENCES tbl_custom_form_field(id),
-    source_role VARCHAR(20) NOT NULL, -- PRIMARY, SECONDARY
-    source_order INTEGER NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at TIMESTAMPTZ NULL,
-    UNIQUE (field_config_id, source_field_id)
 );
 
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS tbl_custom_form_field_formula_source;
 DROP TABLE IF EXISTS tbl_custom_form_field_config;
 DROP TABLE IF EXISTS tbl_custom_form_field;
 DROP TABLE IF EXISTS tbl_custom_form_version;

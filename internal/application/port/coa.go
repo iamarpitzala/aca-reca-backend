@@ -18,6 +18,7 @@ type ChartOfAccountsRepository interface {
 	GetByAccountTypeID(ctx context.Context, accountTypeID int) ([]coa.COA, error)
 	GetByAccountTypeIDSorted(ctx context.Context, accountTypeID int, sortBy, sortOrder string) ([]coa.COA, error)
 	GetByAccountTypeSorted(ctx context.Context, sortBy, sortOrder string) ([]coa.COA, error)
+	CheckIfAccountTaxIsTaxable(ctx context.Context, accountTypeID int) (bool, error)
 	GetByAccountTaxID(ctx context.Context, accountTaxID int) ([]coa.COA, error)
 	GetAllAccountTypes(ctx context.Context) ([]coa.AccountTypeCOA, error)
 	GetAccountTypeByID(ctx context.Context, id int) (*coa.AccountTypeCOA, error)

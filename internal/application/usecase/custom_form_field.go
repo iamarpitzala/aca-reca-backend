@@ -9,22 +9,19 @@ import (
 )
 
 type CustomFormFieldService struct {
-	fieldRepo   port.CustomFormFieldRepository
-	configRepo  port.CustomFormFieldConfigRepository
-	sourceRepo  port.CustomFormFieldFormulaSourceRepository
-	formRepo    port.CustomFormRepository
+	fieldRepo  port.CustomFormFieldRepository
+	configRepo port.CustomFormFieldConfigRepository
+	formRepo   port.CustomFormRepository
 }
 
 func NewCustomFormFieldService(
 	fieldRepo port.CustomFormFieldRepository,
 	configRepo port.CustomFormFieldConfigRepository,
-	sourceRepo port.CustomFormFieldFormulaSourceRepository,
 	formRepo port.CustomFormRepository,
 ) *CustomFormFieldService {
 	return &CustomFormFieldService{
 		fieldRepo:  fieldRepo,
 		configRepo: configRepo,
-		sourceRepo: sourceRepo,
 		formRepo:   formRepo,
 	}
 }
@@ -146,59 +143,4 @@ func (s *CustomFormFieldService) UpdateFieldConfig(ctx context.Context, id strin
 
 func (s *CustomFormFieldService) DeleteFieldConfig(ctx context.Context, id string) error {
 	return s.configRepo.DeleteByID(ctx, id)
-}
-
-func (s *CustomFormFieldService) CreateFormulaSource(ctx context.Context, req *form.FormulaSourceRequest) (*form.FormulaSourceResponse, error) {
-	if err := req.Validate(); err != nil {
-		return nil, err
-	}
-	if _, err := s.configRepo.GetByID(ctx, req.FieldConfigID); err != nil {
-		return nil, errors.New("field config not found")
-	}
-	src := &form.FormulaSource{}
-	src.FromRequest(req)
-	if err := s.sourceRepo.Create(ctx, src); err != nil {
-		return nil, err
-	}
-	return src.ToResponse(), nil
-}
-
-func (s *CustomFormFieldService) GetFormulaSourceByID(ctx context.Context, id string) (*form.FormulaSourceResponse, error) {
-	src, err := s.sourceRepo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return src.ToResponse(), nil
-}
-
-func (s *CustomFormFieldService) GetFormulaSourcesByFieldConfigID(ctx context.Context, fieldConfigID string) ([]*form.FormulaSourceResponse, error) {
-	list, err := s.sourceRepo.GetByFieldConfigID(ctx, fieldConfigID)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*form.FormulaSourceResponse, len(list))
-	for i := range list {
-		out[i] = list[i].ToResponse()
-	}
-	return out, nil
-}
-
-func (s *CustomFormFieldService) UpdateFormulaSource(ctx context.Context, id string, req *form.FormulaSourceRequest) (*form.FormulaSourceResponse, error) {
-	existing, err := s.sourceRepo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Validate(); err != nil {
-		return nil, err
-	}
-	existing.FromRequest(req)
-	existing.ID = id
-	if err := s.sourceRepo.Update(ctx, existing); err != nil {
-		return nil, err
-	}
-	return existing.ToResponse(), nil
-}
-
-func (s *CustomFormFieldService) DeleteFormulaSource(ctx context.Context, id string) error {
-	return s.sourceRepo.DeleteByID(ctx, id)
 }

@@ -40,6 +40,7 @@ func (s *COAService) CreateCOA(ctx context.Context, req *coa.COARequest, ownerUs
 	if accountTax == nil {
 		return errors.New("account tax not found")
 	}
+
 	return s.repo.Create(ctx, coa)
 }
 
@@ -159,4 +160,8 @@ func (s *COAService) GetAccountTax(ctx context.Context) ([]coa.AccountTaxCOA, er
 // Call this when a new user is created so they get the standard accounts automatically.
 func (s *COAService) CreateDefaultAccountsForUser(ctx context.Context, userID string) error {
 	return s.repo.CreateDefaultAccountsForUser(ctx, userID)
+}
+
+func (s *COAService) CheckIfAccountTaxIsTaxable(ctx context.Context, accountTypeID int) (bool, error) {
+	return s.repo.CheckIfAccountTaxIsTaxable(ctx, accountTypeID)
 }

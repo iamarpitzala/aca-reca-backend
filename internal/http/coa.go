@@ -348,3 +348,18 @@ func (h *COAHandler) ArchiveCOA(c *gin.Context) {
 	}
 	utils.JSONResponse(c, http.StatusOK, "accounts archived successfully", gin.H{"archived": len(ids)}, nil)
 }
+
+func (h *COAHandler) CheckIfAccountTaxIsTaxable(c *gin.Context) {
+	accountTypeID := c.Param("id")
+	accountTypeIDInt, ok := util.ToInt(accountTypeID)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": utils.ErrInvalidAccountTypeID})
+		return
+	}
+	isTaxable, err := h.coaUC.CheckIfAccountTaxIsTaxable(c.Request.Context(), accountTypeIDInt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "account type is taxable", gin.H{"isTaxable": isTaxable}, nil)
+}

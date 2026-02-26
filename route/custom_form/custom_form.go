@@ -44,16 +44,6 @@ func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFor
 	configs.PUT("/:configId", fieldHandler.UpdateFieldConfig)
 	configs.DELETE("/:configId", fieldHandler.DeleteFieldConfig)
 
-	// Formula sources (nested under config)
-	configs.POST("/:configId/formula-sources", fieldHandler.CreateFormulaSource)
-	configs.GET("/:configId/formula-sources", fieldHandler.GetFormulaSourcesByFieldConfigID)
-
-	// Single formula source
-	sources := g.Group("/formula-sources")
-	sources.GET("/:sourceId", fieldHandler.GetFormulaSourceByID)
-	sources.PUT("/:sourceId", fieldHandler.UpdateFormulaSource)
-	sources.DELETE("/:sourceId", fieldHandler.DeleteFormulaSource)
-
 	// Entries under /entries to avoid conflicting with form :id
 	entries := g.Group("/entries")
 	entries.POST("", entryHandler.Create)

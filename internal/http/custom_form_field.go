@@ -31,26 +31,26 @@ func NewCustomFormFieldHandler(
 // --- Form fields ---
 
 func (h *CustomFormFieldHandler) CreateField(c *gin.Context) {
-	formID := c.Param("formId")
+	var req form.FieldRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.SectionID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "sectionId is required"})
+		return
+	}
+	formID, err := h.fieldUC.GetFormIDForSection(c.Request.Context(), req.SectionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	fm, err := h.formUC.GetByID(c.Request.Context(), formID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
 		return
 	}
 	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
-		return
-	}
-	var req form.FieldRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	req.FormID = formID
-	if formVersionId := c.Query("formVersionId"); formVersionId != "" {
-		req.FormVersionID = formVersionId
-	}
-	if req.FormVersionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "formVersionId is required (query or body)"})
 		return
 	}
 	resp, err := h.fieldUC.CreateField(c.Request.Context(), &req)
@@ -63,13 +63,22 @@ func (h *CustomFormFieldHandler) CreateField(c *gin.Context) {
 
 func (h *CustomFormFieldHandler) GetFieldByID(c *gin.Context) {
 	id := c.Param("fieldId")
-	resp, err := h.fieldUC.GetFieldByID(c.Request.Context(), id)
+	formID, err := h.fieldUC.GetFormIDForField(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	fm, _ := h.formUC.GetByID(c.Request.Context(), resp.FormID)
-	if fm != nil && !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
+	fm, err := h.formUC.GetByID(c.Request.Context(), formID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
+		return
+	}
+	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
+		return
+	}
+	resp, err := h.fieldUC.GetFieldByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 	utils.JSONResponse(c, http.StatusOK, "form field retrieved", resp, nil)
@@ -104,13 +113,17 @@ func (h *CustomFormFieldHandler) GetFieldsByFormVersionID(c *gin.Context) {
 
 func (h *CustomFormFieldHandler) UpdateField(c *gin.Context) {
 	fieldID := c.Param("fieldId")
-	existing, err := h.fieldUC.GetFieldByID(c.Request.Context(), fieldID)
+	formID, err := h.fieldUC.GetFormIDForField(c.Request.Context(), fieldID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	fm, _ := h.formUC.GetByID(c.Request.Context(), existing.FormID)
-	if fm != nil && !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
+	fm, err := h.formUC.GetByID(c.Request.Context(), formID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
+		return
+	}
+	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
 		return
 	}
 	var req form.FieldRequest
@@ -128,13 +141,17 @@ func (h *CustomFormFieldHandler) UpdateField(c *gin.Context) {
 
 func (h *CustomFormFieldHandler) DeleteField(c *gin.Context) {
 	fieldID := c.Param("fieldId")
-	existing, err := h.fieldUC.GetFieldByID(c.Request.Context(), fieldID)
+	formID, err := h.fieldUC.GetFormIDForField(c.Request.Context(), fieldID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	fm, _ := h.formUC.GetByID(c.Request.Context(), existing.FormID)
-	if fm != nil && !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
+	fm, err := h.formUC.GetByID(c.Request.Context(), formID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
+		return
+	}
+	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
 		return
 	}
 	if err := h.fieldUC.DeleteField(c.Request.Context(), fieldID); err != nil {
@@ -158,12 +175,12 @@ func RequireClinicAccessFromForm(c *gin.Context, formUC *usecase.CustomFormServi
 
 func (h *CustomFormFieldHandler) CreateFieldConfig(c *gin.Context) {
 	fieldID := c.Param("fieldId")
-	existing, err := h.fieldUC.GetFieldByID(c.Request.Context(), fieldID)
+	formID, err := h.fieldUC.GetFormIDForField(c.Request.Context(), fieldID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "form field not found"})
 		return
 	}
-	if !RequireClinicAccessFromForm(c, h.formUC, h.userClinicUC, existing.FormID) {
+	if !RequireClinicAccessFromForm(c, h.formUC, h.userClinicUC, formID) {
 		return
 	}
 	var req form.FieldConfigRequest
@@ -187,24 +204,30 @@ func (h *CustomFormFieldHandler) GetFieldConfigByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	field, _ := h.fieldUC.GetFieldByID(c.Request.Context(), resp.FormFieldID)
-	if field != nil {
-		fm, _ := h.formUC.GetByID(c.Request.Context(), field.FormID)
-		if fm != nil && !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
-			return
-		}
+	formID, err := h.fieldUC.GetFormIDForField(c.Request.Context(), resp.FormFieldID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	fm, err := h.formUC.GetByID(c.Request.Context(), formID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
+		return
+	}
+	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
+		return
 	}
 	utils.JSONResponse(c, http.StatusOK, "field config retrieved", resp, nil)
 }
 
 func (h *CustomFormFieldHandler) GetFieldConfigsByFormFieldID(c *gin.Context) {
 	fieldID := c.Param("fieldId")
-	existing, err := h.fieldUC.GetFieldByID(c.Request.Context(), fieldID)
+	formID, err := h.fieldUC.GetFormIDForField(c.Request.Context(), fieldID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "form field not found"})
 		return
 	}
-	if !RequireClinicAccessFromForm(c, h.formUC, h.userClinicUC, existing.FormID) {
+	if !RequireClinicAccessFromForm(c, h.formUC, h.userClinicUC, formID) {
 		return
 	}
 	list, err := h.fieldUC.GetFieldConfigsByFormFieldID(c.Request.Context(), fieldID)
@@ -222,12 +245,18 @@ func (h *CustomFormFieldHandler) UpdateFieldConfig(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	field, _ := h.fieldUC.GetFieldByID(c.Request.Context(), existing.FormFieldID)
-	if field != nil {
-		fm, _ := h.formUC.GetByID(c.Request.Context(), field.FormID)
-		if fm != nil && !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
-			return
-		}
+	formID, err := h.fieldUC.GetFormIDForField(c.Request.Context(), existing.FormFieldID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	fm, err := h.formUC.GetByID(c.Request.Context(), formID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
+		return
+	}
+	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
+		return
 	}
 	var req form.FieldConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -250,12 +279,18 @@ func (h *CustomFormFieldHandler) DeleteFieldConfig(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	field, _ := h.fieldUC.GetFieldByID(c.Request.Context(), existing.FormFieldID)
-	if field != nil {
-		fm, _ := h.formUC.GetByID(c.Request.Context(), field.FormID)
-		if fm != nil && !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
-			return
-		}
+	formID, err := h.fieldUC.GetFormIDForField(c.Request.Context(), existing.FormFieldID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	fm, err := h.formUC.GetByID(c.Request.Context(), formID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
+		return
+	}
+	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
+		return
 	}
 	if err := h.fieldUC.DeleteFieldConfig(c.Request.Context(), configID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

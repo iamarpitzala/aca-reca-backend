@@ -103,11 +103,11 @@ func (h *COAHandler) GetAllAccountTax(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "COA ID"
-// @Success 200 {object} domain.AOCResponse
+// @Success 200 {object} domain.COAResponse
 // @Failure 400 {object} domain.H
 // @Failure 404 {object} domain.H
 // @Failure 500 {object} domain.H
-func (h *COAHandler) GetAOCByAccountTaxID(c *gin.Context) {
+func (h *COAHandler) GetCOAByAccountTaxID(c *gin.Context) {
 	accountTaxId := c.Param("id")
 	accountTaxIdInt, ok := util.ToInt(accountTaxId)
 	if !ok {
@@ -140,7 +140,7 @@ func (h *COAHandler) GetCOAByID(c *gin.Context) {
 	response, err := h.coaUC.GetCOAByID(c.Request.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrAOCNotFound})
+			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrCOANotFound})
 			return
 		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -166,7 +166,7 @@ func (h *COAHandler) GetCOAByCode(c *gin.Context) {
 	response, err := h.coaUC.GetCOAByCode(c.Request.Context(), code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrAOCNotFound})
+			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrCOANotFound})
 			return
 		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -205,7 +205,7 @@ func (h *COAHandler) GetCOAByAccountTypeID(c *gin.Context) {
 	response, err := h.coaUC.GetCOAByAccountTypeID(c.Request.Context(), accountTypeIdInt, sortBy, sortOrder)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrAOCNotFound})
+			c.JSON(http.StatusNotFound, gin.H{"error": utils.ErrCOANotFound})
 			return
 		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})

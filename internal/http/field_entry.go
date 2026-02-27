@@ -4,167 +4,152 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/usecase"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain/form"
 	utils "github.com/iamarpitzala/aca-reca-backend/util"
 )
 
-// FieldEntryHandler handles field entry HTTP endpoints.
-// Enforces clinic-level access control (RBAC) for all operations.
-type FieldEntryHandler struct {
-	entryUC      *usecase.FieldEntryService
+// CustomFormEntryHandler handles custom form entry HTTP endpoints (tbl_custom_form_entry + tbl_custom_form_entry_value).
+type CustomFormEntryHandler struct {
+	entryUC      *usecase.CustomFormEntryService
 	userClinicUC *usecase.UserClinicService
-	formRepo     port.CustomFormRepository
 }
 
-func NewFieldEntryHandler(entryUC *usecase.FieldEntryService, userClinicUC *usecase.UserClinicService, formRepo port.CustomFormRepository) *FieldEntryHandler {
-	return &FieldEntryHandler{
+func NewCustomFormEntryHandler(entryUC *usecase.CustomFormEntryService, userClinicUC *usecase.UserClinicService) *CustomFormEntryHandler {
+	return &CustomFormEntryHandler{
 		entryUC:      entryUC,
 		userClinicUC: userClinicUC,
-		formRepo:     formRepo,
 	}
 }
 
-// Create handles POST /entry
-func (h *FieldEntryHandler) Create(c *gin.Context) {
+// Create handles POST /entries — create an entry with values for a form version.
+func (h *CustomFormEntryHandler) Create(c *gin.Context) {
 	userID, ok := GetAuthUserID(c)
 	if !ok {
 		return
 	}
-
-	var req form.EntryFieldRequest
+	var req form.EntryCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	// Get form to resolve clinic for access control
-	fm, err := h.formRepo.GetByID(c.Request.Context(), req.FormID)
-	if err != nil || fm == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "form not found"})
+	// Resolve clinic from form version for access control
+	formVersionID := req.FormVersionID
+	if formVersionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "formVersionId required"})
 		return
 	}
-
-	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
+	// We validate form version and form in use case; clinic check requires form. Use case returns error if form not found.
+	// For access we need clinic ID: get form version -> form -> clinic. Handler can call a use-case method that returns clinic ID for a form version.
+	// For simplicity: require clinicId in query or body and RequireClinicAccess. Or add GetClinicIDForFormVersion to entry use case.
+	// Entry use case has formRepo and versionRepo - we can add GetClinicIDForFormVersion(versionID) and use it here.
+	// For now: create entry; use case will validate form version and form. Then for access we need to ensure user has clinic access. So after create we have entry; we don't have clinic on entry. So we need GetClinicIDForFormVersion in use case. Let me add it.
+	clinicID, err := h.entryUC.GetClinicIDForFormVersion(c.Request.Context(), req.FormVersionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
+		return
+	}
 	resp, err := h.entryUC.Create(c.Request.Context(), &req, userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	utils.JSONResponse(c, http.StatusCreated, utils.MsgEntryCreated, resp, nil)
 }
 
-// GetByID handles GET /field-entries/:id
-func (h *FieldEntryHandler) GetByID(c *gin.Context) {
-	id := c.Param("id")
-
+// GetByID handles GET /entries/:entryId
+func (h *CustomFormEntryHandler) GetByID(c *gin.Context) {
+	id := c.Param("entryId")
 	resp, err := h.entryUC.GetByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-
-	if !RequireClinicAccess(c, h.userClinicUC, resp.ClinicID) {
+	clinicID, err := h.entryUC.GetClinicIDForEntry(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
+		return
+	}
 	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntryRetrieved, resp, nil)
 }
 
-// GetByFormID handles GET /field-entries/form/:formId
-func (h *FieldEntryHandler) GetByFormID(c *gin.Context) {
+// GetByFormID handles GET /entries/form/:formId
+func (h *CustomFormEntryHandler) GetByFormID(c *gin.Context) {
 	formID := c.Param("formId")
-
-	fm, err := h.formRepo.GetByID(c.Request.Context(), formID)
-	if err != nil || fm == nil {
+	f, err := h.entryUC.GetFormByIDForAccess(c.Request.Context(), formID)
+	if err != nil || f == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "form not found"})
 		return
 	}
-
-	if !RequireClinicAccess(c, h.userClinicUC, fm.ClinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, f.ClinicID) {
 		return
 	}
-
 	list, err := h.entryUC.GetByFormID(c.Request.Context(), formID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntriesRetrieved, list, nil)
 }
 
-// GetByClinicID handles GET /field-entries/clinic/:clinicId
-func (h *FieldEntryHandler) GetByClinicID(c *gin.Context) {
+// GetByClinicID handles GET /entries/clinic/:clinicId
+func (h *CustomFormEntryHandler) GetByClinicID(c *gin.Context) {
 	clinicID := c.Param("clinicId")
-
 	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
-
 	list, err := h.entryUC.GetByClinicID(c.Request.Context(), clinicID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntriesRetrieved, list, nil)
 }
 
-// Update handles PUT /field-entries/:id
-func (h *FieldEntryHandler) Update(c *gin.Context) {
-	id := c.Param("id")
-
-	existing, err := h.entryUC.GetByID(c.Request.Context(), id)
+// Update handles PUT /entries/:entryId
+func (h *CustomFormEntryHandler) Update(c *gin.Context) {
+	entryID := c.Param("entryId")
+	clinicID, err := h.entryUC.GetClinicIDForEntry(c.Request.Context(), entryID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-
-	if !RequireClinicAccess(c, h.userClinicUC, existing.ClinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
-
-	var req form.EntryFieldUpdateRequest
+	var req form.EntryUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	req.ID = id
-
-	resp, err := h.entryUC.Update(c.Request.Context(), &req)
+	resp, err := h.entryUC.Update(c.Request.Context(), entryID, &req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntryUpdated, resp, nil)
 }
 
-// Delete handles DELETE /field-entries/:id
-func (h *FieldEntryHandler) Delete(c *gin.Context) {
-	id := c.Param("id")
-
-	existing, err := h.entryUC.GetByID(c.Request.Context(), id)
+// Delete handles DELETE /entries/:entryId
+func (h *CustomFormEntryHandler) Delete(c *gin.Context) {
+	id := c.Param("entryId")
+	clinicID, err := h.entryUC.GetClinicIDForEntry(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-
-	if !RequireClinicAccess(c, h.userClinicUC, existing.ClinicID) {
+	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
 	}
-
 	if err := h.entryUC.Delete(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-
 	utils.JSONResponse(c, http.StatusOK, utils.MsgFieldEntryDeleted, nil, nil)
 }

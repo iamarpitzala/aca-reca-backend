@@ -3,32 +3,42 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/iamarpitzala/aca-reca-backend/internal/application/port"
 	"github.com/iamarpitzala/aca-reca-backend/internal/domain/form"
 )
 
 type CustomFormFieldService struct {
-	fieldRepo  port.CustomFormFieldRepository
-	configRepo port.CustomFormFieldConfigRepository
-	formRepo   port.CustomFormRepository
+	fieldRepo   port.CustomFormFieldRepository
+	sectionRepo port.CustomFormSectionRepository
+	versionRepo port.CustomFormVersionRepository
+	configRepo  port.CustomFormFieldConfigRepository
+	formRepo    port.CustomFormRepository
 }
 
 func NewCustomFormFieldService(
 	fieldRepo port.CustomFormFieldRepository,
+	sectionRepo port.CustomFormSectionRepository,
+	versionRepo port.CustomFormVersionRepository,
 	configRepo port.CustomFormFieldConfigRepository,
 	formRepo port.CustomFormRepository,
 ) *CustomFormFieldService {
 	return &CustomFormFieldService{
-		fieldRepo:  fieldRepo,
-		configRepo: configRepo,
-		formRepo:   formRepo,
+		fieldRepo:   fieldRepo,
+		sectionRepo: sectionRepo,
+		versionRepo: versionRepo,
+		configRepo:  configRepo,
+		formRepo:    formRepo,
 	}
 }
 
 func (s *CustomFormFieldService) CreateField(ctx context.Context, req *form.FieldRequest) (*form.FieldResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
+	}
+	if _, err := s.sectionRepo.GetByID(ctx, req.SectionID); err != nil {
+		return nil, errors.New("section not found")
 	}
 	f := &form.Field{}
 	f.ToFieldDB(req)
@@ -59,7 +69,11 @@ func (s *CustomFormFieldService) GetFieldsByFormID(ctx context.Context, formID s
 }
 
 func (s *CustomFormFieldService) GetFieldsByFormVersionID(ctx context.Context, formVersionID string) ([]*form.FieldResponse, error) {
-	fields, err := s.fieldRepo.GetByFormVersionID(ctx, formVersionID)
+	vid, err := strconv.Atoi(formVersionID)
+	if err != nil {
+		return nil, errors.New("invalid formVersionId")
+	}
+	fields, err := s.fieldRepo.GetByFormVersionID(ctx, vid)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +82,36 @@ func (s *CustomFormFieldService) GetFieldsByFormVersionID(ctx context.Context, f
 		out[i] = fields[i].ToFieldResponse()
 	}
 	return out, nil
+}
+
+// GetFormIDForField returns the form ID that owns this field (section -> version -> form). For access control.
+func (s *CustomFormFieldService) GetFormIDForField(ctx context.Context, fieldID string) (string, error) {
+	f, err := s.fieldRepo.GetByID(ctx, fieldID)
+	if err != nil {
+		return "", errors.New("field not found")
+	}
+	sec, err := s.sectionRepo.GetByID(ctx, f.SectionID)
+	if err != nil || sec == nil {
+		return "", errors.New("section not found")
+	}
+	version, err := s.versionRepo.GetByID(ctx, sec.FormVersionID)
+	if err != nil || version == nil {
+		return "", errors.New("form version not found")
+	}
+	return version.FormID, nil
+}
+
+// GetFormIDForSection returns the form ID for the form version that owns this section (for access control).
+func (s *CustomFormFieldService) GetFormIDForSection(ctx context.Context, sectionID int) (string, error) {
+	sec, err := s.sectionRepo.GetByID(ctx, sectionID)
+	if err != nil || sec == nil {
+		return "", errors.New("section not found")
+	}
+	version, err := s.versionRepo.GetByID(ctx, sec.FormVersionID)
+	if err != nil || version == nil {
+		return "", errors.New("form version not found")
+	}
+	return version.FormID, nil
 }
 
 func (s *CustomFormFieldService) UpdateField(ctx context.Context, id string, req *form.FieldRequest) (*form.FieldResponse, error) {

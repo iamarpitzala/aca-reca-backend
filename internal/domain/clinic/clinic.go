@@ -70,30 +70,30 @@ func (c *ClinicRequest) ToClinic() *Clinic {
 }
 
 type Clinic struct {
-	ID          string  `db:"id"`
-	UserID      string  `db:"user_id"`
-	Name        string  `db:"name"`
-	ABNNumber   string  `db:"abn_number"`
-	Address     string  `db:"address"`
-	City        string  `db:"city"`
-	State       string  `db:"state"`
-	Postcode    *string `db:"postcode"`
-	Phone       *string `db:"phone"`
-	Email       *string `db:"email"`
-	Website     *string `db:"website"`
-	LogoURL     *string `db:"logo_url"`
-	Description *string `db:"description"`
+	ID          string  `db:"id" json:"id"`
+	UserID      string  `db:"user_id" json:"userId"`
+	Name        string  `db:"name" json:"name"`
+	ABNNumber   string  `db:"abn_number" json:"abnNumber"`
+	Address     string  `db:"address" json:"address"`
+	City        string  `db:"city" json:"city"`
+	State       string  `db:"state" json:"state"`
+	Postcode    *string `db:"postcode" json:"postcode"`
+	Phone       *string `db:"phone" json:"phone"`
+	Email       *string `db:"email" json:"email"`
+	Website     *string `db:"website" json:"website"`
+	LogoURL     *string `db:"logo_url" json:"logoURL"`
+	Description *string `db:"description" json:"description"`
 
-	ShareType   string `db:"share_type"`
-	MethodType  string `db:"method_type"`
-	ClinicShare int    `db:"clinic_share"`
-	OwnerShare  int    `db:"owner_share"`
+	ShareType   string `db:"share_type" json:"shareType"`
+	MethodType  string `db:"method_type" json:"methodType"`
+	ClinicShare int    `db:"clinic_share" json:"clinicShare"`
+	OwnerShare  int    `db:"owner_share" json:"ownerShare"`
 
-	IsActive bool `db:"is_active"`
+	IsActive bool `db:"is_active" json:"isActive"`
 
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-	DeletedAt time.Time `db:"deleted_at"`
+	CreatedAt time.Time `db:"created_at" json:"createdAt"`
+	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	DeletedAt time.Time `db:"deleted_at" json:"deletedAt"`
 }
 
 type ClinicResponse struct {

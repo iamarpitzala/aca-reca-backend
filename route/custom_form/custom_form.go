@@ -7,7 +7,7 @@ import (
 	"github.com/iamarpitzala/aca-reca-backend/internal/service"
 )
 
-func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFormHandler, entryHandler *httpHandler.FieldEntryHandler, fieldHandler *httpHandler.CustomFormFieldHandler, tokenService *service.TokenService) {
+func RegisterCustomFormRoutes(e *gin.RouterGroup, handler *httpHandler.CustomFormHandler, entryHandler *httpHandler.CustomFormEntryHandler, fieldHandler *httpHandler.CustomFormFieldHandler, tokenService *service.TokenService) {
 	g := e.Group("/custom-form")
 	g.Use(middleware.AuthMiddleware(tokenService))
 

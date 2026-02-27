@@ -134,6 +134,22 @@ func (h *ClinicHandler) GetClinic(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"clinic": clinic, "currentUserRole": roleLower})
 }
 
+// ListClinicCOA returns the chart of accounts linked to the clinic.
+// GET /api/v1/clinic/:id/coa
+// Returns 200 with data: [] (empty until clinic-COA association is implemented).
+func (h *ClinicHandler) ListClinicCOA(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "clinic id required"})
+		return
+	}
+	if !RequireClinicAccess(c, h.userClinicUC, id) {
+		return
+	}
+	// TODO: when tbl_clinic_coa (or equivalent) exists, return clinic COA associations with details
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "clinic coa retrieved", "data": []interface{}{}})
+}
+
 // UpdateClinic updates a clinic by ID (requires user to be associated with the clinic)
 // PUT /api/v1/clinic/:id
 // @Summary Update a clinic by ID

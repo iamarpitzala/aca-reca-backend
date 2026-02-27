@@ -35,7 +35,7 @@ const (
 
 	// Not found errors
 	ErrClinicNotFound                = "clinic not found"
-	ErrAOCNotFound                   = "coa not found"
+	ErrCOANotFound                   = "coa not found"
 	ErrUserClinicAssociationNotFound = "user-clinic association not found"
 	ErrNetDetailsNotFound            = "net details not found for this entry"
 	ErrGrossDetailsNotFound          = "gross details not found for this entry"
@@ -74,6 +74,7 @@ const (
 	MsgFormArchived                  = "form archived"
 	MsgCustomFormDeleted             = "custom form deleted"
 	MsgFormDuplicated                = "form duplicated"
+	MsgFormSectionTypesRetrieved     = "form section types retrieved"
 
 	// Entry messages
 	MsgEntryCreated          = "entry created"

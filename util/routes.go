@@ -16,10 +16,9 @@ const (
 	RouteCustomForm              = "/custom-form"
 	RouteQuarter                 = "/quarter"
 	RouteExpense                 = "/expense"
-	RouteAOC                     = "/coa"
+	RouteCOA                     = "/coa"
 	RouteUpload                  = "/upload"
 	RouteClinicFinancialSettings = "/clinic-financial-settings"
-	RouteEntry                   = "/entry"
 	RouteTransaction             = "/transaction"
 	RouteReports                 = "/reports"
 )

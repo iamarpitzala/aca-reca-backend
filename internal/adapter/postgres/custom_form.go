@@ -100,6 +100,8 @@ func (r *customFormRepo) Update(ctx context.Context, form *form.Form) error {
 		SET
 			name = :name,
 			description = :description,
+			status = :status,
+			calculation_method = :calculation_method,
 			updated_at = :updated_at
 		WHERE id = :id AND deleted_at IS NULL`
 	_, err := r.db.NamedExecContext(ctx, q, form)

@@ -1,6 +1,6 @@
 basePath: /api/v1
 definitions:
-  domain.AOCRequest:
+  domain.COARequest:
     properties:
       accountTaxId:
         type: integer
@@ -22,7 +22,7 @@ definitions:
     - id
     - name
     type: object
-  domain.AOCResponse:
+  domain.COAResponse:
     properties:
       accountTaxId:
         type: integer
@@ -73,7 +73,7 @@ definitions:
       user:
         $ref: '#/definitions/domain.User'
     type: object
-  domain.BulkDeleteAOCRequest:
+  domain.BulkDeleteCOARequest:
     properties:
       ids:
         items:
@@ -407,29 +407,29 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.AOCResponse'
+              $ref: '#/definitions/domain.COAResponse'
             type: array
-      summary: Get all AOCs
+      summary: Get all COAs
       tags:
-      - AOC
+      - COA
     post:
       consumes:
       - application/json
       description: Create a new coa with the given information
       parameters:
-      - description: AOC information
+      - description: COA information
         in: body
         name: coa
         required: true
         schema:
-          $ref: '#/definitions/domain.AOCRequest'
+          $ref: '#/definitions/domain.COARequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/domain.AOCResponse'
+            $ref: '#/definitions/domain.COAResponse'
         "400":
           description: Bad Request
           schema:
@@ -440,7 +440,7 @@ paths:
             $ref: '#/definitions/domain.H'
       summary: Create a new coa
       tags:
-      - AOC
+      - COA
   /coa/account-types:
     get:
       description: 'Get all accounts. Query params: sort (code|name, default code),
@@ -459,11 +459,11 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.AOCResponse'
+              $ref: '#/definitions/domain.COAResponse'
             type: array
       summary: Get all accounts (optionally sorted)
       tags:
-      - AOC
+      - COA
   /coa/tax:
     get:
       consumes:
@@ -482,7 +482,7 @@ paths:
             $ref: '#/definitions/domain.H'
       summary: Get all account tax types
       tags:
-      - AOC
+      - COA
   /auth/login:
     post:
       consumes:

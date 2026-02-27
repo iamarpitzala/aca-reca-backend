@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +30,12 @@ func (h *CustomFormHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if req.Status == "" {
+		req.Status = "DRAFT"
+	}
+	if req.CalculationMethod == "" {
+		req.CalculationMethod = "NET"
+	}
 	clinicID := req.ClinicID
 	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
 		return
@@ -57,6 +62,18 @@ func (h *CustomFormHandler) GetByID(c *gin.Context) {
 	utils.JSONResponse(c, http.StatusOK, utils.MsgCustomFormRetrieved, resp, nil)
 }
 
+// GetSectionTypes returns the list of section types for the Build form (Step 1).
+// Does not require clinic access; returns static config (INCOME: Collection; EXPENSES: Cost, Service and facility, Other cost).
+func (h *CustomFormHandler) GetSectionTypes(c *gin.Context) {
+	list := []form.SectionTypeOption{
+		{ID: "collection", Category: "INCOME", Title: "Collection", Description: "Income and fees collected", Order: 1},
+		{ID: "cost", Category: "EXPENSES", Title: "Cost", Description: "Direct costs and expenses", Order: 2},
+		{ID: "service_and_facility", Category: "EXPENSES", Title: "Service and facility", Description: "Service & facility fee component", Order: 3},
+		{ID: "other_cost", Category: "EXPENSES", Title: "Other cost", Description: "Other costs and deductions", Order: 4},
+	}
+	utils.JSONResponse(c, http.StatusOK, utils.MsgFormSectionTypesRetrieved, list, nil)
+}
+
 func (h *CustomFormHandler) GetByClinicID(c *gin.Context) {
 	clinicID := c.Param("clinicId")
 	if !RequireClinicAccess(c, h.userClinicUC, clinicID) {
@@ -80,8 +97,6 @@ func (h *CustomFormHandler) GetPublishedByClinicID(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	fmt.Println("list", list)
 	utils.JSONResponse(c, http.StatusOK, utils.MsgPublishedCustomFormsRetrieved, list, nil)
 }
 

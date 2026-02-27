@@ -25,16 +25,16 @@
             "get": {
                 "description": "Get all chart of accounts entries",
                 "tags": [
-                    "AOC"
+                    "COA"
                 ],
-                "summary": "Get all AOCs",
+                "summary": "Get all COAs",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.AOCResponse"
+                                "$ref": "#/definitions/domain.COAResponse"
                             }
                         }
                     }
@@ -49,17 +49,17 @@
                     "application/json"
                 ],
                 "tags": [
-                    "AOC"
+                    "COA"
                 ],
                 "summary": "Create a new coa",
                 "parameters": [
                     {
-                        "description": "AOC information",
+                        "description": "COA information",
                         "name": "coa",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.AOCRequest"
+                            "$ref": "#/definitions/domain.COARequest"
                         }
                     }
                 ],
@@ -67,7 +67,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/domain.AOCResponse"
+                            "$ref": "#/definitions/domain.COAResponse"
                         }
                     },
                     "400": {
@@ -89,7 +89,7 @@
             "get": {
                 "description": "Get all accounts. Query params: sort (code|name, default code), order (asc|desc, default asc)",
                 "tags": [
-                    "AOC"
+                    "COA"
                 ],
                 "summary": "Get all accounts (optionally sorted)",
                 "parameters": [
@@ -112,7 +112,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.AOCResponse"
+                                "$ref": "#/definitions/domain.COAResponse"
                             }
                         }
                     }
@@ -129,7 +129,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "AOC"
+                    "COA"
                 ],
                 "summary": "Get all account tax types",
                 "responses": {
@@ -2185,7 +2185,7 @@
         }
     },
     "definitions": {
-        "domain.AOCRequest": {
+        "domain.COARequest": {
             "type": "object",
             "required": [
                 "accountTaxId",
@@ -2216,7 +2216,7 @@
                 }
             }
         },
-        "domain.AOCResponse": {
+        "domain.COAResponse": {
             "type": "object",
             "properties": {
                 "accountTaxId": {
@@ -2294,7 +2294,7 @@
                 }
             }
         },
-        "domain.BulkDeleteAOCRequest": {
+        "domain.BulkDeleteCOARequest": {
             "type": "object",
             "required": [
                 "ids"

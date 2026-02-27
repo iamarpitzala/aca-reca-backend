@@ -31,6 +31,33 @@ func (r *customFormVersionRepo) Create(ctx context.Context, version *form.FormVe
 	return err
 }
 
+func (r *customFormVersionRepo) GetByID(ctx context.Context, versionID int) (*form.FormVersion, error) {
+	q := `SELECT id, form_id, version, is_active, created_by, created_at
+		FROM tbl_custom_form_version WHERE id = $1`
+	var version form.FormVersion
+	if err := r.db.GetContext(ctx, &version, q, versionID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("form version not found: %w", err)
+		}
+		return nil, fmt.Errorf("failed to get form version: %w", err)
+	}
+	return &version, nil
+}
+
+func (r *customFormVersionRepo) GetActiveByFormID(ctx context.Context, formID string) (*form.FormVersion, error) {
+	q := `SELECT id, form_id, version, is_active, created_by, created_at
+		FROM tbl_custom_form_version WHERE form_id = $1 AND is_active = true LIMIT 1`
+	var version form.FormVersion
+	err := r.db.GetContext(ctx, &version, q, formID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get active version: %w", err)
+	}
+	return &version, nil
+}
+
 func (r *customFormVersionRepo) GetLatestByFormID(ctx context.Context, formID string) (*form.FormVersion, error) {
 	q := `
 		SELECT id, form_id, version, is_active, created_by, created_at

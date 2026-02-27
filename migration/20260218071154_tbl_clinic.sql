@@ -3,6 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS tbl_clinic (
     id VARCHAR(40) PRIMARY KEY NOT NULL UNIQUE,
+    user_id VARCHAR(40) REFERENCES tbl_user(id),
 
     name VARCHAR(255) NOT NULL,
     abn_number VARCHAR(11) NOT NULL,
@@ -36,9 +37,14 @@ CREATE TABLE IF NOT EXISTS tbl_clinic (
     )
 );
 
+
+CREATE UNIQUE INDEX ux_clinic_abn_active
+ON tbl_clinic (abn_number)
+WHERE deleted_at IS NULL;
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP INDEX IF EXISTS ux_clinic_abn_active;
 DROP TABLE IF EXISTS tbl_clinic;
 -- +goose StatementEnd

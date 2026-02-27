@@ -16,7 +16,6 @@ import (
 	clinic_financial_settings "github.com/iamarpitzala/aca-reca-backend/route/clinic_financial_settings"
 	coa_route "github.com/iamarpitzala/aca-reca-backend/route/coa"
 	custom_form "github.com/iamarpitzala/aca-reca-backend/route/custom_form"
-	"github.com/iamarpitzala/aca-reca-backend/route/entry"
 	expense "github.com/iamarpitzala/aca-reca-backend/route/expense"
 	payslip "github.com/iamarpitzala/aca-reca-backend/route/payslip"
 	reports_route "github.com/iamarpitzala/aca-reca-backend/route/reports"
@@ -50,14 +49,14 @@ func InitRouter(e *gin.Engine) {
 	customFormRepo := postgres.NewCustomFormRepository(sqlxDB)
 	customFormFieldRepo := postgres.NewCustomFormFieldRepository(sqlxDB)
 	customFormFieldConfigRepo := postgres.NewCustomFormFieldConfigRepository(sqlxDB)
+	customFormSectionRepo := postgres.NewCustomFormSectionRepository(sqlxDB)
 	customFormVersionRepo := postgres.NewCustomFormVersionRepository(sqlxDB)
+	customFormEntryRepo := postgres.NewCustomFormEntryRepository(sqlxDB)
 	financialYearRepo := postgres.NewFinancialYearRepository(sqlxDB)
 	financialQuarterRepo := postgres.NewFinancialQuarterRepository(sqlxDB)
 	clinicFinancialYearRepo := postgres.NewClinicFinancialYearRepository(sqlxDB)
 	clinicFinancialQuarterLockRepo := postgres.NewClinicFinancialQuarterLockRepository(sqlxDB)
 	clinicFinancialSettingsRepo := postgres.NewClinicFinancialSettingRepository(sqlxDB)
-
-	fieldEntryRepo := postgres.NewFieldEntryRepository(sqlxDB)
 
 	transactionRepo := postgres.NewTransactionRepository(sqlxDB)
 	pnlReportRepo := postgres.NewPnlReportRepository(sqlxDB)
@@ -68,10 +67,10 @@ func InitRouter(e *gin.Engine) {
 	userClinicUC := usecase.NewUserClinicService(userClinicRepo, clinicRepo, userRepo)
 	authUC := usecase.NewAuthService(userRepo, sessionRepo, tokenService)
 	expensesUC := usecase.NewExpensesService(expenseRepo)
-	customFormUC := usecase.NewCustomFormService(customFormRepo, customFormFieldRepo, customFormVersionRepo, clinicRepo)
-	customFormFieldUC := usecase.NewCustomFormFieldService(customFormFieldRepo, customFormFieldConfigRepo, customFormRepo)
+	customFormUC := usecase.NewCustomFormService(customFormRepo, customFormFieldRepo, customFormSectionRepo, customFormVersionRepo, clinicRepo)
+	customFormFieldUC := usecase.NewCustomFormFieldService(customFormFieldRepo, customFormSectionRepo, customFormVersionRepo, customFormFieldConfigRepo, customFormRepo)
 	clinicFinancialSettingsUC := usecase.NewClinicFinancialSettingsService(clinicFinancialSettingsRepo, clinicRepo, financialYearRepo, financialQuarterRepo, clinicFinancialYearRepo, clinicFinancialQuarterLockRepo)
-	fieldEntryUC := usecase.NewFieldEntryService(fieldEntryRepo, customFormRepo, customFormFieldRepo, clinicRepo, clinicFinancialSettingsRepo, transactionRepo)
+	customFormEntryUC := usecase.NewCustomFormEntryService(customFormEntryRepo, customFormVersionRepo, customFormRepo)
 	transactionUC := usecase.NewTransactionService(transactionRepo, clinicRepo)
 	pnlReportUC := usecase.NewPnlReportService(pnlReportRepo, clinicRepo)
 	coaUC := usecase.NewCOAService(ChartOfAccountsRepo)
@@ -85,7 +84,7 @@ func InitRouter(e *gin.Engine) {
 	customFormFieldHandler := httpHandler.NewCustomFormFieldHandler(customFormFieldUC, userClinicUC, customFormUC)
 	expensesHandler := httpHandler.NewExpensesHandler(expensesUC)
 	clinicFinancialSettingsHandler := httpHandler.NewClinicFinancialSettingsHandler(clinicFinancialSettingsUC)
-	fieldEntryHandler := httpHandler.NewFieldEntryHandler(fieldEntryUC, userClinicUC, customFormRepo)
+	customFormEntryHandler := httpHandler.NewCustomFormEntryHandler(customFormEntryUC, userClinicUC)
 	transactionHandler := httpHandler.NewTransactionHandler(transactionUC)
 	pnlReportHandler := httpHandler.NewPnlReportHandler(pnlReportUC)
 	coaHandler := httpHandler.NewCOAHandler(coaUC)
@@ -102,11 +101,10 @@ func InitRouter(e *gin.Engine) {
 	clinic.RegisterClinicRoutes(v1, clinicHandler, tokenService)
 	payslip.RegisterPayslipRoutes(v1, payslipHandler)
 	user_clinic.RegisterUserClinicRoutes(v1, userClinicHandler, tokenService)
-	custom_form.RegisterCustomFormRoutes(v1, customFormHandler, fieldEntryHandler, customFormFieldHandler, tokenService)
+	custom_form.RegisterCustomFormRoutes(v1, customFormHandler, customFormEntryHandler, customFormFieldHandler, tokenService)
 	expense.RegisterExpensesRoutes(v1, expensesHandler, tokenService)
 	upload_route.RegisterUploadRoutes(v1, uploadHandler, tokenService)
 	clinic_financial_settings.RegisterClinicFinancialSettingRoutes(v1, clinicFinancialSettingsHandler, tokenService)
-	entry.RegisterEntryRoutes(v1, fieldEntryHandler, tokenService)
 	transaction_route.RegisterTransactionRoutes(v1, transactionHandler, tokenService)
 	reports_route.RegisterReportsRoutes(v1, pnlReportHandler, tokenService)
 	coa_route.RegisterCOARoutes(v1, coaHandler, tokenService)
